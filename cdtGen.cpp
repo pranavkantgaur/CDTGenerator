@@ -17,7 +17,7 @@ void readPLCInput()
 
     return;
 }
-sxvcdsvs
+
 
 void computeInitialDelaunayTetrahedralization()
 {
