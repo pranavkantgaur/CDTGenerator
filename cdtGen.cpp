@@ -2,7 +2,7 @@
 
 using namespace std;
 
-/// Datastructure implementations:
+// Datastructure implementations:
 // PLC: Implement using CGAL Linear cell complexes
 // Delaunay tetrahedralization: CGAL::Delaunay_3
 // Output mesh: Linear cell complex
@@ -10,37 +10,37 @@ using namespace std;
 
 void readPLCInput()
 {
-    // read PLY file(assumed to contain the PLC)
-    // initialize inputVertices
-    // initialize inputFaces
+	// read PLY file(assumed to contain the PLC)
+    	// initialize inputVertices
+    	// initialize inputFaces
 
 
-    return;
+	
 }
 
 
 void computeInitialDelaunayTetrahedralization()
 {
 
-    return;
+    	
 }
 
 void removeLocalDegeneracies()
 {
-return;
+	
 }
 
 void recoverConstraintFaces()
 {
-return;
+	
 }
 
 
 int main()
 {
-    readPLCInput();
-    computeInitialDelaunayTetrahedralization();
-    removeLocalDegeneracies();
-    recoverConstraintFaces();
-    return 0;
+	readPLCInput();
+	computeInitialDelaunayTetrahedralization();
+	removeLocalDegeneracies();
+	recoverConstraintFaces();
+        return 0;
 }
