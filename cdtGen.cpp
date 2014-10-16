@@ -26,7 +26,7 @@ static unsigned tempPoint[3];
 unsigned int dimensionId = 0;
 static unsigned pointId = 0;
 
-static tempFace[3];
+static unsigned tempFace[3];
 
 
 
