@@ -1,3 +1,5 @@
 #1. Use CGAL::Linear_cell_complex as PLC. Add required functions e.g. locate() to get handle to the point in LCC nearest to the query point.
 
-#2. Use CGAL::Delaunay_triangulation_3 
+#2. Use CGAL::Delaunay_triangulation_3
+
+#3. Input should allow for more file options than ply. 
