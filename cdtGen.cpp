@@ -1,7 +1,22 @@
 #include <CGAL/Linear_cell_complex.h>
 #include <CGAL/Delaunay_triangulation_3.h>
 
+using namespace std;
 
+
+typedef CGAL::Point_3 Point;
+typedef CGAL::Delaunay_triangulation_3 Delaunay;
+
+// PLC:
+map <unsigned, Point> PLCvertices; // mapping between vertex coordinates and corresponding unique id
+list <unsigned, unsigned, unsigned> PLCfaces; // contains ids of vertices/points making the triangle
+
+// Delaunay tetrahedralization:
+Delaunay DT;
+
+// CDT: output mesh:
+map <unsigned, Point> CDTvertices;
+list <unsigned, unsigned, unsigned, unsigned> CDTtets; // contains ids of vertices making tetrahedron
 
 
 // reads input PLC
@@ -10,16 +25,19 @@ void readPLCInput()
 	// read PLY file(assumed to contain the PLC)
     	// initialize inputVertices
     	// initialize inputFaces
-
-
 	
 }
 
 // computes the initial delaunay tetrahedralization
 void computeInitialDelaunayTetrahedralization()
-{
+{	
+	
+	list <Point> tempPointList;
 
-    	
+	for (map<unsigned, Point>::iterator pit = PLCvertices.begin(); pit != PLCvertices.end(); pit++)
+		tempPointList.push(PLCvertices.find(i)->second);
+
+    	DT.insert(tempPointList.begin(). tempPointList.end());
 }
 
 // removes local degeneracies from Delaunay tetrahedralization
