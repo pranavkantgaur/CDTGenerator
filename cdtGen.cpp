@@ -1,8 +1,10 @@
 #include <string.h>
+#include <iostream>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Point_3.h>
 #include <CGAL/Delaunay_triangulation_3.h>
 #include "rply/rply.h"
+
 
 using namespace std;
 using namespace CGAL;
@@ -17,13 +19,15 @@ map <unsigned, Point> plcVertices; // mapping between vertex coordinates and cor
 
 class TriangleFace
 {
-unsigned int vertexIds[3];
+	public:
+		unsigned int vertexIds[3];
 }tempFace;
 
 
 class TetrahedronCell
 {
-unsigned int vertexIds[4];
+	public:
+		unsigned int vertexIds[4];
 }tempTet;
 
 list <TriangleFace> plcFaces; // contains ids of vertices/points making the triangle
@@ -39,26 +43,26 @@ static unsigned tempPoint[3];
 unsigned int dimensionId = 0;
 static unsigned pointId = 0;
 
-void vertex_cb(p_ply_argument argument) 
+static int vertex_cb(p_ply_argument argument) 
 {	
 	long eol;
 	ply_get_argument_user_data(argument, NULL, &eol);
 	tempPoint[dimensionId++] = ply_get_argument_value(argument);
 	
 	// insert the vertex into plcVertex
-	if (strcmp((*argument).element.name, 'z'))
+	if (eol)
 	{
-		plcVertices.push(pointId++, Point(tempPoint[0],tempPoint[1],tempPoint[2]));
+		plcVertices[pointId++] = Point(tempPoint[0],tempPoint[1],tempPoint[2]);
 		dimensionId = 0;
 	}
 }
 
-void face_cb(p_ply_argument argument) 
+static int face_cb(p_ply_argument argument) 
 {
 	long length, value_index;
 
-
 	ply_get_argument_property(argument, NULL, &length, &value_index);
+
         switch (value_index) 
 	{
         	case 0:
@@ -66,9 +70,9 @@ void face_cb(p_ply_argument argument)
         		tempFace.vertexIds[pointId++] = ply_get_argument_value(argument);
 	                break;
         	case 2:	
-			tempFace[pointId] = ply_get_argument_value(argument);
+			tempFace.vertexIds[pointId] = ply_get_argument_value(argument);
 			pointId = 0;				
-			plcFaces.push(tempFace);
+			plcFaces.push_front(tempFace);
 	                break;
         	default: 
                 	cout << "Invalid number of points in a face specified :(";
@@ -85,27 +89,27 @@ void readPLCInput()
 
 	cout << "Please enter input filename";
 	cin >> fileName;
- 
-	p_ply inputPLY = ply_open(fileName);
-    	
-	if (!inputPLY) return 1;
-
-        if (!ply_read_header(inputPLY)) return 1;
 	
-	if (!read_ply(inputPLY))
+	p_ply inputPLY = ply_open(fileName.c_str(), NULL, 0, NULL);
+    	
+	if (!inputPLY) exit(0);
+
+        if (!ply_read_header(inputPLY)) exit(0);
+	
+	if (!ply_read(inputPLY))
 	{
 		cout << "Cannot read the PLY file :(";
 		exit(0);
 	}
 
 	// Initialize plcVertex and plcFaces
-  	ply_set_read_cb(ply, "vertex", "x", vertex_cb, NULL, 0);	
-	ply_set_read_cb(ply, "vertex", "y", vertex_cb, NULL, 0);
-	ply_set_read_cb(ply, "vertex", "z", vertex_cb, NULL, 0);
+  	ply_set_read_cb(inputPLY, "vertex", "x", vertex_cb, NULL, 0);	
+	ply_set_read_cb(inputPLY, "vertex", "y", vertex_cb, NULL, 0);
+	ply_set_read_cb(inputPLY, "vertex", "z", vertex_cb, NULL, 1);
 
-	ply_set_read_cb(ply, "face", "vertex_indices", face_cb, NULL, 0); 
+	ply_set_read_cb(inputPLY, "face", "vertex_indices", face_cb, NULL, 0); 
 
-	inputPLY.close();
+	ply_close(inputPLY);
 	
 }
 
@@ -114,10 +118,10 @@ void computeInitialDelaunayTetrahedralization()
 {	
 	
 	list <Point> tempPointList;
-	unsigned int i;
+	unsigned int i = 0;
 
-	for (map<unsigned, Point>::iterator pit = plcVertices.begin(), i = 0; pit != plcVertices.end(); pit++, i++)
-		tempPointList.push(plcVertices.find(i)->second);
+	for (map<unsigned, Point>::iterator pit = plcVertices.begin(); pit != plcVertices.end(); pit++, i++)
+		tempPointList.push_front(plcVertices.find(i)->second);
 
     	DT.insert(tempPointList.begin(), tempPointList.end());
 }
