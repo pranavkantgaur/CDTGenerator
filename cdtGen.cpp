@@ -87,7 +87,7 @@ void readPLCInput()
 	// read PLY file(assumed to contain the PLC)
 	string fileName;
 
-	cout << "Please enter input filename";
+	cout << "\nPlease enter input filename:\t";
 	cin >> fileName;
 	
 	p_ply inputPLY = ply_open(fileName.c_str(), NULL, 0, NULL);
@@ -124,6 +124,8 @@ void computeInitialDelaunayTetrahedralization()
 		tempPointList.push_front(plcVertices.find(i)->second);
 
     	DT.insert(tempPointList.begin(), tempPointList.end());
+
+	cout << "\nInitial Delaunay tetrahedralization computed!!";
 }
 
 // removes local degeneracies from Delaunay tetrahedralization
