@@ -2,4 +2,6 @@
 
 #2. Use CGAL::Delaunay_triangulation_3
 
-#3. Input should allow for more file options than ply. 
+#3. Input should allow for more file options than ply.
+
+#4. If time available, see why g++ -lgmp -lCGAL rply.cpp cdtCode.cpp does not link whereas, g++ rply.cpp cdtCode.cpp -lgmp -lCGAL does? 
