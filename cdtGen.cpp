@@ -184,21 +184,8 @@ void removeLocalDegeneracies()
 						inputPLCVertices.push(vb);		
 				}						
 			}
-		// for each local degeneracy l in Q:
-			// if l is removable:
-				// remove l by small perturbation
-			// else,
-				// compute vb to break l
-					// if vb encroaches upon any segment or subface,
-						// push l into queue
-						// call boundary protection procedure
-					// else
-						// insert vb to break l 	
-					// end if
-			// end if
-		// end for
-	// end repeat
-}	
+}
+	
 
 // recovers the constraint faces
 void recoverConstraintFaces()
