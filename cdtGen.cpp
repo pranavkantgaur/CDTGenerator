@@ -1,3 +1,4 @@
+/*
 #include <string.h>
 #include <iostream>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
@@ -127,33 +128,41 @@ void computeInitialDelaunayTetrahedralization()
 
 	cout << "\nInitial Delaunay tetrahedralization computed!!";
 }
+*/
 
-
-void addLocalDegeneracies(queue<VertexSet> degeneracyQueue)
+class DegenerateVertexSetCandidate
 {
-
-	// For each tet 't' of DT
-		// If it forms a local degeneracy with any of its neighbor vertex:(i.e., all vertices are co-spherical)
-			// Add this 5 vertex set to degeneracyQueue
-
-	// QUESTION: How to relate vertices in DT with those in the inputPLC??
-		// Required for perturbing a vertex in the degenerate set.
+	CGAL::Vertex_3 degenSetVertex[5];	
+};
 
 
-	for (triangulation<>::iterator cellIter = DT.cellIter.begin(); cellIter != DT.cellIter.end(); cellIter++)
-		{
-			for (each neighbor vertex of tet, v)
-				if (areCospherical(tetVertices, v))
-				{
-					VertexSet vs;
-					vs.add(tetVertices);
-					vs.add(v);					
-					degeneracyQueue.push_front(vs);
-				}		
-		}
+
+
+
+void addLocalDegeneraciesToQueue(queue<DegenerateVertexSetCandidate> degeneracyQueue)
+{
+	
+	for (delaunay::Finite_cell_iterator cellIter = DT.finite_cell_begin(); cellIter != DT.finite_cell_end(); cellIter++)
+	{
+			while(cellIter->Neighbor.vertex[i] != cellIter.vertex[j])
+			{
+				cellIter->neighbor(i);
+				for (each neighbor of cellIter)
+				{			
+					get vertex not common with cellIter, v
+						
+					if (areCospherical(tetVertices, v))
+					{
+						DegenerateVertexSetCandidate dvs;
+						dvs.add(tetVertices);
+						dvs.add(v);					
+						degeneracyQueue.push_front(dvs);
+					}		
+				}
+			}
+	}
 
 	removeDuplicateDegeneracies(degeneracyQueue); 
-
 }
 
 
@@ -166,7 +175,7 @@ void removeLocalDegeneracies()
 
 	// compute all local degeneracies in DT and add them to Q
 	queue<VertexSet> degeneracyQueue;
-	addLocalDegeneracies(degeneracyQueue);
+	addLocalDegeneraciesToQueue(degeneracyQueue);
 
 	// repeat while Q != NULL	
 	while (degenercyQueue.size() != 0)
@@ -184,8 +193,12 @@ void removeLocalDegeneracies()
 						inputPLCVertices.push(vb);		
 				}						
 			}
+
+	cout << "Local degeneracy removal completed";
 }
 	
+
+/*
 
 // recovers the constraint faces
 void recoverConstraintFaces()
@@ -202,3 +215,4 @@ int main()
 	recoverConstraintFaces();
         return 0;
 }
+*/
