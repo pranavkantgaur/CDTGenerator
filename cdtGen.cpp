@@ -128,11 +128,62 @@ void computeInitialDelaunayTetrahedralization()
 	cout << "\nInitial Delaunay tetrahedralization computed!!";
 }
 
+
+void addLocalDegeneracies(queue<VertexSet> degeneracyQueue)
+{
+
+	// For each tet 't' of DT
+		// If it forms a local degeneracy with any of its neighbor vertex:(i.e., all vertices are co-spherical)
+			// Add this 5 vertex set to degeneracyQueue
+
+	// QUESTION: How to relate vertices in DT with those in the inputPLC??
+		// Required for perturbing a vertex in the degenerate set.
+
+
+	for (triangulation<>::iterator cellIter = DT.cellIter.begin(); cellIter != DT.cellIter.end(); cellIter++)
+		{
+			for (each neighbor vertex of tet, v)
+				if (areCospherical(tetVertices, v))
+				{
+					VertexSet vs;
+					vs.add(tetVertices);
+					vs.add(v);					
+					degeneracyQueue.push_front(vs);
+				}		
+		}
+
+	removeDuplicateDegeneracies(degeneracyQueue); 
+
+}
+
+
+
 // removes local degeneracies from Delaunay tetrahedralization
 void removeLocalDegeneracies()
 {
+	
+	cout << "\nStarting local degeneracy removal...";
+
 	// compute all local degeneracies in DT and add them to Q
-	// repeat while Q != NULL
+	queue<VertexSet> degeneracyQueue;
+	addLocalDegeneracies(degeneracyQueue);
+
+	// repeat while Q != NULL	
+	while (degenercyQueue.size() != 0)
+		for (queue<>::iterator qIter = degeneracyQueue.begin(); qIter != degeneracyQueue.end(); qIter++)
+			{
+				if (isDegeneracyRemovable(qIter))
+					perturbRemove(qIter, degeneracyQueue); 
+				else
+				{
+					Vertex vb;	
+					computeBreakPoint(vb, qIter, degeneracyQueue);
+					if (isEncroachingPLC(vb))
+						boundaryProtection(vb);
+					else
+						inputPLCVertices.push(vb);		
+				}						
+			}
 		// for each local degeneracy l in Q:
 			// if l is removable:
 				// remove l by small perturbation
