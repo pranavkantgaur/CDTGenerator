@@ -152,9 +152,11 @@ bool areCospherical(DegenerateVertexSetCandidate degenSet)
 }
 
 // removes duplicate vertex sets from global degeneracyQueue
-void removeDuplicateDegenracies()
+void removeDuplicateDegeneracies(queue<DegenerateVertexSetCandidae>degenQueue)
 {
-
+	// remove duplicates from the degeneracyQueue
+	// NOTE: For any vertex set (cellHandle1, cellHandle2){which resulted in this vertex set} can be used to remove duplicates...	
+	
 }
 
 
@@ -180,7 +182,7 @@ void addLocalDegeneraciesToQueue(queue<DegenerateVertexSetCandidate> degeneracyQ
 				}
 	}
 
-	removeDuplicateDegeneracies(); 
+	removeDuplicateDegeneracies(degeneracyQueue); 
 }
 
 
