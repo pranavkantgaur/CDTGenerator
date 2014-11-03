@@ -137,9 +137,18 @@ class DegenerateVertexSetCandidate
 
 
 // returns true if  given vertices are co-spherical
-bool areCospherical()
+bool areCospherical(DegenerateVertexSetCandidate degenSet)
 {
+	
+	Point_3 p[5];
+	
+	for (unsigned int i = 0; i < 5; i++)	
+		p[i] = (degenSet.degenSetVertex[i])->point();
 
+	if (CGAL::side_of_bounded_sphere(p[0],p[1],p[2],p[3],p[4]) == CGAL::ON_BOUNDARY)
+		return true;
+	else
+		return false;
 }
 
 // removes duplicate vertex sets from global degeneracyQueue
