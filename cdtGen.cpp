@@ -132,37 +132,46 @@ void computeInitialDelaunayTetrahedralization()
 
 class DegenerateVertexSetCandidate
 {
-	CGAL::Vertex_3 degenSetVertex[5];	
+	Vertex_handle degenSetVertex[5];	
 };
 
 
+// returns true if  given vertices are co-spherical
+bool areCospherical()
+{
+
+}
+
+// removes duplicate vertex sets from global degeneracyQueue
+void removeDuplicateDegenracies()
+{
+
+}
 
 
-
+// finds all local degeneracies in DT and adds them to a global queue
 void addLocalDegeneraciesToQueue(queue<DegenerateVertexSetCandidate> degeneracyQueue)
 {
 	
-	for (delaunay::Finite_cell_iterator cellIter = DT.finite_cell_begin(); cellIter != DT.finite_cell_end(); cellIter++)
+	DegenerateVertexSetCandidate degenerateSet;
+	
+	for (delaunay::Finite_cell_iterator cellIter = DT.finite_cells_begin(); cellIter != DT.finite_cells_end(); cellIter++)
 	{
-			while(cellIter->Neighbor.vertex[i] != cellIter.vertex[j])
-			{
-				cellIter->neighbor(i);
-				for (each neighbor of cellIter)
-				{			
-					get vertex not common with cellIter, v
+		for (unsigned int n = 0; n < 4; n++)
+			degenerateSet.degenSetVertex[n] = cellIter->vertex(n);
+
+		for (unsigned int j = 0; j < 4; j++)
+			for (unsigned int k = 0; k < 4; k++)
+				{
+					if ((cellId->neighbor(j))->neighbor(k) == cellId)
+						degenerateSet.degenSetVertex[4] = (cellIter->neighbor)->vertex(k);		
 						
-					if (areCospherical(tetVertices, v))
-					{
-						DegenerateVertexSetCandidate dvs;
-						dvs.add(tetVertices);
-						dvs.add(v);					
-						degeneracyQueue.push_front(dvs);
-					}		
+					if (areCospherical(degenerateSet))
+						degeneracyQueue.push_front(degenerateSet);	
 				}
-			}
 	}
 
-	removeDuplicateDegeneracies(degeneracyQueue); 
+	removeDuplicateDegeneracies(); 
 }
 
 
@@ -174,7 +183,7 @@ void removeLocalDegeneracies()
 	cout << "\nStarting local degeneracy removal...";
 
 	// compute all local degeneracies in DT and add them to Q
-	queue<VertexSet> degeneracyQueue;
+	queue<DegenerateVertexSetCandidate> degeneracyQueue;
 	addLocalDegeneraciesToQueue(degeneracyQueue);
 
 	// repeat while Q != NULL	
@@ -196,10 +205,9 @@ void removeLocalDegeneracies()
 
 	cout << "Local degeneracy removal completed";
 }
-	
+
 
 /*
-
 // recovers the constraint faces
 void recoverConstraintFaces()
 {
