@@ -1,6 +1,7 @@
 /*
 #include <string.h>
 #include <iostream>
+#include <unordered_set>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Point_3.h>
 #include <CGAL/Delaunay_triangulation_3.h>
@@ -151,17 +152,18 @@ bool areCospherical(DegenerateVertexSetCandidate degenSet)
 		return false;
 }
 
-// removes duplicate vertex sets from global degeneracyQueue
-void removeDuplicateDegeneracies(queue<DegenerateVertexSetCandidae>degenQueue)
+// implements hash function for unorderd_set used to model degeneracy queue and missing face queue
+struct hashFunction
 {
-	// remove duplicates from the degeneracyQueue
-	// NOTE: For any vertex set (cellHandle1, cellHandle2){which resulted in this vertex set} can be used to remove duplicates...	
+	operator=()
+	{
+		hashValue = func(key.degenSetVertex);		
+	}
+};
 	
-}
-
 
 // finds all local degeneracies in DT and adds them to a global queue
-void addLocalDegeneraciesToQueue(queue<DegenerateVertexSetCandidate> degeneracyQueue)
+void addLocalDegeneraciesToQueue(unordered_set<DegenerateVertexSetCandidate> localDegeneracySet)
 {
 	
 	DegenerateVertexSetCandidate degenerateSet;
@@ -178,35 +180,64 @@ void addLocalDegeneraciesToQueue(queue<DegenerateVertexSetCandidate> degeneracyQ
 						degenerateSet.degenSetVertex[4] = (cellIter->neighbor)->vertex(k);		
 						
 					if (areCospherical(degenerateSet))
-						degeneracyQueue.push_front(degenerateSet);	
+					{
+						if (localDegeneracySet.find(degenerateSet) != localDegeneracySet.end()) // not included in the degeneracy queue yet
+							localDegeneracySet.insert(degenerateSet);	
+					}
 				}
 	}
 
-	removeDuplicateDegeneracies(degeneracyQueue); 
+
+}
+/*
+// perturbation should be such that it does not make PLC inconsistent
+bool isVertexPerturbable(Vertex)
+{
+	bool pertubable = false;
+
+		
+	
+	return perturbable;
 }
 
+bool isVertexSegmentSafePertubable()
+{
+	bool segmentSafePerturbable = false;
 
+	return segmentSafePerturbable;
+}
+
+bool isDegeneracyRemovable()
+{
+	bool removable = false;
+	
+	if (vertexIsPerturbable(vertex))
+		if (vertexIsSegmentSafePerturbable(vertex))
+			removable = true;
+
+	return removable;
+}
+*/
 
 // removes local degeneracies from Delaunay tetrahedralization
 void removeLocalDegeneracies()
 {
-	
 	cout << "\nStarting local degeneracy removal...";
 
 	// compute all local degeneracies in DT and add them to Q
-	queue<DegenerateVertexSetCandidate> degeneracyQueue;
-	addLocalDegeneraciesToQueue(degeneracyQueue);
+	unordered_set<DegenerateVertexSetCandidate, hashFunction> localDegeneracySet;
+	addLocalDegeneraciesToQueue(localDegeneracySet);
 
 	// repeat while Q != NULL	
 	while (degenercyQueue.size() != 0)
-		for (queue<>::iterator qIter = degeneracyQueue.begin(); qIter != degeneracyQueue.end(); qIter++)
+		for (unordered_set<localDegeneracySet, hashFunction>::iterator qIter = localDegeneracySet.begin(); qIter != localDegeneracySet.end(); qIter++)
 			{
 				if (isDegeneracyRemovable(qIter))
-					perturbRemove(qIter, degeneracyQueue); 
+					perturbRemove(qIter, localDegeneracySet); 
 				else
 				{
 					Vertex vb;	
-					computeBreakPoint(vb, qIter, degeneracyQueue);
+					computeBreakPoint(vb, qIter, localDegeneracySet);
 					if (isEncroachingPLC(vb))
 						boundaryProtection(vb);
 					else
