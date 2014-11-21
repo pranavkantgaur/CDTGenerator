@@ -15,6 +15,8 @@ using namespace CGAL;
 typedef Exact_predicates_inexact_constructions_kernel K;
 typedef Point_3<K> Point;
 typedef Delaunay_triangulation_3<K> Delaunay;
+typedef Delaunay::Vertex_handle Vertex_handle;
+
 
 // PLC:
 map <unsigned, Point> plcVertices; // mapping between vertex coordinates and corresponding unique id
@@ -131,16 +133,68 @@ void computeInitialDelaunayTetrahedralization()
 }
 */
 
+/////////////////////////////////////////////// Local Degeneracy Removal ////////////////////////////////////////////////////////////
+
 class DegenerateVertexSetCandidate
 {
-	Vertex_handle degenSetVertex[5];	
+	Vertex_handle degenSetVertex[5]; // 5 vertices constitute a degeneracy	
+	
+	bool operator==(const DegenerateVertexSetCandidate &anotherSet)
+	{
+		bool matched[5];			
+
+		for (unsigned int i = 0; i < 5; i++)
+		{	
+			matched[i] = false;
+
+			for (unsigned int n = 0; n < 5; n++)
+				{
+					if (another.degenSetVertex[i] == degenSetVertex[n])
+					{
+						matched[i] = true;
+						break;
+					}			
+				}
+		}
+
+		unsigned int m;
+		for (m = 0; m < 5; m++)
+		{
+			if (matched[m] == true)
+				continue;
+			else
+				break;			
+		}
+
+		if (m == 5)
+			return true; // duplicate(both key and hash value match)
+		else 
+			return false; // unique element(only hash values matches)
+
+	}
+
+};
+
+// implements hash function for unorderd_set used to model degeneracy queue and missing face queue
+template <>
+struct hash<DegenerateVertexSetCandidate>
+{
+	size_t operator()(const DegenerateVertexSetCandidate &key) const
+	{
+		size_t hashValue;
+		for (unsigned i = 0; i < 5; i++)
+			hashValue ^= hash<Vertex_handle>(key.degenVertSet[i]); 
+
+		return (hashValue);
+	}
 };
 
 
+
+	
 // returns true if  given vertices are co-spherical
 bool areCospherical(DegenerateVertexSetCandidate degenSet)
-{
-	
+{	
 	Point_3 p[5];
 	
 	for (unsigned int i = 0; i < 5; i++)	
@@ -151,16 +205,6 @@ bool areCospherical(DegenerateVertexSetCandidate degenSet)
 	else
 		return false;
 }
-
-// implements hash function for unorderd_set used to model degeneracy queue and missing face queue
-struct hashFunction
-{
-	operator=()
-	{
-		hashValue = func(key.degenSetVertex);		
-	}
-};
-	
 
 // finds all local degeneracies in DT and adds them to a global queue
 void addLocalDegeneraciesToQueue(unordered_set<DegenerateVertexSetCandidate> localDegeneracySet)
@@ -181,14 +225,14 @@ void addLocalDegeneraciesToQueue(unordered_set<DegenerateVertexSetCandidate> loc
 						
 					if (areCospherical(degenerateSet))
 					{
-						if (localDegeneracySet.find(degenerateSet) != localDegeneracySet.end()) // not included in the degeneracy queue yet
+						if (localDegeneracySet.find(degenerateSet) != localDegeneracySet.end())
 							localDegeneracySet.insert(degenerateSet);	
 					}
 				}
 	}
-
-
 }
+
+
 /*
 // perturbation should be such that it does not make PLC inconsistent
 bool isVertexPerturbable(Vertex)
@@ -229,7 +273,7 @@ void removeLocalDegeneracies()
 	addLocalDegeneraciesToQueue(localDegeneracySet);
 
 	// repeat while Q != NULL	
-	while (degenercyQueue.size() != 0)
+	while (localDegenercySet.size() != 0)
 		for (unordered_set<localDegeneracySet, hashFunction>::iterator qIter = localDegeneracySet.begin(); qIter != localDegeneracySet.end(); qIter++)
 			{
 				if (isDegeneracyRemovable(qIter))
@@ -248,6 +292,7 @@ void removeLocalDegeneracies()
 	cout << "Local degeneracy removal completed";
 }
 
+///////////////////////////////////////////////////// Local Degeneracy Removal //////////////////////////////////////////////////////
 
 /*
 // recovers the constraint faces
