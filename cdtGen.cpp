@@ -135,6 +135,7 @@ void computeInitialDelaunayTetrahedralization()
 
 /////////////////////////////////////////////// Local Degeneracy Removal ////////////////////////////////////////////////////////////
 
+/*
 class DegenerateVertexSetCandidate
 {
 	Vertex_handle degenSetVertex[5]; // 5 vertices constitute a degeneracy	
@@ -190,7 +191,7 @@ struct hash<DegenerateVertexSetCandidate>
 };
 
 
-
+*/
 	
 // returns true if  given vertices are co-spherical
 bool areCospherical(DegenerateVertexSetCandidate degenSet)
@@ -239,7 +240,6 @@ bool isVertexPerturbable(Vertex)
 {
 	bool pertubable = false;
 
-		
 	
 	return perturbable;
 }
