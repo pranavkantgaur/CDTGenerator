@@ -191,7 +191,7 @@ struct hash<DegenerateVertexSetCandidate>
 };
 
 
-*/
+
 	
 // returns true if  given vertices are co-spherical
 bool areCospherical(DegenerateVertexSetCandidate degenSet)
@@ -209,37 +209,45 @@ bool areCospherical(DegenerateVertexSetCandidate degenSet)
 
 // finds all local degeneracies in DT and adds them to a global queue
 void addLocalDegeneraciesToQueue(unordered_set<DegenerateVertexSetCandidate> localDegeneracySet)
-{
-	
-	DegenerateVertexSetCandidate degenerateSet;
+{	
+	DegenerateVertexSetCandidate degenerateSetCandidate;
 	
 	for (delaunay::Finite_cell_iterator cellIter = DT.finite_cells_begin(); cellIter != DT.finite_cells_end(); cellIter++)
 	{
 		for (unsigned int n = 0; n < 4; n++)
-			degenerateSet.degenSetVertex[n] = cellIter->vertex(n);
+			degenerateSetCandidate.degenSetVertex[n] = cellIter->vertex(n);
 
 		for (unsigned int j = 0; j < 4; j++)
 			for (unsigned int k = 0; k < 4; k++)
 				{
 					if ((cellId->neighbor(j))->neighbor(k) == cellId)
-						degenerateSet.degenSetVertex[4] = (cellIter->neighbor)->vertex(k);		
+						degenerateSetCandidate.degenSetVertex[4] = (cellIter->neighbor)->vertex(k);		
 						
-					if (areCospherical(degenerateSet))
+					if (areCospherical(degenerateSetCandidate))
 					{
-						if (localDegeneracySet.find(degenerateSet) != localDegeneracySet.end())
-							localDegeneracySet.insert(degenerateSet);	
+						if (localDegeneracySet.find(degenerateSetCandidate) != localDegeneracySet.end())
+							localDegeneracySet.insert(degenerateSetCandidate);	
 					}
 				}
 	}
 }
 
+*/
 
-/*
+
+
 // perturbation should be such that it does not make PLC inconsistent
 bool isVertexPerturbable(Vertex)
 {
 	bool pertubable = false;
+	
+	// a vertex is perturbable iff its perturbation does not make PLC inconsitent
+	// use simulation of simplicity approach to artifically perturb the vertex(if it is perturbable) to remove the degeneracy
+	
 
+	
+		
+	
 	
 	return perturbable;
 }
@@ -261,7 +269,7 @@ bool isDegeneracyRemovable()
 
 	return removable;
 }
-*/
+
 
 // removes local degeneracies from Delaunay tetrahedralization
 void removeLocalDegeneracies()
@@ -292,14 +300,61 @@ void removeLocalDegeneracies()
 	cout << "Local degeneracy removal completed";
 }
 
-///////////////////////////////////////////////////// Local Degeneracy Removal //////////////////////////////////////////////////////
+/////////////////////////////////////////////////////Local Degeneracy Removal Ends//////////////////////////////////////////////////////
 
-/*
-// recovers the constraint faces
-void recoverConstraintFaces()
+
+// IMPLEMENT UNORDERED_SET OF missingSubfacesQueue ????
+
+void formMissingSubfaceQueue(unordered_set<> missingSubfacesQueue)
 {
 	
 }
+
+void formCavity(lcc c1, lcc c2, lcc aMissingSubface)
+{
+
+}
+
+// recovers the constraint faces
+void recoverConstraintFaces()
+{
+
+	// input X2, D2
+	// output CDT of X2
+	
+	// form a queue of missing subfaces
+	// while (Q!=0)
+	// 	remove an uncovered subface f from Q
+	// 	for 2 cavities C1, C2 by formcavity procedure
+	// 	for each cavity Ci:
+	// 	call cavity retetrahedralization subroutine
+	 			
+        unordered_set<face, key> missingSubfacesQueue;
+	formMissingSubfaceQueue(missingSubfacesQueue);
+	lcc aMissingSubface;
+	lcc C[2]; // seems like we need to implement it using LCC
+
+
+	while (missingSubfacesQueue.size() != 0)
+	{
+		 aMissingSubface = missingSubfacesQueue.pop();
+
+		 formCavity(C[0], C[1], aMissingSubface);
+		
+		 for (unsigned int cavityId = 0; cavityId < 2; cavityId++)
+		 	cavityReterahedralization(C[cavityId], cdtMesh); // 'cdtMesh' points to the final output mesh 
+			 
+	}
+
+	return;	
+}		 
+	
+
+
+
+	
+
+
 
 // main procedure
 int main()
@@ -310,4 +365,4 @@ int main()
 	recoverConstraintFaces();
         return 0;
 }
-*/
+
