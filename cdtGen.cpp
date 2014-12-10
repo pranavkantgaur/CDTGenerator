@@ -318,7 +318,14 @@ unsigned int determineSegmentType(Segment *missingSegment)
 		return 2;
 }
 
+unsigned int findAcuteParent(unsigned int vertexId)
+{
+	if (isVertexAcute(vertexId))
+		return vertexId;
+	else
+			
 
+}
 
 void splitMissingSegment(Segment *missingSegment)
 {
@@ -368,9 +375,37 @@ void splitMissingSegment(Segment *missingSegment)
 	else if (segmentType == 2)
 	{
 		// locate which vertex is not acute
-		Vertex *acuteParent = findAcuteParent();
-		
-		Segment ApB; // TODO!!
+		// lets determine which vertex is acute, if any
+		// let vertex B be acute, then acute(B) = B, else acute(B) = parentVertex 
+		unsigned int acuteParentId; 
+		Segment ApB; 
+		unsigned int vbLength;
+
+	
+		if (isVertexAcute(missingSegment->vertexIds[0]))
+			acuteParentId = missingSegment->vertexIds[0];
+	        else if (isVertexAcute(missingSegment->vertexIds[1]))
+	       	       acuteParentId = missingSegment->vertexIds[1];
+       		else
+	        {
+	        	if (A.acuteParentId != NULL)
+		       	{
+				acuteParentId = A.acuteParentId;
+				ApB.vertexIds[1] = missingSegment->vertexIds[1]; // ie. vertex B taken as the other endpoint
+		 		vbLength = computerSegmentLength(v, B);      	       	
+		       	} 	       		
+
+		       	else if (B.acuteParentId != NULL)
+			{
+				acuteParentId = B.acuteParentId;		
+				ApB.vertexIds[1] = missingSegment->vertexIds[0]; // vertex A taken as the other endpoint
+       	        		vbLength = computerSegmentLength(v, A);
+			}
+		}
+
+		ApB.vertexIds[0] = acuteParentId;
+	
+		Vertex *acuteParent = getVertexbyId(acuteParentId);
 
 		unsigned int ApRefPointLength = computerSegmentLength(acuteParent, refPoint);
 
@@ -379,12 +414,11 @@ void splitMissingSegment(Segment *missingSegment)
 
 		v = CGAL::intersection(ApB, s); 
 		
-		unsigned int vbLength = computerSegmentLength(v, B);
 		unsigned int vrefpointLength = computerSegmentLength(v, refPoint);
 
 		if (vbLength < vrefpointLength) // v was rejected
 		{
-			s.c = acuteParent;
+			s.center = acuteParent;
 			unsigned int avLength = computerSegmentLength(A, v);
 			if (vrefpointLength < 0.5 * avLength)
 				{
@@ -646,17 +680,6 @@ void recoverConstraintFaces()
 
 //////////////////////////////////////////////////// Facet recovery ends /////////////////////////////////////////////////////////////
 	
-
-void recoverConstraintSegments()
-{
-	// Input : DT, plcVertices, plcFaces
-	// Output: DT with segments recovered in form of strongly Delaunay subsegments, PLC is also modified
-	
-	
-
-
-	return; 
-}
 
 // main procedure
 int main()
