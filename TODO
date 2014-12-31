@@ -9,3 +9,5 @@
 #5. Add definition of hash function for storing local degeneracies and missing faces.
 
 #6. Replace naive code for finding all possible pairs of segments.
+
+#7. Add Point_3 of type float in CGAL.
