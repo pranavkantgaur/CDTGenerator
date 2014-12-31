@@ -382,10 +382,10 @@ void splitMissingSegment(Segment *missingSegment)
 		unsigned int vbLength;
 
 	
-		if (isVertexAcute(missingSegment->vertexIds[0]))
+		if (isVertexAcute(A))
 			acuteParentId = missingSegment->vertexIds[0];
-	        else if (isVertexAcute(missingSegment->vertexIds[1]))
-	       	       acuteParentId = missingSegment->vertexIds[1];
+	        else if (isVertexAcute(B))
+	       		acuteParentId = missingSegment->vertexIds[1];
        		else
 	        {
 	        	if (A.acuteParentId != NULL)
@@ -461,7 +461,7 @@ void recoverConstraintSegments()
 }
 
 
-
+/*
 
 /////////////////////////////////////////////// Local Degeneracy Removal begin ///////////////////////////////////////////////////
 
@@ -676,7 +676,7 @@ void recoverConstraintFaces()
 	return;	
 }		 
 	
-
+*/
 
 //////////////////////////////////////////////////// Facet recovery ends /////////////////////////////////////////////////////////////
 	
@@ -687,8 +687,10 @@ int main()
 	readPLCInput();
 	computeDelaunayTetrahedralization();
 	recoverConstraintSegments();
-	removeLocalDegeneracies();
+/*
+ 	removeLocalDegeneracies();
 	recoverConstraintFaces();
-        return 0;
+*/
+	return 0;
 }
 
