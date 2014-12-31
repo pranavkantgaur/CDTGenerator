@@ -7,7 +7,7 @@
 #include "rply/rply.h"
 
 #define Pi 22.0/7.0
-#define INVALID_VALUE -1.0f // distances cannot be negative
+#define INVALID_VALUE -1.0f // used in context of distances 
 using namespace std;
 using namespace CGAL;
 
@@ -17,40 +17,42 @@ typedef Point_3<K> Point;
 typedef Delaunay_triangulation_3<K> Delaunay;
 typedef Delaunay::Vertex_handle Vertex_handle;
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// PLC:
-map <unsigned, Point> plcVertices; // mapping between vertex coordinates and corresponding unique id
+/*
+ * Input  : plcVertices, plcSegments, plcFaces
+ * Output : cdtTeterahedralMesh (collection of tetrahedrons), cdtVertices(=plcVertices)
+ */
 
 class Segment
 {
-	unsigned int vertexIds[2]; // simply stores the endpoint ids
+	public:
+		unsigned int vertexIds[2]; // index into the plcVertices vector
 };
 
-list<Segment> plcSegments;
-
-class TriangleFace
+class Triangle
 {
 	public:
 		unsigned int vertexIds[3];
 };
 
-list <TriangleFace> plcFaces; // contains ids of vertices/points making the triangle
-
-class TetrahedronCell
+class Tetrahedron
 {
 	public:
 		unsigned int vertexIds[4];
 };
 
-map <unsigned, Point> cdtVertices;
-list <TetrahedronCell> cdtTets; // contains ids of vertices making tetrahedron
+
+vector<Point> plcVertices;
+vector<Segment> plcSegments;
+vector<Triangle> plcFaces;
+
+vector <Tetrahedron> cdtTets; // contains ids of vertices making tetrahedron
 
 Delaunay DT;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-static unsigned tempPoint[3];
+static unsigned int tempPoint[3];
 unsigned int dimensionId = 0;
 static unsigned pointId = 0;
 
@@ -64,7 +66,7 @@ static int vertex_cb(p_ply_argument argument)
 	// insert the vertex into plcVertex
 	if (eol)
 	{
-		plcVertices[pointId++] = Point(tempPoint[0],tempPoint[1],tempPoint[2]);
+		plcVertices.insert(Point(tempPoint[0],tempPoint[1],tempPoint[2]));
 		dimensionId = 0;
 
 	}
@@ -73,7 +75,8 @@ static int vertex_cb(p_ply_argument argument)
 static int face_cb(p_ply_argument argument) 
 {
 	long length, value_index;
-
+        static TriangleFace tempFace;
+	
 	ply_get_argument_property(argument, NULL, &length, &value_index);
 
         switch (value_index) 
@@ -159,7 +162,12 @@ void computeDelaunayTetrahedralization()
 
 	cout << "\nInitial Delaunay tetrahedralization computed!!";
 }
-///////////////////////////////////////////// Segment recovery(ensures that all constraining segments are strongly Delaunay)/////
+
+
+
+///////////////////////////////////////////// Segment recovery ///////////////////////////////////////////////////////////////////
+
+/*
 void formMissingSegmentsQueue(queue<Segment>missingSegmentQueue)
 {
 	// plcSegments contains the constraint segments
@@ -460,7 +468,7 @@ void recoverConstraintSegments()
 	return;
 }
 
-
+*/
 /*
 
 /////////////////////////////////////////////// Local Degeneracy Removal begin ///////////////////////////////////////////////////
@@ -686,9 +694,9 @@ int main()
 {
 	readPLCInput();
 	computeDelaunayTetrahedralization();
-	recoverConstraintSegments();
 /*
- 	removeLocalDegeneracies();
+	recoverConstraintSegments();
+	removeLocalDegeneracies();
 	recoverConstraintFaces();
 */
 	return 0;
