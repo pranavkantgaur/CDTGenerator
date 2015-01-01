@@ -1,6 +1,6 @@
 #include <string.h>
 #include <iostream>
-#include <unordered_set>
+//#include <unordered_set>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Point_3.h>
 #include <CGAL/Delaunay_triangulation_3.h>
@@ -13,8 +13,8 @@ using namespace CGAL;
 
 
 typedef Exact_predicates_inexact_constructions_kernel K;
-typedef Point_3<K> Point;
 typedef Delaunay_triangulation_3<K> Delaunay;
+typedef Delaunay::Point Point;
 typedef Delaunay::Vertex_handle Vertex_handle;
 
 /*
@@ -25,19 +25,22 @@ typedef Delaunay::Vertex_handle Vertex_handle;
 class Segment
 {
 	public:
-		unsigned int vertexIds[2]; // index into the plcVertices vector
+		unsigned int pointIds[2]; // index into the plcVertices vector
+		
 };
 
 class Triangle
 {
 	public:
-		unsigned int vertexIds[3];
+		unsigned int pointIds[3];
+		
 };
 
 class Tetrahedron
 {
 	public:
-		unsigned int vertexIds[4];
+		unsigned int pointIds[4];
+		
 };
 
 
@@ -52,7 +55,8 @@ Delaunay DT;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-static unsigned int tempPoint[3];
+static float tempPoint[3];
+
 unsigned int dimensionId = 0;
 static unsigned pointId = 0;
 
@@ -66,16 +70,19 @@ static int vertex_cb(p_ply_argument argument)
 	// insert the vertex into plcVertex
 	if (eol)
 	{
-		plcVertices.insert(Point(tempPoint[0],tempPoint[1],tempPoint[2]));
+		
+		plcVertices.push_back(Point(tempPoint[0],tempPoint[1],tempPoint[2]));
 		dimensionId = 0;
 
 	}
+	
+	return 1;
 }
 
 static int face_cb(p_ply_argument argument) 
 {
 	long length, value_index;
-        static TriangleFace tempFace;
+        static Triangle tempFace;
 	
 	ply_get_argument_property(argument, NULL, &length, &value_index);
 
@@ -83,37 +90,37 @@ static int face_cb(p_ply_argument argument)
 	{
         	case 0:
 	        case 1: 
-        		tempFace.vertexIds[pointId++] = ply_get_argument_value(argument);
+        		tempFace.pointIds[pointId++] = ply_get_argument_value(argument);
+			
 	                break;
         	case 2:	
-			tempFace.vertexIds[pointId] = ply_get_argument_value(argument);
+			tempFace.pointIds[pointId] = ply_get_argument_value(argument);
 			pointId = 0;				
-			plcFaces.push(tempFace);
+			plcFaces.push_back(tempFace);
 	                
 			// extract corresponding segments as well
 			Segment tempSegments[3]; // each face will give 3 segments
 			
-			tempSegments[0].vertexIds[0] = tempFace.pointIds[0];
-			tempSegments[0].vertexIds[1] = tempFace.pointIds[1];
+			tempSegments[0].pointIds[0] = tempFace.pointIds[0];
+			tempSegments[0].pointIds[1] = tempFace.pointIds[1];
 			
-			tempSegments[1].vertexIds[0] = tempFace.pointIds[1];
-			tempSegments[1].vertexIds[1] = tempFace.pointIds[2];
+			tempSegments[1].pointIds[0] = tempFace.pointIds[1];
+			tempSegments[1].pointIds[1] = tempFace.pointIds[2];
+		
+			tempSegments[2].pointIds[0] = tempFace.pointIds[2];
+			tempSegments[2].pointIds[1] = tempFace.pointIds[3];
 
-			
-			tempSegments[2].vertexIds[0] = tempFace.pointIds[2]
-			tempSegments[2].vertexIds[1] = tempFace.pointIds[3];
 
-
-			plcSegments.push(tempSegments[0]);
-			plcSegments.push(tempSegments[1]);		
-			plcSegments.push(tempSegments[2]);
+			plcSegments.push_back(tempSegments[0]);
+			plcSegments.push_back(tempSegments[1]);		
+			plcSegments.push_back(tempSegments[2]);
 		
 			break;
         	default: 
-                	cout << "Invalid number of points in a face specified :(";
-			break;
+                	break;
         } 
     
+	return 1;
 }
 
 // reads input PLC
@@ -130,12 +137,6 @@ void readPLCInput()
 	if (!inputPLY) exit(0);
 
         if (!ply_read_header(inputPLY)) exit(0);
-	
-	if (!ply_read(inputPLY))
-	{
-		cout << "Cannot read the PLY file :(";
-		exit(0);
-	}
 
 	// Initialize plcVertex and plcFaces
   	ply_set_read_cb(inputPLY, "vertex", "x", vertex_cb, NULL, 0);	
@@ -143,8 +144,20 @@ void readPLCInput()
 	ply_set_read_cb(inputPLY, "vertex", "z", vertex_cb, NULL, 1);
 
 	ply_set_read_cb(inputPLY, "face", "vertex_indices", face_cb, NULL, 0); 
+	if (!ply_read(inputPLY))
+	{
+		cout << "Cannot read the PLY file :(";
+		exit(0);
+	}
+
 
 	ply_close(inputPLY);
+
+	cout << "Number of vertices:" << plcVertices.size() << "\n";
+	cout << "Number of faces:" << plcFaces.size() << "\n";
+	cout << "Number of segments:" << plcSegments.size();
+		
+		
 	
 }
 //////////////////////////////////////////////////// Done with reading input PLC ////////////////////////////////////////////////
@@ -152,15 +165,21 @@ void readPLCInput()
 void computeDelaunayTetrahedralization()
 {	
 	
-	list <Point> tempPointList;
+/*	vector<Point> tempPointList;
 	unsigned int i = 0;
 
 	for (map<unsigned, Point>::iterator pit = plcVertices.begin(); pit != plcVertices.end(); pit++, i++)
-		tempPointList.push(plcVertices.find(i)->second);
+		tempPointList.push_back(plcVertices.find(i)->second);
 
     	DT.insert(tempPointList.begin(), tempPointList.end());
+*/
+	DT.insert(plcVertices.begin(), plcVertices.end());
 
-	cout << "\nInitial Delaunay tetrahedralization computed!!";
+	cout << "\nDelaunay tetrahedralization computed!!\n";
+
+	cout << "Number of vertices in Delaunay tetrahedralization" << DT.number_of_vertices() << "\n";
+	cout << "Number of tetrahedrons in Delaunay tetrahedralization" << DT.number_of_cells() << "\n";
+
 }
 
 
@@ -213,7 +232,7 @@ void computeReferencePoint(Vertex *refPoint, Segment *missingSegment)
 	float circumradiusMap[plcVertices.size() - 2]; // stores the circumradius value for all vertices for the triangle formed by missingsegment and vertex.
 	for (unsigned int n = 0; n < plcVertices.size(); n++)
 	{
-		if (n != missingSegment->verexIds[0] && n != missingSegment->vertexIds[1])
+		if (n != missingSegment->verexIds[0] && n != missingSegment->pointIds[1])
 			if (encroachingCandidateDistance <= smallestCircumsphere.radius) // encroaching vertex
 				circumradiusMap[n] = computeCircumradius(A, B, plcVertices[n]);
 			else // not encroaching
@@ -248,11 +267,11 @@ float dotProduct (Segment segment1, Segment segment2)
 	Vertex segment1Vertex[2];
 	Vertex segment2Vertex[2];
 
-	segment1Vertex[0] = getVertexbyId(segment1.vertexIds[0]);
-	segment1Vertex[1] = getVertexbyId(segment1.vertexIds[1]);
+	segment1Vertex[0] = getVertexbyId(segment1.pointIds[0]);
+	segment1Vertex[1] = getVertexbyId(segment1.pointIds[1]);
 
-	segment2Vertex[0] = getVertexbyId(segment2.vertexIds[0]);
-	segment2Vertex[1] = getVertexbyId(segment2.vertexIds[1]);
+	segment2Vertex[0] = getVertexbyId(segment2.pointIds[0]);
+	segment2Vertex[1] = getVertexbyId(segment2.pointIds[1]);
 
 	Vector vector1 = (segment1Vertex[0].x - segment1Vertex[1].x, segment1Vertex[0].y - segment1Vertex[1].y, segment1Vertex[0].z - segment1Vertex[1].z);
 	Vector vector2 = (segment2Vertex[0].x - segment2Vertex[1].x, segment2Vertex[0].y - segment2Vertex[1].y, segment2Vertex[0].z - segment2Vertex[1].z);
@@ -268,8 +287,8 @@ float dotProduct (Segment segment1, Segment segment2)
 float vectorMagnitude(Segment inputSegment)
 {
 	Vertex segmentVertices[2];
-	segmentVertices[0] = getVertexbyId(inputSegment.vertexIds[0]);
-	segmentVertices[1] = getVertexbyId(inputSegment.vertexIds[1]);
+	segmentVertices[0] = getVertexbyId(inputSegment.pointIds[0]);
+	segmentVertices[1] = getVertexbyId(inputSegment.pointIds[1]);
 
 	Vector vector = (segmentVertices[0].x - segmentVertices[1].x, segmentVertices[0].y - segmentVertices[1].y, segmentVertices[0].z - segmentVertices[1].z);
 
@@ -291,7 +310,7 @@ bool isVertexAcute(Vertex A)
 
 	for (unsigned int n = 0; n < plcSegments.size(); n++) 
 	{
-		if (plcSegments[n].vertexIds[0] == A.id || plcSegments[n].vertexIds[1] == A.id)
+		if (plcSegments[n].pointIds[0] == A.id || plcSegments[n].pointIds[1] == A.id)
 			incidentOnA.push(plcSegments[n]);
 	}
 
@@ -310,8 +329,8 @@ unsigned int determineSegmentType(Segment *missingSegment)
 
 	// if both endpoints of the segment are acute, type 1
 	// if only one endpoint acute, type 2	
-	Vertex A = getVertexbyId(missingSegment->vertexIds[0]);
-	Vertex B = getVertexbyId(missingSegment->vertexIds[1]);
+	Vertex A = getVertexbyId(missingSegment->pointIds[0]);
+	Vertex B = getVertexbyId(missingSegment->pointIds[1]);
 
 	bool vertexAIsAcute = isVertexAcute(A);
 	bool vertexBIsAcute = isVertexAcute(B);
@@ -347,8 +366,8 @@ void splitMissingSegment(Segment *missingSegment)
 	computeReferencePoint(refPoint);
 	segmentType = determineSegmentType(missingSegment);
 
-	Vertex A = getVertexbyId(missingSegment->vertexIds[0]);
-	Vertex B = getVertexbyId(missingSegment->vertexIds[1]);
+	Vertex A = getVertexbyId(missingSegment->pointIds[0]);
+	Vertex B = getVertexbyId(missingSegment->pointIds[1]);
 	
 	float AP, PB, AB;
 
@@ -391,27 +410,27 @@ void splitMissingSegment(Segment *missingSegment)
 
 	
 		if (isVertexAcute(A))
-			acuteParentId = missingSegment->vertexIds[0];
+			acuteParentId = missingSegment->pointIds[0];
 	        else if (isVertexAcute(B))
-	       		acuteParentId = missingSegment->vertexIds[1];
+	       		acuteParentId = missingSegment->pointIds[1];
        		else
 	        {
 	        	if (A.acuteParentId != NULL)
 		       	{
 				acuteParentId = A.acuteParentId;
-				ApB.vertexIds[1] = missingSegment->vertexIds[1]; // ie. vertex B taken as the other endpoint
+				ApB.pointIds[1] = missingSegment->pointIds[1]; // ie. vertex B taken as the other endpoint
 		 		vbLength = computerSegmentLength(v, B);      	       	
 		       	} 	       		
 
 		       	else if (B.acuteParentId != NULL)
 			{
 				acuteParentId = B.acuteParentId;		
-				ApB.vertexIds[1] = missingSegment->vertexIds[0]; // vertex A taken as the other endpoint
+				ApB.pointIds[1] = missingSegment->pointIds[0]; // vertex A taken as the other endpoint
        	        		vbLength = computerSegmentLength(v, A);
 			}
 		}
 
-		ApB.vertexIds[0] = acuteParentId;
+		ApB.pointIds[0] = acuteParentId;
 	
 		Vertex *acuteParent = getVertexbyId(acuteParentId);
 
