@@ -186,13 +186,11 @@ void computeDelaunayTetrahedralization()
 
 ///////////////////////////////////////////// Segment recovery ///////////////////////////////////////////////////////////////////
 
-/*
-void formMissingSegmentsQueue(queue<Segment>missingSegmentQueue)
-{
-	// plcSegments contains the constraint segments
-	// simply insert all segments from plcSegments to missingSegmentQueue
-	missingSegmentQueue = plcSegments;
 
+void formMissingSegmentsQueue(vector<Segment*> missingSegmentQueue)
+{
+	// collect pointers to all segments in plcSegments which are not in DT	
+	// while inserting points in DT set a id for each point
 	return;
 }
 
@@ -281,7 +279,6 @@ float dotProduct (Segment segment1, Segment segment2)
 
 	return v1Dotv2;
 
-	
 }
 
 float vectorMagnitude(Segment inputSegment)
@@ -474,9 +471,12 @@ void recoverConstraintSegments()
 	// I/P: plcVertex1, plcFaces1, DT1
 	// O/P: plcVertex2, plcFaces2, DT2
 	
-	formMissingSegmentsQueue(missingSegmentQueue);
- 	Segment *missingSegment;
+	vector<Segment*> missingSegmentQueue; // contains references to the missing constraint segments
+	Segment missingSegment;
 
+
+	formMissingSegmentsQueue(missingSegmentQueue);
+ 
 	while (missingSegmentQueue.size() != NULL)
 	{
 		missingSegment = missingSegmentQueue.pop();
@@ -487,7 +487,7 @@ void recoverConstraintSegments()
 	return;
 }
 
-*/
+
 /*
 
 /////////////////////////////////////////////// Local Degeneracy Removal begin ///////////////////////////////////////////////////
@@ -713,8 +713,8 @@ int main()
 {
 	readPLCInput();
 	computeDelaunayTetrahedralization();
-/*
 	recoverConstraintSegments();
+/*	
 	removeLocalDegeneracies();
 	recoverConstraintFaces();
 */
