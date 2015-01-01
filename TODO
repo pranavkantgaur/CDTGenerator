@@ -11,3 +11,5 @@
 #6. Replace naive code for finding all possible pairs of segments.
 
 #7. Add Point_3 of type float in CGAL.
+
+#8. Function for writing output mesh back in PLY format.
