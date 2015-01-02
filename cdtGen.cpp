@@ -3,6 +3,7 @@
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Triangulation_vertex_base_with_info_3.h>
 #include <CGAL/Delaunay_triangulation_3.h>
+#include <CGAL/Sphere_3.h>
 #include "rply/rply.h"
 
 #define Pi 22.0/7.0
@@ -16,7 +17,6 @@ typedef Triangulation_vertex_base_with_info_3<unsigned, K> Vb;
 typedef Triangulation_data_structure_3<Vb> Tds;
 typedef Delaunay_triangulation_3<K, Tds, Fast_location> Delaunay;
 typedef Delaunay::Point Point;
-//typedef Delaunay::Vertex_handle VertexHandle;
 
 /*
  * Input  : plcVertices, plcSegments, plcFaces
@@ -217,65 +217,70 @@ void formMissingSegmentsQueue(vector<Segment*> missingSegmentQueue)
 	return;
 }
 
-/*
-unsigned int computeCircumradius(Vertex A, Vertex B, Vertex encroachingCandidate)
+
+unsigned int computeCircumradius(Point &A, Point &B, Point &encroachingCandidate)
 {
-	// computing circumradius for a triangle:
+	// computing circumradius of a triangle:
 	
 	float a, b, c;
 
-	a = sqrt(pow((A.x - encroachingCandidate.x), 2)+ pow((A.y - encroachingCandidate.y), 2) + pow((A.z - encroachingCandidate.z), 2));
-	b = sqrt(pow((B.x - encroachingCandidate.x), 2)+ pow((B.y - encroachingCandidate.y), 2) + pow((B.z - encroachingCandidate.z), 2));
-	c = sqrt(pow((A.x - B.x), 2)+ pow((A.y - B.y), 2) + pow((A.z - B.z), 2));
+	a = sqrt(pow((A.x() - encroachingCandidate.x()), 2)+ pow((A.y() - encroachingCandidate.y()), 2) + pow((A.z() - encroachingCandidate.z()), 2));
+	b = sqrt(pow((B.x() - encroachingCandidate.x()), 2)+ pow((B.y() - encroachingCandidate.y()), 2) + pow((B.z() - encroachingCandidate.z()), 2));
+	c = sqrt(pow((A.x() - B.x()), 2)+ pow((A.y() - B.y()), 2) + pow((A.z() - B.z()), 2));
 
 	return circumradius = (a * b * c) / sqrt((a + b + c) * (b + c - a) * (c + a - b) * (a + b - c));
 }
 
-void computeReferencePoint(Vertex *refPoint, Segment *missingSegment)
+void computeReferencePoint(Point *refPoint, Segment *missingSegment)
 {
 	// compute a reference point p such that:
 	// p encroaches missingSegment	
 	// p has the largest circumradius of smallest circumsphere out of all encroaching vertices
 	
-	Vertex A, B;
-	getVertexbyId(missingSegment->vertexId[0], A);
-	getVertexbyId(missingSegment->vertexId[1], B);
+	Point &A, &B;
+	A = plcVertices[missingSegment->pointIds[0]];
+	B = plcVertices[missingSegment->pointIds[1]];
 
-	float missingSegmentLength = sqrt(pow((A.x - B.x), 2) + pow((A.y - B.y), 2) + pow((A.z - B.z), 2));
+	float missingSegmentLength = sqrt(pow((A.x() - B.x()), 2) + pow((A.y() - B.y()), 2) + pow((A.z() - B.z()), 2));
 	
-	Sphere smallestCircumsphere;
+	float sphereRadius = (missingSegmentLength / 2.0);
+	Point sphereCenter = ((A.x() + B.x()) / 2,  (A.y() + B.y()) / 2, (A.z() + B.z()) / 2);
 
-	smallestCircumsphere.center.x = (A.x + B.x) / 2;
-	smallestCircumsphere.center.y = (A.y + B.y) / 2;
-	smallestCircumsphere.center.z = (A.z + B.z) / 2;
-	smallestCircumsphere.radius = (missingSegmentLength / 2.0);
+	Sphere smallestCircumsphere(sphereCenter, pow(sphereRadius, 2));
+
 
 	float encroachingCandidateDistance;
-	float circumradiusMap[plcVertices.size() - 2]; // stores the circumradius value for all vertices for the triangle formed by missingsegment and vertex.
+	vector<float> circumradiusMap; // value is computed only for those points which are encroaching
+	
 	for (unsigned int n = 0; n < plcVertices.size(); n++)
 	{
-		if (n != missingSegment->verexIds[0] && n != missingSegment->pointIds[1])
-			if (encroachingCandidateDistance <= smallestCircumsphere.radius) // encroaching vertex
+		if (n != missingSegment->pointIds[0] && n != missingSegment->pointIds[1])
+		{
+			
+			encroachingCandidateDistance = sqrt(pow(sphereCenter.x() - plcVertices[n].x(), 2) + pow(sphereCenter.y() - plcVertices[n].y(), 2) + pow(sphereCenter.z() - plcVertices[n].z(), 2));
+			if (encroachingCandidateDistance <= sqrt(smallestCircumsphere.squared_radius()) / 2.0) // encroaching vertex
 				circumradiusMap[n] = computeCircumradius(A, B, plcVertices[n]);
 			else // not encroaching
 				circumradiusMap[i] = INVALID_VALUE;
+		
+		}
 		else
 			continue; // skip
 	}
 
 	// select the one with maximum circumradius.
 	float maxCircumradius = INVALID_VALUE;
-
-
+	
 	for (unsigned int i = 0; i < plcVertices.size(); i++)
-		if (maxCircumradius < circumradius[i])
-		{
-			maxCircumradius = circumradius[i];
-			refPoint = &plcVertices[i]; // at the end of iteration we will have reference point pointed to be refPoint
-		}	
+		if (circumradiusMap[i] != INVALID_VALUE)
+			if (maxCircumradius < circumradiusMap[i])
+			{
+				maxCircumradius = circumradiusMap[i];
+				refPoint = &plcVertices[i];
+			}	
 	return;
 }
-
+/*
 // returns vertex handle corresponding vertexId
 Vertex& getVertexbyId(unsigned int vertexId)
 {
@@ -374,17 +379,17 @@ unsigned int findAcuteParent(unsigned int vertexId)
 			
 
 }
-
+*/
 void splitMissingSegment(Segment *missingSegment)
 {
 
 	// Apply rules to split the segments into strongly Delaunay subsegments
-	Vertex vb, refPoint;
+	Point vb, refPoint;
 	Sphere s;
 
 	unsigned int segmentType;
 	
-	computeReferencePoint(refPoint);
+	computeReferencePoint(&refPoint, missingSegment);
 	segmentType = determineSegmentType(missingSegment);
 
 	Vertex A = getVertexbyId(missingSegment->pointIds[0]);
@@ -488,7 +493,7 @@ void splitMissingSegment(Segment *missingSegment)
 
 	return;
 }
-*/
+
 
 void recoverConstraintSegments()
 {
@@ -496,18 +501,18 @@ void recoverConstraintSegments()
 	// O/P: plcVertex2, plcFaces2, DT2
 	
 	vector<Segment*> missingSegmentQueue; // contains references to the missing constraint segments
-	Segment missingSegment;
+	Segment *missingSegment;
 
 
 	formMissingSegmentsQueue(missingSegmentQueue);
  
-/*	while (missingSegmentQueue.size() != NULL)
+	while (missingSegmentQueue.size() != 0)
 	{
-		missingSegment = missingSegmentQueue.pop();
+		missingSegment = missingSegmentQueue.pop_back();
 		splitMissingSegment(missingSegment);
-		updatePLCDT();
+		updatePLCAndDT();
 	}
-*/
+
 	return;
 }
 
