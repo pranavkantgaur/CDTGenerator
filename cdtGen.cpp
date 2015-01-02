@@ -1,8 +1,7 @@
-#include <string.h>
 #include <iostream>
-//#include <unordered_set>
+#include <vector>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Point_3.h>
+#include <CGAL/Triangulation_vertex_base_with_info_3.h>
 #include <CGAL/Delaunay_triangulation_3.h>
 #include "rply/rply.h"
 
@@ -13,9 +12,11 @@ using namespace CGAL;
 
 
 typedef Exact_predicates_inexact_constructions_kernel K;
-typedef Delaunay_triangulation_3<K> Delaunay;
+typedef Triangulation_vertex_base_with_info_3<unsigned, K> Vb;
+typedef Triangulation_data_structure_3<Vb> Tds;
+typedef Delaunay_triangulation_3<K, Tds, Fast_location> Delaunay;
 typedef Delaunay::Point Point;
-typedef Delaunay::Vertex_handle Vertex_handle;
+//typedef Delaunay::Vertex_handle VertexHandle;
 
 /*
  * Input  : plcVertices, plcSegments, plcFaces
@@ -44,7 +45,7 @@ class Tetrahedron
 };
 
 
-vector<Point> plcVertices;
+vector<pair<Point, unsigned int> > plcVertices;
 vector<Segment> plcSegments;
 vector<Triangle> plcFaces;
 
@@ -56,7 +57,7 @@ Delaunay DT;
 
 
 static float tempPoint[3];
-
+static int pointCount = 0;
 unsigned int dimensionId = 0;
 static unsigned pointId = 0;
 
@@ -70,10 +71,8 @@ static int vertex_cb(p_ply_argument argument)
 	// insert the vertex into plcVertex
 	if (eol)
 	{
-		
-		plcVertices.push_back(Point(tempPoint[0],tempPoint[1],tempPoint[2]));
+		plcVertices.push_back(make_pair(Point(tempPoint[0],tempPoint[1],tempPoint[2]), pointCount++));
 		dimensionId = 0;
-
 	}
 	
 	return 1;
@@ -156,29 +155,19 @@ void readPLCInput()
 	cout << "Number of vertices:" << plcVertices.size() << "\n";
 	cout << "Number of faces:" << plcFaces.size() << "\n";
 	cout << "Number of segments:" << plcSegments.size();
-		
-		
-	
 }
+
 //////////////////////////////////////////////////// Done with reading input PLC ////////////////////////////////////////////////
 // computes delaunay tetrahedralization
 void computeDelaunayTetrahedralization()
 {	
-	
-/*	vector<Point> tempPointList;
-	unsigned int i = 0;
-
-	for (map<unsigned, Point>::iterator pit = plcVertices.begin(); pit != plcVertices.end(); pit++, i++)
-		tempPointList.push_back(plcVertices.find(i)->second);
-
-    	DT.insert(tempPointList.begin(), tempPointList.end());
-*/
+	// Add vertex id with each vertex which will be used for relating these vertices with plcSegments, plcFaces 
 	DT.insert(plcVertices.begin(), plcVertices.end());
 
 	cout << "\nDelaunay tetrahedralization computed!!\n";
 
-	cout << "Number of vertices in Delaunay tetrahedralization" << DT.number_of_vertices() << "\n";
-	cout << "Number of tetrahedrons in Delaunay tetrahedralization" << DT.number_of_cells() << "\n";
+	cout << "Number of vertices in Delaunay tetrahedralization:" << DT.number_of_vertices() << "\n";
+	cout << "Number of tetrahedrons in Delaunay tetrahedralization:" << DT.number_of_cells() << "\n";
 
 }
 
@@ -191,9 +180,44 @@ void formMissingSegmentsQueue(vector<Segment*> missingSegmentQueue)
 {
 	// collect pointers to all segments in plcSegments which are not in DT	
 	// while inserting points in DT set a id for each point
+	bool  segmentFound ;
+
+	for (unsigned int m = 0; m < plcSegments.size(); m++)
+	{
+		segmentFound = false;
+
+		for (Delaunay::Finite_cells_iterator cit = DT.finite_cells_begin(); cit != DT.finite_cells_end(); cit++)
+		{
+			// since a tet is fully connected I only need to find if there is a tet containing both vertices			
+			for (unsigned int i = 0; i < 4; i++)
+			{
+				if ((cit->vertex(i))->info() == plcSegments[m].pointIds[0])
+					for (unsigned int j = 0; j != i && j < 4; j++)
+					{	if ((cit->vertex(j))->info() == plcSegments[m].pointIds[1])
+						{
+							segmentFound = true;
+							break;	// segment found!!
+						}
+					}
+				if (segmentFound)
+					break;
+			}
+		
+			if (segmentFound)
+				break;
+		}
+	
+		if (!segmentFound)
+			missingSegmentQueue.push_back(&(plcSegments[m]));
+	}
+
+	cout << "\nTotal number of missing constraint segments:" << missingSegmentQueue.size() << "\n";
+
+
 	return;
 }
 
+/*
 unsigned int computeCircumradius(Vertex A, Vertex B, Vertex encroachingCandidate)
 {
 	// computing circumradius for a triangle:
@@ -464,7 +488,7 @@ void splitMissingSegment(Segment *missingSegment)
 
 	return;
 }
-
+*/
 
 void recoverConstraintSegments()
 {
@@ -477,13 +501,13 @@ void recoverConstraintSegments()
 
 	formMissingSegmentsQueue(missingSegmentQueue);
  
-	while (missingSegmentQueue.size() != NULL)
+/*	while (missingSegmentQueue.size() != NULL)
 	{
 		missingSegment = missingSegmentQueue.pop();
 		splitMissingSegment(missingSegment);
 		updatePLCDT();
 	}
-
+*/
 	return;
 }
 
