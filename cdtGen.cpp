@@ -280,73 +280,68 @@ void computeReferencePoint(Point *refPoint, Segment *missingSegment)
 			}	
 	return;
 }
-/*
-// returns vertex handle corresponding vertexId
-Vertex& getVertexbyId(unsigned int vertexId)
+
+float dotProduct (Segment &segment1, Segment &segment2)
 {
-	return plcVertices[vertexId];
-}
+	Point &segment1Vertex[2];
+	Point &segment2Vertex[2];
+
+	for (unsigned int i = 0; i < 2; i++)
+	{
+		segment1Vertex[i] = plcVertices[segment1.pointIds[i]];
+		segment2Vertex[i] = plcVertices[segment2.pointIds[i]];
+	}
+
+	Point  vector1 = (segment1Vertex[0].x() - segment1Vertex[1].x(), segment1Vertex[0].y() - segment1Vertex[1].y(), segment1Vertex[0].z() - segment1Vertex[1].z());
+	Point vector2 = (segment2Vertex[0].x() - segment2Vertex[1].x(), segment2Vertex[0].y() - segment2Vertex[1].y(), segment2Vertex[0].z() - segment2Vertex[1].z());
 
 
-
-float dotProduct (Segment segment1, Segment segment2)
-{
-	Vertex segment1Vertex[2];
-	Vertex segment2Vertex[2];
-
-	segment1Vertex[0] = getVertexbyId(segment1.pointIds[0]);
-	segment1Vertex[1] = getVertexbyId(segment1.pointIds[1]);
-
-	segment2Vertex[0] = getVertexbyId(segment2.pointIds[0]);
-	segment2Vertex[1] = getVertexbyId(segment2.pointIds[1]);
-
-	Vector vector1 = (segment1Vertex[0].x - segment1Vertex[1].x, segment1Vertex[0].y - segment1Vertex[1].y, segment1Vertex[0].z - segment1Vertex[1].z);
-	Vector vector2 = (segment2Vertex[0].x - segment2Vertex[1].x, segment2Vertex[0].y - segment2Vertex[1].y, segment2Vertex[0].z - segment2Vertex[1].z);
-
-
-	float v1Dotv2 = vector1.x * vector2.x + vector1.y * vector2.y + vector1.z * vector2.z;
+	float v1Dotv2 = vector1.x() * vector2.x() + vector1.y() * vector2.y() + vector1.z() * vector2.z();
 
 	return v1Dotv2;
 
 }
 
-float vectorMagnitude(Segment inputSegment)
+float vectorMagnitude(Segment &inputSegment)
 {
-	Vertex segmentVertices[2];
-	segmentVertices[0] = getVertexbyId(inputSegment.pointIds[0]);
-	segmentVertices[1] = getVertexbyId(inputSegment.pointIds[1]);
+	Vertex &segmentVertices[2];
 
-	Vector vector = (segmentVertices[0].x - segmentVertices[1].x, segmentVertices[0].y - segmentVertices[1].y, segmentVertices[0].z - segmentVertices[1].z);
+	for (unsigned int i = 0; i < 2; i++)
+		segmentVertices[i] = plcVertices[inputSegment.pointIds[i]];
 
-	float sqrt(pow(vector.x, 2) + pow(vector.y, 2) + pow(vector.z, 2));
+	Point vector = (segmentVertices[0].x() - segmentVertices[1].x(), segmentVertices[0].y() - segmentVertices[1].y(), segmentVertices[0].z() - segmentVertices[1].z());
+
+	float vectorMagnitude = sqrt(pow(vector.x, 2) + pow(vector.y, 2) + pow(vector.z, 2));
+
+	return vectorMagnitude;
 }
 
 
-float computeAngleBetweenSegments(Segment segment1, Segment segment2)
+float computeAngleBetweenSegments(Segment *segment1, Segment *segment2)
 {
-	float angle = acosf(dotProduct(segment1, segment2) / (vectorMagnitude(segment1) * vectorMagnitude(segment2)));
+	float angle = acosf(dotProduct(*segment1, *segment2) / (vectorMagnitude(*segment1) * vectorMagnitude(*segment2)));
 
-	return (angle * 180.0f / Pi); // convertion to degrees
+	return (angle * 180.0f / Pi); // conversion to degrees
 }
 
-bool isVertexAcute(Vertex A)
+bool isVertexAcute(unsigned int inputPointId)
 {
 	// Determine segment-pair(involving A) 
-	list<Segment> incidentOnA;
+	vector<Segment*> incidentOnInputPoint;
 
 	for (unsigned int n = 0; n < plcSegments.size(); n++) 
 	{
-		if (plcSegments[n].pointIds[0] == A.id || plcSegments[n].pointIds[1] == A.id)
-			incidentOnA.push(plcSegments[n]);
+		if (plcSegments[n].pointIds[0] == inputPointId || plcSegments[n].pointIds[1] == inputPointId)
+			incidentOnInputPoint.push_back(&plcSegments[n]);
 	}
 
 	// Compute angle between all possible pairs(NAIVE SOLUTION)
-	for (list<Segment>::iterator segIter1 = incidentOnA.begin(); segIter1 != incidentOnA.end(); segIter1++) 
-		for (list<Segment>::iterator segIter2 = incidentOnA.begin(); segIter2 != incidentOnA.end(); segIter2++)
+	for (vector<Segment*>::iterator segIter1 = incidentOnInputPoint.begin(); segIter1 != incidentOnInputPoint.end(); segIter1++) 
+		for (vector<Segment*>::iterator segIter2 = incidentOnInputPoint.begin(); segIter2 != incidentOnInputPoint.end(); segIter2++)
 			if ((segIter1 != segIter2) && (computeAngleBetweenSegments(segIter1, segIter2) < 90.0f))
 				return true;
 
-	return false; // statement is outside 'for' structure
+	return false; 
 }
 
 
@@ -355,11 +350,11 @@ unsigned int determineSegmentType(Segment *missingSegment)
 
 	// if both endpoints of the segment are acute, type 1
 	// if only one endpoint acute, type 2	
-	Vertex A = getVertexbyId(missingSegment->pointIds[0]);
-	Vertex B = getVertexbyId(missingSegment->pointIds[1]);
+	Point &A = plcVertices[missingSegment->pointIds[0]];
+	Point &B = plcVertices[missingSegment->pointIds[1]];
 
-	bool vertexAIsAcute = isVertexAcute(A);
-	bool vertexBIsAcute = isVertexAcute(B);
+	bool vertexAIsAcute = isVertexAcute(missingSegment->pointIds[0]);
+	bool vertexBIsAcute = isVertexAcute(missingSegment->pointIds[1]);
 
 	if (vertexAIsAcute && vertexBIsAcute)	
 		return 1;
@@ -371,6 +366,7 @@ unsigned int determineSegmentType(Segment *missingSegment)
 		return 2;
 }
 
+/*
 unsigned int findAcuteParent(unsigned int vertexId)
 {
 	if (isVertexAcute(vertexId))
@@ -388,12 +384,12 @@ void splitMissingSegment(Segment *missingSegment)
 	Sphere s;
 
 	unsigned int segmentType;
-	
-	computeReferencePoint(&refPoint, missingSegment);
 	segmentType = determineSegmentType(missingSegment);
 
-	Vertex A = getVertexbyId(missingSegment->pointIds[0]);
-	Vertex B = getVertexbyId(missingSegment->pointIds[1]);
+	computeReferencePoint(&refPoint, missingSegment);
+	
+	Vertex &A = plcVertices[missingSegment->pointIds[0]];
+	Vertex &B = plcVertices[missingSegment->pointIds[1]];
 	
 	float AP, PB, AB;
 
