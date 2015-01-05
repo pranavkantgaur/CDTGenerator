@@ -176,11 +176,11 @@ void computeDelaunayTetrahedralization()
 ///////////////////////////////////////////// Segment recovery ///////////////////////////////////////////////////////////////////
 
 
-void formMissingSegmentsQueue(vector<Segment*> missingSegmentQueue)
+void formMissingSegmentsQueue(vector<unsigned int> missingSegmentQueue)
 {
 	// collect pointers to all segments in plcSegments which are not in DT	
 	// while inserting points in DT set a id for each point
-	bool  segmentFound ;
+	bool  segmentFound;
 
 	for (unsigned int m = 0; m < plcSegments.size(); m++)
 	{
@@ -208,7 +208,7 @@ void formMissingSegmentsQueue(vector<Segment*> missingSegmentQueue)
 		}
 	
 		if (!segmentFound)
-			missingSegmentQueue.push_back(&(plcSegments[m]));
+			missingSegmentQueue.push_back(m);
 	}
 
 	cout << "\nTotal number of missing constraint segments:" << missingSegmentQueue.size() << "\n";
@@ -356,135 +356,172 @@ unsigned int determineSegmentType(Segment *missingSegment)
 	bool vertexAIsAcute = isVertexAcute(missingSegment->pointIds[0]);
 	bool vertexBIsAcute = isVertexAcute(missingSegment->pointIds[1]);
 
-	if (vertexAIsAcute && vertexBIsAcute)	
+	if (!vertexAIsAcute && !vertexBIsAcute)	
 		return 1;
 	
-	if (!vertexAIsAcute && !vertexBIsAcute)
-		return 0; // invalid type
-
-	else 
+	else if (vertexAIsAcute != vertexBIsAcute) // effectively XOR
 		return 2;
-}
-
-/*
-unsigned int findAcuteParent(unsigned int vertexId)
-{
-	if (isVertexAcute(vertexId))
-		return vertexId;
 	else
-			
-
+		return 3;
 }
-*/
-void splitMissingSegment(Segment *missingSegment)
+
+float computeSegmentLength(Point &A, Point &B)
+{
+	float sLength;
+	sLength = sqrt(pow(A.x() - B.x(), 2) + pow(A.y() - B.y(), 2) + pow(A.z() - B.z(), 2));
+	return sLength;
+}
+
+
+void splitMissingSegment(unsigned int missingSegmentId)
 {
 
 	// Apply rules to split the segments into strongly Delaunay subsegments
 	Point vb, refPoint;
-	Sphere s;
+	Point sphereCenter;
+	float sphereRadius;
 
 	unsigned int segmentType;
 	segmentType = determineSegmentType(missingSegment);
 
 	computeReferencePoint(&refPoint, missingSegment);
 	
-	Vertex &A = plcVertices[missingSegment->pointIds[0]];
-	Vertex &B = plcVertices[missingSegment->pointIds[1]];
+	Point &A = plcVertices[plcSegments[missingSegmentId].pointIds[0]];
+	Point &B = plcVertices[plcSegments[missingSegmentId].pointIds[1]];
 	
 	float AP, PB, AB;
 
-	Vertex v;
+	Point v;
 
 	if (segmentType == 1)
 	{
-		AP = computerSegmentLength(A, refPoint);
-		AB = computerSegmentLength(A, B);
+		AP = computeSegmentLength(A, refPoint);
+		AB = computeSegmentLength(A, B);
 		
 		if (AP < 0.5f * AB)
 		{
-			s.center = A;
-			s.radius = AP;
+			sphereCenter(A);
+			sphereRadius = AP;
 		}
 
 		else if (PB < 0.5 * AB)
 		{
-			s.center = B;
-			s.radius = PB;
+			sphereCenter(B);
+			sphereRadius = PB;
 		}
 
 		else
 		{
-			s.center = A;
-			s.radius = 0.5 * AB; 
+			sphereCenter(A);
+			sphereRadius = 0.5 * AB; 
 		}	
 
-		v = CGAL::intersection(missingSegment, s);
+		Sphere s(sphereCenter, pow(sphereRadius, 2));
+
+		v = CGAL::intersection(plcSegments[missingSegmentId], s);
 	}
 
 	else if (segmentType == 2)
 	{
-		// locate which vertex is not acute
-		// lets determine which vertex is acute, if any
-		// let vertex B be acute, then acute(B) = B, else acute(B) = parentVertex 
 		unsigned int acuteParentId; 
 		Segment ApB; 
-		unsigned int vbLength;
+		float vbLength;
 
-	
-		if (isVertexAcute(A))
-			acuteParentId = missingSegment->pointIds[0];
-	        else if (isVertexAcute(B))
-	       		acuteParentId = missingSegment->pointIds[1];
-       		else
-	        {
-	        	if (A.acuteParentId != NULL)
-		       	{
-				acuteParentId = A.acuteParentId;
-				ApB.pointIds[1] = missingSegment->pointIds[1]; // ie. vertex B taken as the other endpoint
-		 		vbLength = computerSegmentLength(v, B);      	       	
-		       	} 	       		
 
-		       	else if (B.acuteParentId != NULL)
-			{
-				acuteParentId = B.acuteParentId;		
-				ApB.pointIds[1] = missingSegment->pointIds[0]; // vertex A taken as the other endpoint
-       	        		vbLength = computerSegmentLength(v, A);
-			}
+		if (isVertexAcute(A) && !isVertexAcute(B))
+			acuteParentId = plcSegments[missingSegmentId].pointIds[0];
+	        else if (isVertexAcute(B) && !isVertexAcute(A))
+		{
+			acuteParentId = plcSegments[missingSegmentId].pointIds[1];
+			// swap A <-> B 
+			Point t;
+			t = A;
+			A = B;
+			B = t;
 		}
-
+		
 		ApB.pointIds[0] = acuteParentId;
+		ApB.pointIds[1] = B;
 	
-		Vertex *acuteParent = getVertexbyId(acuteParentId);
+		Point &acuteParent = plcVertices[acuteParentId];
 
-		unsigned int ApRefPointLength = computerSegmentLength(acuteParent, refPoint);
+		float ApRefPointLength = computerSegmentLength(acuteParent, refPoint);
 
-		s.center = acuteParent;
-		s.radius = ApRefPointLength;
+		Sphere s(acuteParent, pow(ApRefPointLength, 2));
 
 		v = CGAL::intersection(ApB, s); 
 		
-		unsigned int vrefpointLength = computerSegmentLength(v, refPoint);
+		float vrefpointLength = computerSegmentLength(v, refPoint);
 
 		if (vbLength < vrefpointLength) // v was rejected
 		{
-			s.center = acuteParent;
+			sphereCenter = acuteParent;
 			unsigned int avLength = computerSegmentLength(A, v);
 			if (vrefpointLength < 0.5 * avLength)
 				{
 			
-					unsigned int acuteparentALength = computerSegmentLength(acuteParent, A);
-					s.radius = acuteparentALength + avLength - vrefpointLength;	
+					float acuteparentALength = computerSegmentLength(acuteParent, A);
+					sphereRadius = acuteparentALength + avLength - vrefpointLength;	
 				}
 			else
-				s.radius = acuteparentALength + 0.5 * avLength;
-		
-			
+				sphereRadius = acuteparentALength + 0.5 * avLength;
+		        
+			s = Sphere(sphereCenter, pow(sphereRadius, 2));
 			v = CGAL::intersection(ApB, s);
 		}
-	}	
+	}
+
+	else if (segmentType == 3) // meaning both A & B are acute
+	{
+		static vector<unsigned int> acuteParentMap; // will store acute parent ID for each vertex
+		unsigned int acuteParentId;
+		// split the segment to create 2 type-2 segments:
+		// Lets insert the new point at the mid of the segment
+		Point newPoint;
+		x = (A.x() + B.x()) / 2.0;
+		y = (A.y() + B.y()) / 2.0;
+		z = (A.z() + B.z()) / 2.0;
+		newPoint = Point(x, y, z); // must be collinear with A and B, we now have AX, XB
+		
+		v = newPoint;
+	}
+
+	// udpdate plc and DT
 	
-	// update PLC and Delaunay tetrahedralization
-	plcVertices.push(v);
+	// vertex
+	plcVertices.push_back(v);
+	
+	// segments
+	Segment AN, NB;
+
+	
+	AN.pointIds[0] = plcSegments[missingSegmentId].pointIds[0];
+	AN.pointIds[1] = plcVertices.size() - 1; // since new vertex has been inserted at the end
+	NB.pointIds[0] = plcVertices.size() - 1;
+	NB.pointIds[1] = plcSegments[missingSegmentId].pointIds[1];
+	
+	plcSegments.push_back(AN);
+	plcSegments.push_back(NB);
+
+	for (unsigned int n = 0; n < plcSegments.size(); n++)
+		if (plcSegments[n] == missingSegment)
+		{
+			plcSegments.erase(n); 
+			break;
+		}
+
+	// faces
+	// Find out the faces sharing that segment
+	 	//For each face sharing this segment edge,
+			// Partition the face into 2 triangles
+			
+
+	unsigned int oldFaceId;
+	plcFaces.erase(oldFaceId);
+	plcFaces.push_back(newFace1);
+	plcFaces.push_back(newFace2);
+
+	// DT
 	computeDelaunayTetrahedralization();
 
 	return;
@@ -493,20 +530,19 @@ void splitMissingSegment(Segment *missingSegment)
 
 void recoverConstraintSegments()
 {
-	// I/P: plcVertex1, plcFaces1, DT1
-	// O/P: plcVertex2, plcFaces2, DT2
+	// I/P: plc1, DT1
+	// O/P: plc2, DT2
 	
-	vector<Segment*> missingSegmentQueue; // contains references to the missing constraint segments
-	Segment *missingSegment;
-
+	vector<unsigned int> missingSegmentQueue;// stores index of missing segments into plcSegments	
+	unsigned int missingSegment;
 
 	formMissingSegmentsQueue(missingSegmentQueue);
- 
+
 	while (missingSegmentQueue.size() != 0)
 	{
 		missingSegment = missingSegmentQueue.pop_back();
 		splitMissingSegment(missingSegment);
-		updatePLCAndDT();
+		formMissingSegmentsQueue(missingSegmentQueue);
 	}
 
 	return;
