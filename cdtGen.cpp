@@ -1,9 +1,13 @@
 #include <iostream>
 #include <vector>
+#include<math.h>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Triangulation_vertex_base_with_info_3.h>
 #include <CGAL/Delaunay_triangulation_3.h>
 #include <CGAL/Sphere_3.h>
+#include <CGAL/Segment_3.h>
+#include <CGAL/Exact_spherical_kernel_3.h>
+#include <CGAL/Spherical_kernel_intersections.h>
 #include "rply/rply.h"
 
 #define Pi 22.0/7.0
@@ -13,10 +17,15 @@ using namespace CGAL;
 
 
 typedef Exact_predicates_inexact_constructions_kernel K;
+typedef Exact_spherical_kernel_3 SK;
 typedef Triangulation_vertex_base_with_info_3<unsigned, K> Vb;
 typedef Triangulation_data_structure_3<Vb> Tds;
 typedef Delaunay_triangulation_3<K, Tds, Fast_location> Delaunay;
 typedef Delaunay::Point Point;
+typedef Sphere_3<SK> SphericalSphere;
+typedef Segment_3<SK> SphericalSegment;
+typedef Point_3<SK> SphericalPoint;
+typedef Sphere_3<K> Sphere;
 
 /*
  * Input  : plcVertices, plcSegments, plcFaces
@@ -27,7 +36,6 @@ class Segment
 {
 	public:
 		unsigned int pointIds[2]; // index into the plcVertices vector
-		
 };
 
 class Triangle
@@ -223,7 +231,7 @@ unsigned int computeCircumradius(Point &A, Point &B, Point &encroachingCandidate
 	// computing circumradius of a triangle:
 	
 	float a, b, c;
-
+	float circumradius;
 	a = sqrt(pow((A.x() - encroachingCandidate.x()), 2)+ pow((A.y() - encroachingCandidate.y()), 2) + pow((A.z() - encroachingCandidate.z()), 2));
 	b = sqrt(pow((B.x() - encroachingCandidate.x()), 2)+ pow((B.y() - encroachingCandidate.y()), 2) + pow((B.z() - encroachingCandidate.z()), 2));
 	c = sqrt(pow((A.x() - B.x()), 2)+ pow((A.y() - B.y()), 2) + pow((A.z() - B.z()), 2));
@@ -231,20 +239,20 @@ unsigned int computeCircumradius(Point &A, Point &B, Point &encroachingCandidate
 	return circumradius = (a * b * c) / sqrt((a + b + c) * (b + c - a) * (c + a - b) * (a + b - c));
 }
 
-void computeReferencePoint(Point *refPoint, Segment *missingSegment)
+void computeReferencePoint(Point *refPoint, unsigned int missingSegmentId)
 {
 	// compute a reference point p such that:
 	// p encroaches missingSegment	
 	// p has the largest circumradius of smallest circumsphere out of all encroaching vertices
 	
-	Point &A, &B;
-	A = plcVertices[missingSegment->pointIds[0]];
-	B = plcVertices[missingSegment->pointIds[1]];
+	
+	Point &A = plcVertices[plcSegments[missingSegmentId].pointIds[0]].first;
+	Point &B = plcVertices[plcSegments[missingSegmentId].pointIds[1]].first;
 
 	float missingSegmentLength = sqrt(pow((A.x() - B.x()), 2) + pow((A.y() - B.y()), 2) + pow((A.z() - B.z()), 2));
 	
 	float sphereRadius = (missingSegmentLength / 2.0);
-	Point sphereCenter = ((A.x() + B.x()) / 2,  (A.y() + B.y()) / 2, (A.z() + B.z()) / 2);
+	Point sphereCenter = Point((A.x() + B.x()) / 2.0,  (A.y() + B.y()) / 2.0, (A.z() + B.z()) / 2.0);
 
 	Sphere smallestCircumsphere(sphereCenter, pow(sphereRadius, 2));
 
@@ -254,14 +262,14 @@ void computeReferencePoint(Point *refPoint, Segment *missingSegment)
 	
 	for (unsigned int n = 0; n < plcVertices.size(); n++)
 	{
-		if (n != missingSegment->pointIds[0] && n != missingSegment->pointIds[1])
+		if (n != plcSegments[missingSegmentId].pointIds[0] && n != plcSegments[missingSegmentId].pointIds[1])
 		{
 			
-			encroachingCandidateDistance = sqrt(pow(sphereCenter.x() - plcVertices[n].x(), 2) + pow(sphereCenter.y() - plcVertices[n].y(), 2) + pow(sphereCenter.z() - plcVertices[n].z(), 2));
+			encroachingCandidateDistance = sqrt(pow(sphereCenter.x() - (plcVertices[n].first).x(), 2) + pow(sphereCenter.y() - (plcVertices[n].first).y(), 2) + pow(sphereCenter.z() - (plcVertices[n].first).z(), 2));
 			if (encroachingCandidateDistance <= sqrt(smallestCircumsphere.squared_radius()) / 2.0) // encroaching vertex
-				circumradiusMap[n] = computeCircumradius(A, B, plcVertices[n]);
+				circumradiusMap[n] = computeCircumradius(A, B, plcVertices[n].first);
 			else // not encroaching
-				circumradiusMap[i] = INVALID_VALUE;
+				circumradiusMap[n] = INVALID_VALUE;
 		
 		}
 		else
@@ -276,24 +284,24 @@ void computeReferencePoint(Point *refPoint, Segment *missingSegment)
 			if (maxCircumradius < circumradiusMap[i])
 			{
 				maxCircumradius = circumradiusMap[i];
-				refPoint = &plcVertices[i];
+				refPoint = &(plcVertices[i].first);
 			}	
 	return;
 }
 
-float dotProduct (Segment &segment1, Segment &segment2)
+float dotProduct (unsigned segment1Id, unsigned int segment2Id)
 {
-	Point &segment1Vertex[2];
-	Point &segment2Vertex[2];
+	Point segment1Vertex[2];
+	Point segment2Vertex[2];
 
 	for (unsigned int i = 0; i < 2; i++)
 	{
-		segment1Vertex[i] = plcVertices[segment1.pointIds[i]];
-		segment2Vertex[i] = plcVertices[segment2.pointIds[i]];
+		segment1Vertex[i] = plcVertices[plcSegments[segment1Id].pointIds[i]].first;
+		segment2Vertex[i] = plcVertices[plcSegments[segment2Id].pointIds[i]].first;
 	}
 
-	Point  vector1 = (segment1Vertex[0].x() - segment1Vertex[1].x(), segment1Vertex[0].y() - segment1Vertex[1].y(), segment1Vertex[0].z() - segment1Vertex[1].z());
-	Point vector2 = (segment2Vertex[0].x() - segment2Vertex[1].x(), segment2Vertex[0].y() - segment2Vertex[1].y(), segment2Vertex[0].z() - segment2Vertex[1].z());
+	Point vector1 = Point(segment1Vertex[0].x() - segment1Vertex[1].x(), segment1Vertex[0].y() - segment1Vertex[1].y(), segment1Vertex[0].z() - segment1Vertex[1].z());
+	Point vector2 = Point(segment2Vertex[0].x() - segment2Vertex[1].x(), segment2Vertex[0].y() - segment2Vertex[1].y(), segment2Vertex[0].z() - segment2Vertex[1].z());
 
 
 	float v1Dotv2 = vector1.x() * vector2.x() + vector1.y() * vector2.y() + vector1.z() * vector2.z();
@@ -302,24 +310,24 @@ float dotProduct (Segment &segment1, Segment &segment2)
 
 }
 
-float vectorMagnitude(Segment &inputSegment)
+float vectorMagnitude(unsigned int inputSegmentId)
 {
-	Vertex &segmentVertices[2];
+	Point segmentVertices[2];
 
 	for (unsigned int i = 0; i < 2; i++)
-		segmentVertices[i] = plcVertices[inputSegment.pointIds[i]];
+		segmentVertices[i] = plcVertices[plcSegments[inputSegmentId].pointIds[i]].first;
 
-	Point vector = (segmentVertices[0].x() - segmentVertices[1].x(), segmentVertices[0].y() - segmentVertices[1].y(), segmentVertices[0].z() - segmentVertices[1].z());
+	Point vector = Point(segmentVertices[0].x() - segmentVertices[1].x(), segmentVertices[0].y() - segmentVertices[1].y(), segmentVertices[0].z() - segmentVertices[1].z());
 
-	float vectorMagnitude = sqrt(pow(vector.x, 2) + pow(vector.y, 2) + pow(vector.z, 2));
+	float vectorMagnitude = sqrtf(powf(vector.x(), 2.0) + powf(vector.y(), 2.0) + powf(vector.z(), 2.0));
 
 	return vectorMagnitude;
 }
 
 
-float computeAngleBetweenSegments(Segment *segment1, Segment *segment2)
+float computeAngleBetweenSegments(unsigned int segment1Id, unsigned int segment2Id)
 {
-	float angle = acosf(dotProduct(*segment1, *segment2) / (vectorMagnitude(*segment1) * vectorMagnitude(*segment2)));
+	float angle = acosf(dotProduct(segment1Id, segment2Id) / (vectorMagnitude(segment1Id) * vectorMagnitude(segment2Id)));
 
 	return (angle * 180.0f / Pi); // conversion to degrees
 }
@@ -327,34 +335,34 @@ float computeAngleBetweenSegments(Segment *segment1, Segment *segment2)
 bool isVertexAcute(unsigned int inputPointId)
 {
 	// Determine segment-pair(involving A) 
-	vector<Segment*> incidentOnInputPoint;
+	vector<unsigned int> incidentOnInputPoint;
 
 	for (unsigned int n = 0; n < plcSegments.size(); n++) 
 	{
 		if (plcSegments[n].pointIds[0] == inputPointId || plcSegments[n].pointIds[1] == inputPointId)
-			incidentOnInputPoint.push_back(&plcSegments[n]);
+			incidentOnInputPoint.push_back(n);
 	}
 
 	// Compute angle between all possible pairs(NAIVE SOLUTION)
-	for (vector<Segment*>::iterator segIter1 = incidentOnInputPoint.begin(); segIter1 != incidentOnInputPoint.end(); segIter1++) 
-		for (vector<Segment*>::iterator segIter2 = incidentOnInputPoint.begin(); segIter2 != incidentOnInputPoint.end(); segIter2++)
-			if ((segIter1 != segIter2) && (computeAngleBetweenSegments(segIter1, segIter2) < 90.0f))
+	for (vector<unsigned int>::iterator segIter1 = incidentOnInputPoint.begin(); segIter1 != incidentOnInputPoint.end(); segIter1++) 
+		for (vector<unsigned int>::iterator segIter2 = incidentOnInputPoint.begin(); *segIter1 != *segIter2 && segIter2 != incidentOnInputPoint.end(); segIter2++)
+			if (computeAngleBetweenSegments(*segIter1, *segIter2) < 90.0f)
 				return true;
 
 	return false; 
 }
 
 
-unsigned int determineSegmentType(Segment *missingSegment)
+unsigned int determineSegmentType(unsigned int missingSegmentId)
 {
 
 	// if both endpoints of the segment are acute, type 1
 	// if only one endpoint acute, type 2	
-	Point &A = plcVertices[missingSegment->pointIds[0]];
-	Point &B = plcVertices[missingSegment->pointIds[1]];
+	Point &A = plcVertices[plcSegments[missingSegmentId].pointIds[0]].first;
+	Point &B = plcVertices[plcSegments[missingSegmentId].pointIds[1]].first;
 
-	bool vertexAIsAcute = isVertexAcute(missingSegment->pointIds[0]);
-	bool vertexBIsAcute = isVertexAcute(missingSegment->pointIds[1]);
+	bool vertexAIsAcute = isVertexAcute(plcSegments[missingSegmentId].pointIds[0]);
+	bool vertexBIsAcute = isVertexAcute(plcSegments[missingSegmentId].pointIds[1]);
 
 	if (!vertexAIsAcute && !vertexBIsAcute)	
 		return 1;
@@ -373,6 +381,18 @@ float computeSegmentLength(Point &A, Point &B)
 }
 
 
+
+bool containsSegment(unsigned int faceId, unsigned int segmentId)
+{
+	for (unsigned int i = 0; i < 3; i++)
+		if (plcSegments[segmentId].pointIds[0] == plcFaces[faceId].pointIds[i])
+			for (unsigned int n = 0; i !=n && n < 3; n++)
+				if (plcSegments[segmentId].pointIds[2] == plcFaces[faceId].pointIds[n])
+					return true;
+	return false;
+}
+
+
 void splitMissingSegment(unsigned int missingSegmentId)
 {
 
@@ -382,16 +402,16 @@ void splitMissingSegment(unsigned int missingSegmentId)
 	float sphereRadius;
 
 	unsigned int segmentType;
-	segmentType = determineSegmentType(missingSegment);
+	segmentType = determineSegmentType(missingSegmentId);
 
-	computeReferencePoint(&refPoint, missingSegment);
+	computeReferencePoint(&refPoint, missingSegmentId);
 	
-	Point &A = plcVertices[plcSegments[missingSegmentId].pointIds[0]];
-	Point &B = plcVertices[plcSegments[missingSegmentId].pointIds[1]];
+	Point &A = plcVertices[plcSegments[missingSegmentId].pointIds[0]].first;
+	Point &B = plcVertices[plcSegments[missingSegmentId].pointIds[1]].first;
 	
 	float AP, PB, AB;
 
-	Point v;
+	SphericalPoint v;
 
 	if (segmentType == 1)
 	{
@@ -400,25 +420,33 @@ void splitMissingSegment(unsigned int missingSegmentId)
 		
 		if (AP < 0.5f * AB)
 		{
-			sphereCenter(A);
+			sphereCenter = A;
 			sphereRadius = AP;
 		}
 
 		else if (PB < 0.5 * AB)
 		{
-			sphereCenter(B);
+			sphereCenter = B;
 			sphereRadius = PB;
 		}
 
 		else
 		{
-			sphereCenter(A);
+			sphereCenter = A;
 			sphereRadius = 0.5 * AB; 
 		}	
 
-		Sphere s(sphereCenter, pow(sphereRadius, 2));
+		SphericalPoint sphericalSphereCenter = SphericalPoint(sphereCenter.x(), sphereCenter.y(), sphereCenter.z());
 
-		v = CGAL::intersection(plcSegments[missingSegmentId], s);
+		SphericalSphere s = SphericalSphere(sphericalSphereCenter, pow(sphereRadius, 2));
+
+		SphericalPoint p1 = SphericalPoint(plcVertices[plcSegments[missingSegmentId].pointIds[0]].first.x(), plcVertices[plcSegments[missingSegmentId].pointIds[0]].first.y(), plcVertices[plcSegments[missingSegmentId].pointIds[0]].first.z());
+
+		SphericalPoint p2 = SphericalPoint(plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.x(), plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.y(), plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.z());
+
+		SphericalSegment seg = SphericalSegment(p1, p2);
+		vector<SphericalPoint> intersections;
+		CGAL::intersection(seg, s, std::back_inserter(intersections));
 	}
 
 	else if (segmentType == 2)
@@ -443,7 +471,7 @@ void splitMissingSegment(unsigned int missingSegmentId)
 		ApB.pointIds[0] = acuteParentId;
 		ApB.pointIds[1] = B;
 	
-		Point &acuteParent = plcVertices[acuteParentId];
+		Point &acuteParent = plcVertices[acuteParentId].first;
 
 		float ApRefPointLength = computerSegmentLength(acuteParent, refPoint);
 
@@ -503,23 +531,30 @@ void splitMissingSegment(unsigned int missingSegmentId)
 	plcSegments.push_back(AN);
 	plcSegments.push_back(NB);
 
-	for (unsigned int n = 0; n < plcSegments.size(); n++)
-		if (plcSegments[n] == missingSegment)
-		{
-			plcSegments.erase(n); 
-			break;
-		}
+	plcSegments.erase(missingSegmentId);
 
 	// faces
 	// Find out the faces sharing that segment
 	 	//For each face sharing this segment edge,
 			// Partition the face into 2 triangles
-			
+	unsigned int v1, v2, v3;
+	for (unsigned int d = 0; d < plcFaces.size(); d++)
+		if (containsSegment(d, missingSegmentId))
+		{
+			v1 = plcFaces[d].pointIds[0];
+			v2 = plcFaces[d].pointIds[1];
+			v3 = plcVertices.size() - 1;
+			newFace1 = Triangle(v1, v2, v3);
+			v1 = plcFaces[d].pointIds[0];
+			v2 = plcFcaes[d].pointIds[2];
+			v3 = plcVertices.size() - 1;
+			newFace2 = Triangle(v1, v2, v3);
+		
+			plcFaces.push_back(newFace1);
+			plcFaces.push_back(newFace2);
+			plcFaces.erase(d);		
+		}
 
-	unsigned int oldFaceId;
-	plcFaces.erase(oldFaceId);
-	plcFaces.push_back(newFace1);
-	plcFaces.push_back(newFace2);
 
 	// DT
 	computeDelaunayTetrahedralization();
