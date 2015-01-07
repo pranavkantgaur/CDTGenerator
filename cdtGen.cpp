@@ -1,11 +1,13 @@
 #include <iostream>
 #include <vector>
 #include<math.h>
+
+#include <CGAL/Sphere_3.h>
+#include <CGAL/Segment_3.h>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Triangulation_vertex_base_with_info_3.h>
 #include <CGAL/Delaunay_triangulation_3.h>
-#include <CGAL/Sphere_3.h>
-#include <CGAL/Segment_3.h>
+
 #include <CGAL/Exact_spherical_kernel_3.h>
 #include <CGAL/Spherical_kernel_intersections.h>
 #include "rply/rply.h"
@@ -15,17 +17,18 @@
 using namespace std;
 using namespace CGAL;
 
-
 typedef Exact_predicates_inexact_constructions_kernel K;
-typedef Exact_spherical_kernel_3 SK;
 typedef Triangulation_vertex_base_with_info_3<unsigned, K> Vb;
 typedef Triangulation_data_structure_3<Vb> Tds;
 typedef Delaunay_triangulation_3<K, Tds, Fast_location> Delaunay;
 typedef Delaunay::Point Point;
-typedef Sphere_3<SK> SphericalSphere;
-typedef Segment_3<SK> SphericalSegment;
-typedef Point_3<SK> SphericalPoint;
 typedef Sphere_3<K> Sphere;
+
+typedef Exact_spherical_kernel_3 SK;
+typedef Line_arc_3<SK> SphericalSegment;
+typedef Sphere_3<SK> SphericalSphere;
+typedef Segment_3<SK> CGALSegment; 
+typedef Point_3<SK> SphericalPoint;
 
 /*
  * Input  : plcVertices, plcSegments, plcFaces
@@ -406,33 +409,35 @@ void splitMissingSegment(unsigned int missingSegmentId)
 
 	computeReferencePoint(&refPoint, missingSegmentId);
 	
-	Point &A = plcVertices[plcSegments[missingSegmentId].pointIds[0]].first;
-	Point &B = plcVertices[plcSegments[missingSegmentId].pointIds[1]].first;
+	unsigned int A = plcSegments[missingSegmentId].pointIds[0];
+	unsigned int B = plcSegments[missingSegmentId].pointIds[1];
 	
 	float AP, PB, AB;
 
-	SphericalPoint v;
+	Point v;
 
 	if (segmentType == 1)
 	{
-		AP = computeSegmentLength(A, refPoint);
-		AB = computeSegmentLength(A, B);
+		Point &Areference = plcVertices[A].first;
+		Point &Breference = plcVertices[B].first;
+		AP = computeSegmentLength(Areference, refPoint);
+		AB = computeSegmentLength(Areference, Breference);
 		
 		if (AP < 0.5f * AB)
 		{
-			sphereCenter = A;
+			sphereCenter = Areference;
 			sphereRadius = AP;
 		}
 
 		else if (PB < 0.5 * AB)
 		{
-			sphereCenter = B;
+			sphereCenter = Breference;
 			sphereRadius = PB;
 		}
 
 		else
 		{
-			sphereCenter = A;
+			sphereCenter = Areference;
 			sphereRadius = 0.5 * AB; 
 		}	
 
@@ -444,9 +449,14 @@ void splitMissingSegment(unsigned int missingSegmentId)
 
 		SphericalPoint p2 = SphericalPoint(plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.x(), plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.y(), plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.z());
 
-		SphericalSegment seg = SphericalSegment(p1, p2);
-		vector<SphericalPoint> intersections;
-		CGAL::intersection(seg, s, std::back_inserter(intersections));
+		CGALSegment seg(p1, p2);
+		SphericalSegment lineArc(seg);
+		vector<Point> intersections;
+		//CGAL::intersection(lineArc, s, std::back_inserter(intersections));
+		
+
+		
+		
 	}
 
 	else if (segmentType == 2)
@@ -454,7 +464,8 @@ void splitMissingSegment(unsigned int missingSegmentId)
 		unsigned int acuteParentId; 
 		Segment ApB; 
 		float vbLength;
-
+		A = plcSegments[missingSegmentId].pointIds[0];
+		B = plcSegments[missingSegmentId].pointIds[1];
 
 		if (isVertexAcute(A) && !isVertexAcute(B))
 			acuteParentId = plcSegments[missingSegmentId].pointIds[0];
@@ -462,40 +473,59 @@ void splitMissingSegment(unsigned int missingSegmentId)
 		{
 			acuteParentId = plcSegments[missingSegmentId].pointIds[1];
 			// swap A <-> B 
-			Point t;
+			unsigned int t;
 			t = A;
 			A = B;
 			B = t;
 		}
 		
+		
+		// Segment calculations
+		
 		ApB.pointIds[0] = acuteParentId;
 		ApB.pointIds[1] = B;
-	
-		Point &acuteParent = plcVertices[acuteParentId].first;
-
-		float ApRefPointLength = computerSegmentLength(acuteParent, refPoint);
-
-		Sphere s(acuteParent, pow(ApRefPointLength, 2));
-
-		v = CGAL::intersection(ApB, s); 
 		
-		float vrefpointLength = computerSegmentLength(v, refPoint);
+	
+		SphericalPoint p1(plcVertices[acuteParentId].first.x(), plcVertices[acuteParentId].first.y(), plcVertices[acuteParentId].first.z());
+		SphericalPoint p2(plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.x(), plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.y(), plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.z());
+		
+		CGALSegment seg(p1, p2);
+		SphericalSegment lineArc(seg);
+		
 
+
+		/// Sphere calculations
+		SphericalPoint acuteParent = SphericalPoint(plcVertices[acuteParentId].first.x(), plcVertices[acuteParentId].first.y(), plcVertices[acuteParentId].first.z());
+		
+		Point acuteParentLinearField(plcVertices[acuteParentId].first.x(), plcVertices[acuteParentId].first.y(), plcVertices[acuteParentId].first.z());
+	
+		float ApRefPointLength = computeSegmentLength(acuteParentLinearField, refPoint);
+
+		SphericalSphere s(acuteParent, pow(ApRefPointLength, 2));
+
+		vector<Point> intersections;
+
+		//CGAL::intersection(lineArc, s, std::back_inserter(intersections)); 
+		
+		float vrefpointLength = computeSegmentLength(v, refPoint);
+		
+		float acuteparentALength;
+			
 		if (vbLength < vrefpointLength) // v was rejected
 		{
-			sphereCenter = acuteParent;
-			unsigned int avLength = computerSegmentLength(A, v);
+			SphericalPoint sphereCenter(acuteParent);
+			unsigned int avLength = computeSegmentLength(plcVertices[A].first, v);
 			if (vrefpointLength < 0.5 * avLength)
 				{
-			
-					float acuteparentALength = computerSegmentLength(acuteParent, A);
+					Point temp(acuteParentLinearField.x(), acuteParentLinearField.y(), acuteParentLinearField.z());
+					acuteparentALength = computeSegmentLength(temp, plcVertices[A].first);
 					sphereRadius = acuteparentALength + avLength - vrefpointLength;	
 				}
 			else
 				sphereRadius = acuteparentALength + 0.5 * avLength;
 		        
-			s = Sphere(sphereCenter, pow(sphereRadius, 2));
-			v = CGAL::intersection(ApB, s);
+			s = SphericalSphere(sphereCenter, pow(sphereRadius, 2));
+			//v = CGAL::intersection(ApB, s);
 		}
 	}
 
@@ -506,9 +536,9 @@ void splitMissingSegment(unsigned int missingSegmentId)
 		// split the segment to create 2 type-2 segments:
 		// Lets insert the new point at the mid of the segment
 		Point newPoint;
-		x = (A.x() + B.x()) / 2.0;
-		y = (A.y() + B.y()) / 2.0;
-		z = (A.z() + B.z()) / 2.0;
+		float x = (plcVertices[A].first.x() + plcVertices[B].first.x()) / 2.0;
+		float y = (plcVertices[A].first.y() + plcVertices[B].first.y()) / 2.0;
+		float z = (plcVertices[A].first.z() + plcVertices[B].first.z()) / 2.0;
 		newPoint = Point(x, y, z); // must be collinear with A and B, we now have AX, XB
 		
 		v = newPoint;
@@ -517,7 +547,7 @@ void splitMissingSegment(unsigned int missingSegmentId)
 	// udpdate plc and DT
 	
 	// vertex
-	plcVertices.push_back(v);
+	plcVertices.push_back(make_pair(v, plcVertices.size()));
 	
 	// segments
 	Segment AN, NB;
@@ -531,28 +561,29 @@ void splitMissingSegment(unsigned int missingSegmentId)
 	plcSegments.push_back(AN);
 	plcSegments.push_back(NB);
 
-	plcSegments.erase(missingSegmentId);
+	plcSegments.erase(plcSegments.begin() + missingSegmentId);
 
 	// faces
 	// Find out the faces sharing that segment
 	 	//For each face sharing this segment edge,
 			// Partition the face into 2 triangles
 	unsigned int v1, v2, v3;
+	Triangle newFace1, newFace2;
+
 	for (unsigned int d = 0; d < plcFaces.size(); d++)
 		if (containsSegment(d, missingSegmentId))
 		{
-			v1 = plcFaces[d].pointIds[0];
-			v2 = plcFaces[d].pointIds[1];
-			v3 = plcVertices.size() - 1;
-			newFace1 = Triangle(v1, v2, v3);
-			v1 = plcFaces[d].pointIds[0];
-			v2 = plcFcaes[d].pointIds[2];
-			v3 = plcVertices.size() - 1;
-			newFace2 = Triangle(v1, v2, v3);
-		
+			newFace1.pointIds[0] = plcFaces[d].pointIds[0];
+			newFace1.pointIds[1] = plcFaces[d].pointIds[1];
+			newFace1.pointIds[2] = plcVertices.size() - 1;
+			
+			newFace2.pointIds[0] = plcFaces[d].pointIds[0];
+			newFace2.pointIds[1] = plcFaces[d].pointIds[2];
+			newFace2.pointIds[2] = plcVertices.size() - 1;
+	
 			plcFaces.push_back(newFace1);
 			plcFaces.push_back(newFace2);
-			plcFaces.erase(d);		
+			plcFaces.erase(plcFaces.begin() + d);		
 		}
 
 
@@ -575,7 +606,8 @@ void recoverConstraintSegments()
 
 	while (missingSegmentQueue.size() != 0)
 	{
-		missingSegment = missingSegmentQueue.pop_back();
+		missingSegment = missingSegmentQueue.back();
+		missingSegmentQueue.pop_back();
 		splitMissingSegment(missingSegment);
 		formMissingSegmentsQueue(missingSegmentQueue);
 	}
