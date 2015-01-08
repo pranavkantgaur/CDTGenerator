@@ -2,6 +2,7 @@
 #include <vector>
 #include<math.h>
 
+#include <CGAL/Object.h>
 #include <CGAL/Sphere_3.h>
 #include <CGAL/Segment_3.h>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
@@ -187,10 +188,14 @@ void computeDelaunayTetrahedralization()
 ///////////////////////////////////////////// Segment recovery ///////////////////////////////////////////////////////////////////
 
 
-void formMissingSegmentsQueue(vector<unsigned int> missingSegmentQueue)
+void formMissingSegmentsQueue(vector<unsigned int> &missingSegmentQueue)
 {
 	// collect pointers to all segments in plcSegments which are not in DT	
 	// while inserting points in DT set a id for each point
+
+	missingSegmentQueue.clear();
+
+
 	bool  segmentFound;
 
 	for (unsigned int m = 0; m < plcSegments.size(); m++)
@@ -270,9 +275,9 @@ void computeReferencePoint(Point *refPoint, unsigned int missingSegmentId)
 			
 			encroachingCandidateDistance = sqrt(pow(sphereCenter.x() - (plcVertices[n].first).x(), 2) + pow(sphereCenter.y() - (plcVertices[n].first).y(), 2) + pow(sphereCenter.z() - (plcVertices[n].first).z(), 2));
 			if (encroachingCandidateDistance <= sqrt(smallestCircumsphere.squared_radius()) / 2.0) // encroaching vertex
-				circumradiusMap[n] = computeCircumradius(A, B, plcVertices[n].first);
+				circumradiusMap.push_back(computeCircumradius(A, B, plcVertices[n].first));
 			else // not encroaching
-				circumradiusMap[n] = INVALID_VALUE;
+				circumradiusMap.push_back(INVALID_VALUE);
 		
 		}
 		else
@@ -451,12 +456,18 @@ void splitMissingSegment(unsigned int missingSegmentId)
 
 		CGALSegment seg(p1, p2);
 		SphericalSegment lineArc(seg);
-		vector<Point> intersections;
-		//CGAL::intersection(lineArc, s, std::back_inserter(intersections));
-		
+		vector<Object> intersections;
+		CGAL::intersection(lineArc, s, back_inserter(intersections));
+		if (intersections.size() > 0)
+		{	v = object_cast<Point>(intersections.back());
+			intersections.pop_back();
+		}
 
-		
-		
+		else
+		{
+			cout << "Case 1: Sphere and segment do not intersect";
+			exit(0);
+		}
 	}
 
 	else if (segmentType == 2)
@@ -492,8 +503,6 @@ void splitMissingSegment(unsigned int missingSegmentId)
 		CGALSegment seg(p1, p2);
 		SphericalSegment lineArc(seg);
 		
-
-
 		/// Sphere calculations
 		SphericalPoint acuteParent = SphericalPoint(plcVertices[acuteParentId].first.x(), plcVertices[acuteParentId].first.y(), plcVertices[acuteParentId].first.z());
 		
@@ -503,9 +512,25 @@ void splitMissingSegment(unsigned int missingSegmentId)
 
 		SphericalSphere s(acuteParent, pow(ApRefPointLength, 2));
 
-		vector<Point> intersections;
+		vector<Object> intersections;
 
-		//CGAL::intersection(lineArc, s, std::back_inserter(intersections)); 
+		CGAL::intersection(lineArc, s, back_inserter(intersections));
+	
+		if (intersections.size() > 0)
+		{	
+			v = object_cast<Point>(intersections.back());
+			intersections.pop_back();
+		}
+
+		else
+		{
+			cout << "Case 2: Sphere and segment do not intersect";
+			cout << "\nSphere center:" << "(" << acuteParent.x() << "," << acuteParent.y() << "," << acuteParent.z() << ")" ;
+			cout << "\nSphere radius:" << ApRefPointLength << "\n";
+			exit(0);
+		}
+
+		
 		
 		float vrefpointLength = computeSegmentLength(v, refPoint);
 		
@@ -525,7 +550,19 @@ void splitMissingSegment(unsigned int missingSegmentId)
 				sphereRadius = acuteparentALength + 0.5 * avLength;
 		        
 			s = SphericalSphere(sphereCenter, pow(sphereRadius, 2));
-			//v = CGAL::intersection(ApB, s);
+		
+			CGAL::intersection(lineArc, s, back_inserter(intersections));
+
+			if (intersections.size() > 0)
+			{
+				v = object_cast<Point>(intersections.back());
+				intersections.pop_back();
+			}
+			else
+			{
+				cout << "Case 3: Sphere and segment do not intersect";
+				exit(0);
+			}
 		}
 	}
 
@@ -603,24 +640,27 @@ void recoverConstraintSegments()
 	unsigned int missingSegment;
 
 	formMissingSegmentsQueue(missingSegmentQueue);
-
+	int i = 0;
 	while (missingSegmentQueue.size() != 0)
 	{
 		missingSegment = missingSegmentQueue.back();
 		missingSegmentQueue.pop_back();
 		splitMissingSegment(missingSegment);
 		formMissingSegmentsQueue(missingSegmentQueue);
+		i++;
 	}
-
+	
+	cout << "\nIn the loop" << i << "number of times" << "\n";
+	
 	return;
 }
 
 
-/*
+
 
 /////////////////////////////////////////////// Local Degeneracy Removal begin ///////////////////////////////////////////////////
 
-
+/*
 class DegenerateVertexSetCandidate
 {
 	Vertex_handle degenSetVertex[5]; // 5 vertices constitute a degeneracy	

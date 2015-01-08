@@ -1,1 +1,1 @@
-g++ rply/rply.cpp cdtGen.cpp -lgmp -lCGAL  -o output
+g++ -g rply/rply.cpp cdtGen.cpp -lgmp -lmpfr -lCGAL  -o output
