@@ -660,71 +660,19 @@ void recoverConstraintSegments()
 
 /////////////////////////////////////////////// Local Degeneracy Removal begin ///////////////////////////////////////////////////
 
-/*
 class DegenerateVertexSetCandidate
 {
-	Vertex_handle degenSetVertex[5]; // 5 vertices constitute a degeneracy	
-	
-	bool operator==(const DegenerateVertexSetCandidate &anotherSet)
-	{
-		bool matched[5];			
-
-		for (unsigned int i = 0; i < 5; i++)
-		{	
-			matched[i] = false;
-
-			for (unsigned int n = 0; n < 5; n++)
-				{
-					if (another.degenSetVertex[i] == degenSetVertex[n])
-					{
-						matched[i] = true;
-						break;
-					}			
-				}
-		}
-
-		unsigned int m;
-		for (m = 0; m < 5; m++)
-		{
-			if (matched[m] == true)
-				continue;
-			else
-				break;			
-		}
-
-		if (m == 5)
-			return true; // duplicate(both key and hash value match)
-		else 
-			return false; // unique element(only hash values matches)
-
-	}
-
-};
-
-// implements hash function for unorderd_set used to model degeneracy queue and missing face queue
-template <>
-struct hash<DegenerateVertexSetCandidate>
-{
-	size_t operator()(const DegenerateVertexSetCandidate &key) const
-	{
-		size_t hashValue;
-		for (unsigned i = 0; i < 5; i++)
-			hashValue ^= hash<Vertex_handle>(key.degenVertSet[i]); 
-
-		return (hashValue);
-	}
+	unsigned int pointIds[5]; // 5 vertices constitute a degeneracy set
 };
 
 
-
-	
 // returns true if  given vertices are co-spherical
 bool areCospherical(DegenerateVertexSetCandidate degenSet)
 {	
-	Point_3 p[5];
+	Point p[5];
 	
 	for (unsigned int i = 0; i < 5; i++)	
-		p[i] = (degenSet.degenSetVertex[i])->point();
+		p[i] = plcVertices[degenSet.pointIds[i]].first;
 
 	if (CGAL::side_of_bounded_sphere(p[0],p[1],p[2],p[3],p[4]) == CGAL::ON_BOUNDARY)
 		return true;
@@ -732,59 +680,62 @@ bool areCospherical(DegenerateVertexSetCandidate degenSet)
 		return false;
 }
 
-// finds all local degeneracies in DT and adds them to a global queue
-void addLocalDegeneraciesToQueue(unordered_set<DegenerateVertexSetCandidate> localDegeneracySet)
+void addLocalDegeneraciesToQueue(vecor<DegenerateVertexSetCandidate> &localDegeneracySet)
 {	
 	DegenerateVertexSetCandidate degenerateSetCandidate;
 	
-	for (delaunay::Finite_cell_iterator cellIter = DT.finite_cells_begin(); cellIter != DT.finite_cells_end(); cellIter++)
+	for (Delaunay::Finite_cells_iterator cellIter = DT.finite_cells_begin(); cellIter != DT.finite_cells_end(); cellIter++)
 	{
-		for (unsigned int n = 0; n < 4; n++)
-			degenerateSetCandidate.degenSetVertex[n] = cellIter->vertex(n);
+		for (unsigned int n = 0; n < 3; n++)
+			degenerateSetCandidate.pointIds[n] = (cellIter->Vertex(n)).info(); // info structure contains pointIds
 
 		for (unsigned int j = 0; j < 4; j++)
 			for (unsigned int k = 0; k < 4; k++)
 				{
-					if ((cellId->neighbor(j))->neighbor(k) == cellId)
-						degenerateSetCandidate.degenSetVertex[4] = (cellIter->neighbor)->vertex(k);		
+					if ((cellIter->neighbor(j))->neighbor(k) == cellIter)
+						degenerateSetCandidate.pointIds[4] = ((cellIter->neighbor)->vertex(k)).info();		
 						
 					if (areCospherical(degenerateSetCandidate))
 					{
-						if (localDegeneracySet.find(degenerateSetCandidate) != localDegeneracySet.end())
-							localDegeneracySet.insert(degenerateSetCandidate);	
+						//if (localDegeneracySet.find(degenerateSetCandidate) != localDegeneracySet.end())
+							localDegeneracySet.push_back(degenerateSetCandidate);	
 					}
 				}
 	}
 }
 
-
-
-
-
 // perturbation should be such that it does not make PLC inconsistent
-bool isVertexPerturbable(Vertex)
+bool isVertexPerturbable(unsigned pointId)
 {
 	bool pertubable = false;
 	
-	// a vertex is perturbable iff its perturbation does not make PLC inconsitent
-	// use simulation of simplicity approach to artifically perturb the vertex(if it is perturbable) to remove the degeneracy
+			
+
 	return perturbable;
 }
 
-bool isVertexSegmentSafePertubable()
+bool isVertexSegmentSafePertubable(unsigned int pointId)
 {
 	bool segmentSafePerturbable = false;
 
 	return segmentSafePerturbable;
 }
 
-bool isDegeneracyRemovable()
+bool isDegeneracyRemovable(DegenerateVertexSetCandidate degenCandidate)
 {
 	bool removable = false;
 	
-	if (vertexIsPerturbable(vertex))
-		if (vertexIsSegmentSafePerturbable(vertex))
-			removable = true;
+	for (unsigned int n = 0; n < 5; n++)
+		if (isVertexPerturbable(degenCandidate.pointIds[n]))
+			if (isVertexSegmentSafePerturbable())
+			{
+				removable = true;
+				break;
+			}
+			else
+				continue;
+
+
 
 	return removable;
 }
@@ -793,36 +744,40 @@ bool isDegeneracyRemovable()
 // removes local degeneracies from Delaunay tetrahedralization
 void removeLocalDegeneracies()
 {
+
+// I/P: plcVertices1, plcFaces1, plcSegments1, DT1
+// O/P: plcVertices2, plcFaces2, plcSegments2, DT2
+
 	cout << "\nStarting local degeneracy removal...";
 
 	// compute all local degeneracies in DT and add them to Q
-	unordered_set<DegenerateVertexSetCandidate, hashFunction> localDegeneracySet;
+	vector<DegenerateVertexSetCandidate> localDegenercySet;
 	addLocalDegeneraciesToQueue(localDegeneracySet);
 
 	// repeat while Q != NULL	
 	while (localDegenercySet.size() != 0)
-		for (unordered_set<localDegeneracySet, hashFunction>::iterator qIter = localDegeneracySet.begin(); qIter != localDegeneracySet.end(); qIter++)
+	{	for (unsigned int n = 0; n < localDegenercySet.size(); n++)
+		{
+			if (isDegeneracyRemovable(localDegenercySet[n]))
+				perturbRemove(n, localDegeneracySet); 
+			else
 			{
-				if (isDegeneracyRemovable(qIter))
-					perturbRemove(qIter, localDegeneracySet); 
+				Vertex vb;	
+				computeBreakPoint(vb, qIter, localDegeneracySet);
+				if (isEncroachingPLC(vb))
+					boundaryProtection(vb);
 				else
-				{
-					Vertex vb;	
-					computeBreakPoint(vb, qIter, localDegeneracySet);
-					if (isEncroachingPLC(vb))
-						boundaryProtection(vb);
-					else
-						inputPLCVertices.push(vb);		
-				}						
-			}
-
-	cout << "Local degeneracy removal completed";
+					inputPLCVertices.push(vb);		
+			}						
+		}
+	}
+	cout << "\nLocal degeneracy removal completed";
 }
 
 ///////////////////////////////////////////////////Local Degeneracy Removal Ends//////////////////////////////////////////////////////
 
 
-
+/*
 /////////////////////////////////////////////////// Facet recovery starts ///////////////////////////////////////////////////////////
 
 // IMPLEMENT UNORDERED_SET OF missingSubfacesQueue ????
@@ -882,8 +837,8 @@ int main()
 	readPLCInput();
 	computeDelaunayTetrahedralization();
 	recoverConstraintSegments();
-/*	
 	removeLocalDegeneracies();
+/*	
 	recoverConstraintFaces();
 */
 	return 0;
