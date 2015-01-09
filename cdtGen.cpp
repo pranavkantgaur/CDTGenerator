@@ -403,6 +403,57 @@ bool containsSegment(unsigned int faceId, unsigned int segmentId)
 }
 
 
+void updatePLCAndDT(Point v)
+{
+	// vertex
+	
+	plcVertices.push_back(make_pair(v, plcVertices.size()));
+	
+	// segments
+	Segment AN, NB;
+
+	
+	AN.pointIds[0] = plcSegments[missingSegmentId].pointIds[0];
+	AN.pointIds[1] = plcVertices.size() - 1; // since new vertex has been inserted at the end
+	NB.pointIds[0] = plcVertices.size() - 1;
+	NB.pointIds[1] = plcSegments[missingSegmentId].pointIds[1];
+	
+	plcSegments.push_back(AN);
+	plcSegments.push_back(NB);
+
+	plcSegments.erase(plcSegments.begin() + missingSegmentId);
+
+	// faces
+	// Find out the faces sharing that segment
+	 	//For each face sharing this segment edge,
+			// Partition the face into 2 triangles
+	unsigned int v1, v2, v3;
+	Triangle newFace1, newFace2;
+
+	for (unsigned int d = 0; d < plcFaces.size(); d++)
+		if (containsSegment(d, missingSegmentId))
+		{
+			newFace1.pointIds[0] = plcFaces[d].pointIds[0];
+			newFace1.pointIds[1] = plcFaces[d].pointIds[1];
+			newFace1.pointIds[2] = plcVertices.size() - 1;
+			
+			newFace2.pointIds[0] = plcFaces[d].pointIds[0];
+			newFace2.pointIds[1] = plcFaces[d].pointIds[2];
+			newFace2.pointIds[2] = plcVertices.size() - 1;
+	
+			plcFaces.push_back(newFace1);
+			plcFaces.push_back(newFace2);
+			plcFaces.erase(plcFaces.begin() + d);		
+		}
+
+
+	// DT
+	computeDelaunayTetrahedralization();
+
+
+}
+
+
 void splitMissingSegment(unsigned int missingSegmentId)
 {
 
@@ -585,50 +636,6 @@ void splitMissingSegment(unsigned int missingSegmentId)
 
 	// udpdate plc and DT
 	
-	// vertex
-	plcVertices.push_back(make_pair(v, plcVertices.size()));
-	
-	// segments
-	Segment AN, NB;
-
-	
-	AN.pointIds[0] = plcSegments[missingSegmentId].pointIds[0];
-	AN.pointIds[1] = plcVertices.size() - 1; // since new vertex has been inserted at the end
-	NB.pointIds[0] = plcVertices.size() - 1;
-	NB.pointIds[1] = plcSegments[missingSegmentId].pointIds[1];
-	
-	plcSegments.push_back(AN);
-	plcSegments.push_back(NB);
-
-	plcSegments.erase(plcSegments.begin() + missingSegmentId);
-
-	// faces
-	// Find out the faces sharing that segment
-	 	//For each face sharing this segment edge,
-			// Partition the face into 2 triangles
-	unsigned int v1, v2, v3;
-	Triangle newFace1, newFace2;
-
-	for (unsigned int d = 0; d < plcFaces.size(); d++)
-		if (containsSegment(d, missingSegmentId))
-		{
-			newFace1.pointIds[0] = plcFaces[d].pointIds[0];
-			newFace1.pointIds[1] = plcFaces[d].pointIds[1];
-			newFace1.pointIds[2] = plcVertices.size() - 1;
-			
-			newFace2.pointIds[0] = plcFaces[d].pointIds[0];
-			newFace2.pointIds[1] = plcFaces[d].pointIds[2];
-			newFace2.pointIds[2] = plcVertices.size() - 1;
-	
-			plcFaces.push_back(newFace1);
-			plcFaces.push_back(newFace2);
-			plcFaces.erase(plcFaces.begin() + d);		
-		}
-
-
-	// DT
-	computeDelaunayTetrahedralization();
-
 	return;
 }
 
@@ -895,10 +902,41 @@ void boundaryProtection(Point vb)
 		// update PLC & DT 
 	// for each encroached face:
 		// compute circumcenter x
-		// if x encroaches any segment, don't insert, goto to segment splitting using step 1 above
+		// if x encroaches any segment, don't insert, goto to segment spliting using step 1 above
 		// else, add x to PLC & DT 	
 		
 	// call Delaunay segment recovery to recovery all missing segments(new segments might have been created due to new vertex insertions)
+	
+	for (unsigned int n = 0; n < plcSegments.size(); n++)
+	{
+		if (isVertexEncroachingSegment(vb, n))
+		{
+			// circumcenter of segment 'n':
+			float x = (plcVertices[plcSegments[n].pointIds[0]].first.x() + plcVertices[plcSegments[n].pointIds[1]].first.x()) / 2.0;
+
+			float y = (plcVertices[plcSegments[n].pointIds[0]].first.y() + plcVertices[plcSegments[n].pointIds[1]].first.y()) / 2.0;
+
+			float z = (plcVertices[plcSegments[n].pointIds[0]].first.z() + plcVertices[plcSegments[n].pointIds[1]].first.z()) / 2.0;
+
+			Point sphereCenter(x, y, z);
+
+			// update PLC:
+			// Vertex
+			plcVertices.push_back(sphereCenter);
+			// Segment
+				// remove original segment and add new segment pair containing vb
+		
+			plcSegments.push_back(plcSegments[n].pointIds[0], plcVertices.size() - 1);
+			plcSegments.push_back(plcSegments[n].pointIds[1], plcVertices.size() - 1);
+
+			plcSegments.erase(plcSegments.begin() + n);	
+			
+			// Faces
+			// find all faces which have this segment
+			// partition those faces at vb
+		}
+	}
+	
 }
 
 
