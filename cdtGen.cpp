@@ -5,6 +5,7 @@
 #include <CGAL/Object.h>
 #include <CGAL/Sphere_3.h>
 #include <CGAL/Segment_3.h>
+#include <CGAL/Circle_3.h>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Triangulation_vertex_base_with_info_3.h>
 #include <CGAL/Delaunay_triangulation_3.h>
@@ -24,6 +25,7 @@ typedef Triangulation_data_structure_3<Vb> Tds;
 typedef Delaunay_triangulation_3<K, Tds, Fast_location> Delaunay;
 typedef Delaunay::Point Point;
 typedef Sphere_3<K> Sphere;
+typedef Circle_3<K> Circle;
 
 typedef Exact_spherical_kernel_3 SK;
 typedef Line_arc_3<SK> SphericalSegment;
@@ -655,9 +657,6 @@ void recoverConstraintSegments()
 	return;
 }
 
-
-
-
 /////////////////////////////////////////////// Local Degeneracy Removal begin ///////////////////////////////////////////////////
 
 class DegenerateVertexSetCandidate
@@ -697,8 +696,7 @@ void addLocalDegeneraciesToQueue(vecor<DegenerateVertexSetCandidate> &localDegen
 						
 					if (areCospherical(degenerateSetCandidate))
 					{
-						//if (localDegeneracySet.find(degenerateSetCandidate) != localDegeneracySet.end())
-							localDegeneracySet.push_back(degenerateSetCandidate);	
+						localDegeneracySet.push_back(degenerateSetCandidate);	
 					}
 				}
 	}
@@ -709,7 +707,22 @@ bool isVertexPerturbable(unsigned pointId)
 {
 	bool pertubable = false;
 	
-			
+		// if the vertex is collinear
+		// if the vertex is coplanar
+			// Yes
+		// else
+			// No 	 		
+
+	// for all edges incident on vertex 'pointId'
+		// check is eny 2 edges are collinear
+		// if yes, then check coplanarity
+		// else, return false
+		// check coplanarity:
+		// for all faces containing vertex 'pointId'
+		// check if there are atleast a pair of faces which are coplanar
+		// If yes, return true
+		// else, return false
+
 
 	return perturbable;
 }
@@ -725,7 +738,7 @@ bool isDegeneracyRemovable(DegenerateVertexSetCandidate degenCandidate)
 {
 	bool removable = false;
 	
-	for (unsigned int n = 0; n < 5; n++)
+/*	for (unsigned int n = 0; n < 5; n++)
 		if (isVertexPerturbable(degenCandidate.pointIds[n]))
 			if (isVertexSegmentSafePerturbable())
 			{
@@ -735,9 +748,157 @@ bool isDegeneracyRemovable(DegenerateVertexSetCandidate degenCandidate)
 			else
 				continue;
 
-
+*/
 
 	return removable;
+}
+
+void perturbRemove(unsigned int pointId, vector<DegenerateVertexSetCandidate>& localDegeneracySet)
+{
+	// DO NOTHING FOR NOW
+}
+
+
+bool areAffinelyIndependent(DegenerateVertexSetCandidate degenSet)
+{
+
+	// test each 4-tuple for coplanarity
+	// If they are coplanar then return false
+	// else return true
+	Point v1 = plcVertices[degenSet.pointIds[0]].first;
+	Point v2 = plcVertices[degenSet.pointIds[1]].first;
+	Point v3 = plcVertices[degenSet.pointIds[2]].first;
+	Point v4 = plcVertices[degenSet.pointIds[3]].first;
+	Point v5 = plcVertices[degenSet.pointIds[4]].first;
+
+	if (coplanar(v1, v2, v3, v4) || coplanar(v2, v3, v4, v5) || coplanar(v3, v4, v5, v1) || coplanar(v4, v5, v1, v2) || coplanar(v5, v1, v2, v3))
+		return false;
+
+	return true; // because no 4-tuple of points are coplanar
+}
+
+void computeBreakPoint(Point &vb, unsigned int pointId, vector<DegenerateVertexSetCandidate> &localDegeneracySet)
+{
+	// if vertices of localDeneracySet[n] are affinely independent
+		// Let S be there common sphere, then vb is inside s
+	// if vertices of localDegeneracySet[n] aren't affinely independent(4 of them are coplanar)
+		// Let C be the common circle of those coplanar vertices, then vb lines inside C
+	
+	Point v1 = plcVertices[degenSet.pointIds[0]].first;
+	Point v2 = plcVertices[degenSet.pointIds[1]].first;
+	Point v3 = plcVertices[degenSet.pointIds[2]].first;
+	Point v4 = plcVertices[degenSet.pointIds[3]].first;
+	Point v5 = plcVertices[degenSet.pointIds[4]].first;
+
+	if (areAffinelyIndependent(localDegeneracySet[pointId]))
+	{
+		// find common sphere
+		// if I define a sphere using only 4 of these vertices then that will be shared by 5 as well:
+	
+		Sphere s(v1, v2, v3, v4);
+		vb = s.center();
+	}	
+
+	else // 4 points are coplanar
+	{
+		// find common circle
+		// find which 4 points are coplanar
+		// find corresponding circle
+		Circle c;
+
+		if (coplanar(v1, v2, v3, v4))	
+			c = Circle(v1, v2, v3, v4);
+
+		if (coplanar(v2, v3, v4, v5))	
+			c = Circle(v2, v3, v4, v5);
+
+		if (coplanar(v3, v4, v5, v1))	
+			c = Circle(v3, v4, v5, v1);
+
+		if (coplanar(v4, v5, v1, v2))	
+			c = Circle(v4, v5, v1, v2);
+
+		if (coplanar(v5, v1, v2, v3))	
+			c = Circle(v5, v1, v2, v3);
+
+		vb = c.center(); 
+	}
+}
+
+bool isVertexEncroachingSegment(Point vb, unsigned int segmentId)
+{
+	// compute diametric sphere and check if:
+		// radius < distance of center from vb
+			// if yes, return true
+			// else return false
+	float x = (plcVertices[plcSegments[segmentId].pointIds[0]].first.x() + plcVertices[plcSegments[segmentId].pointIds[1]].first.x()) / 2.0;
+
+	float y = (plcVertices[plcSegments[segmentId].pointIds[0]].first.y() + plcVertices[plcSegments[segmentId].pointIds[1]].first.y()) / 2.0;
+
+	float z = (plcVertices[plcSegments[segmentId].pointIds[0]].first.z() + plcVertices[plcSegments[segmentId].pointIds[1]].first.z()) / 2.0;
+
+	Point sphereCenter(x, y, z);
+
+	float sphereRadius = sqrt(pow(sphereCenter.x() - plcVertices[plcSegments[segmentId].pointIds[0]].first.x(), 2) + pow(sphereCenter.y() - plcVertices[plcSegments[segmentId].pointIds[0]].first.y(), 2) + pow(sphereCenter.z() - plcVertices[plcSegments[segmentId].pointIds[0]].first.z(), 2));
+
+	float centerToBreakingPointDistance = sqrt(pow(sphereCenter.x() - vb.x(), 2) + pow(sphereCenter.y() - vb.y(), 2) + pow(sphereCenter.z() - vb.z(), 2));
+
+
+	if (sphereRadius <= centerToBreakingPointDistance)
+		return true;
+	else
+		return false;
+		
+}
+
+bool isVertexEncroachingFace(Point vb, unsigned int faceId)
+{
+	// make a diametric sphere of face(or triangle in our case)
+	// check if radius < distance of breaking point from center
+	
+	// radius & center of circle of 3 points = radius & center of their diametric sphere 
+	
+	Point v1(plcVertices[plcFaces[faceId].pointIds[0]].first);
+	Point v2(plcVertices[plcFaces[faceId].pointIds[1]].first);
+	Point v3(plcVerticesp[plcFaces[faceId].pointIds[2]].first);
+
+	Circle c(v1, v2, v3);
+
+	float centerToBreakingPointDistance = sqrt(pow(c.center().x() - vb.x(), 2) + pow(c.center.y() - vb.y(), 2) + pow(c.center..z() - vb.z(), 2));
+
+	if (c.radius() < centerToBreakingPointDistance)
+		return true;
+
+	return false;
+}
+
+
+bool isEncroachingPLC(Point vb)
+{
+	// encroaches any segment
+	for (unsigned int n = 0; n < plcSegments.size(); n++)
+		if (isVertexEncroachingSegment(vb, n))
+			return true;
+
+	// encroaches any face
+	for (unsigned int k = 0; k < plcFaces.size(); k++)
+		if (isVertexEncroachingFace(vb, k))
+			return true;
+
+	return false;
+}
+
+void boundaryProtection(Point vb)
+{
+	// for each encroached segment:
+		// add its perturbed circumcenter to plcVerices
+		// update PLC & DT 
+	// for each encroached face:
+		// compute circumcenter x
+		// if x encroaches any segment, don't insert, goto to segment splitting using step 1 above
+		// else, add x to PLC & DT 	
+		
+	// call Delaunay segment recovery to recovery all missing segments(new segments might have been created due to new vertex insertions)
 }
 
 
@@ -756,14 +917,15 @@ void removeLocalDegeneracies()
 
 	// repeat while Q != NULL	
 	while (localDegenercySet.size() != 0)
-	{	for (unsigned int n = 0; n < localDegenercySet.size(); n++)
+	{	
+		for (unsigned int n = 0; n < localDegenercySet.size(); n++)
 		{
 			if (isDegeneracyRemovable(localDegenercySet[n]))
 				perturbRemove(n, localDegeneracySet); 
 			else
 			{
-				Vertex vb;	
-				computeBreakPoint(vb, qIter, localDegeneracySet);
+				Point vb;	
+				computeBreakPoint(vb, n, localDegeneracySet);
 				if (isEncroachingPLC(vb))
 					boundaryProtection(vb);
 				else
