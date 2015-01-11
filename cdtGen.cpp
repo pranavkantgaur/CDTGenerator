@@ -403,7 +403,7 @@ bool containsSegment(unsigned int faceId, unsigned int segmentId)
 }
 
 
-void updatePLCAndDT(Point v)
+void updatePLCAndDT(Point v, unsigned int missingSegmentId)
 {
 	// vertex
 	
@@ -839,9 +839,7 @@ bool isVertexEncroachingSegment(Point vb, unsigned int segmentId)
 			// if yes, return true
 			// else return false
 	float x = (plcVertices[plcSegments[segmentId].pointIds[0]].first.x() + plcVertices[plcSegments[segmentId].pointIds[1]].first.x()) / 2.0;
-
 	float y = (plcVertices[plcSegments[segmentId].pointIds[0]].first.y() + plcVertices[plcSegments[segmentId].pointIds[1]].first.y()) / 2.0;
-
 	float z = (plcVertices[plcSegments[segmentId].pointIds[0]].first.z() + plcVertices[plcSegments[segmentId].pointIds[1]].first.z()) / 2.0;
 
 	Point sphereCenter(x, y, z);
@@ -913,27 +911,12 @@ void boundaryProtection(Point vb)
 		{
 			// circumcenter of segment 'n':
 			float x = (plcVertices[plcSegments[n].pointIds[0]].first.x() + plcVertices[plcSegments[n].pointIds[1]].first.x()) / 2.0;
-
 			float y = (plcVertices[plcSegments[n].pointIds[0]].first.y() + plcVertices[plcSegments[n].pointIds[1]].first.y()) / 2.0;
-
 			float z = (plcVertices[plcSegments[n].pointIds[0]].first.z() + plcVertices[plcSegments[n].pointIds[1]].first.z()) / 2.0;
 
 			Point sphereCenter(x, y, z);
 
-			// update PLC:
-			// Vertex
-			plcVertices.push_back(sphereCenter);
-			// Segment
-				// remove original segment and add new segment pair containing vb
-		
-			plcSegments.push_back(plcSegments[n].pointIds[0], plcVertices.size() - 1);
-			plcSegments.push_back(plcSegments[n].pointIds[1], plcVertices.size() - 1);
-
-			plcSegments.erase(plcSegments.begin() + n);	
-			
-			// Faces
-			// find all faces which have this segment
-			// partition those faces at vb
+			updatePLCAndDT(sphereCenter, n);
 		}
 	}
 	
