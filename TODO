@@ -15,3 +15,5 @@
 #8. Function for writing output mesh back in PLY format.
 
 #9. Use finite_edges_iterator for computing missingSegmentsQueue
+
+#10. Is there any better way to list all possible combinations(say to be able to do it in a for loop)?

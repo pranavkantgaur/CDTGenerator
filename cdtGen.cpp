@@ -962,18 +962,60 @@ void removeLocalDegeneracies()
 ///////////////////////////////////////////////////Local Degeneracy Removal Ends//////////////////////////////////////////////////////
 
 
-/*
-/////////////////////////////////////////////////// Facet recovery starts ///////////////////////////////////////////////////////////
 
-// IMPLEMENT UNORDERED_SET OF missingSubfacesQueue ????
+/////////////////////////////////////////////// Facet recovery starts ///////////////////////////////////////////////////////////
 
-void formMissingSubfaceQueue(unordered_set<> missingSubfacesQueue)
+void formMissingSubfaceQueue(vector<unsigned int> &missingSubfacesQueue)
 {
+	// for all plcFaces check if those faces are already in DT 
+	// If not, add them to missingSubfaceQueue
+	// Else, continue
+	Delaunay::Cell_handle ch;
+	int i , j , k;
 	
+	Delaunay::Vertex v1, v2, v3;
+	Vertex_handle vh1, vh2, vh3;
+
+	for (unsigned int n = 0; n < plcFaces.size(); n++)
+	{
+		DT.is_vertex(plcVertices[plcFaces[n].pointIds[0]].first, vh1);
+		DT.is_vertex(plcVertices[plcFaces[n].pointIds[1]].first, vh2);
+		DT.is_vertex(plcVertices[plcFaces[n].pointIds[2]].first, vh3);
+
+		if (DT.is_facet(vh1, vh2, vh3, ch, i, j, k))
+			continue;
+		else
+			missingSubfacesQueue.push_back(n);
+	}
 }
 
-void formCavity(lcc c1, lcc c2, lcc aMissingSubface)
+void formCavity(vector<unsigned int>& cavity[2], unsigned int missingSubfaceId)
 {
+	// compute list of tets intersecting face number: missingSubfaceId
+	// for each intersecting tet:
+		// Remove the tet from DT 
+		// Decrement counter of each facet(of neighboring tets) in contact of the removed tet by 1
+		// For all removed tets, set counter of each of their facet = INVALID_VALUE
+	// for all faces in DT:
+		// Add all faces with counter value = 1 to cavity
+		
+	
+	// Partition cavity into top & bottom cavities:
+		// For each face in global cavity
+			// Determine if it is on upper or lower side of missingSubface
+				// Take any point on the face and test orientation of point wrt. missingSubface
+					// Positive means associated facet belongs to upper cavity
+					// Negative means associated facet belongs to lower cavity	 
+
+	vector<Cell_iterator> intersectingTets;				
+	for (Delaunay::Finite_cells_iterator cit = DT.finite_cells_begin(); cit != DT.finite_cells_end(); cit++)
+	{
+		if (areIntersecting(missingSubfaceId, cit))
+			intersectingTets.push_back(cit);
+		else
+			continue;
+	}		
+					
 
 }
 
@@ -991,29 +1033,27 @@ void recoverConstraintFaces()
 	// 	for each cavity Ci:
 	// 	call cavity retetrahedralization subroutine
 	 			
-        unordered_set<face, key> missingSubfacesQueue;
+        vector<unsigned int> missingSubfacesQueue;
 	formMissingSubfaceQueue(missingSubfacesQueue);
-	lcc aMissingSubface;
-	lcc C[2]; // seems like we need to implement it using LCC
-
-
+	vector<Triangle> cavity[2];
+	unsigned int missingSubfaceId;
+	
 	while (missingSubfacesQueue.size() != 0)
 	{
-		 aMissingSubface = missingSubfacesQueue.pop();
-
-		 formCavity(C[0], C[1], aMissingSubface);
+		 missingSubfaceId = missingSubfacesQueue.back();
+		 missingSubfacesQueue.pop_back();
+		 formCavity(cavity, missingSubfaceId);
 		
 		 for (unsigned int cavityId = 0; cavityId < 2; cavityId++)
-		 	cavityReterahedralization(C[cavityId], cdtMesh); // 'cdtMesh' points to the final output mesh 
-			 
+		 	cavityReterahedralization(cavity[cavityId], cdtTets); 
 	}
 
 	return;	
 }		 
 	
-*/
 
-//////////////////////////////////////////////////// Facet recovery ends /////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////// Facet recovery ends /////////////////////////////////////////////////////////////
 	
 
 // main procedure
@@ -1023,9 +1063,8 @@ int main()
 	computeDelaunayTetrahedralization();
 	recoverConstraintSegments();
 	removeLocalDegeneracies();
-/*	
 	recoverConstraintFaces();
-*/
+
 	return 0;
 }
 
