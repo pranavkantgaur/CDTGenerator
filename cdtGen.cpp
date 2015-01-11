@@ -33,6 +33,7 @@ typedef Sphere_3<SK> SphericalSphere;
 typedef Segment_3<SK> CGALSegment; 
 typedef Point_3<SK> SphericalPoint;
 
+typedef Delaunay::Vertex_handle Vertex_handle;
 /*
  * Input  : plcVertices, plcSegments, plcFaces
  * Output : cdtTeterahedralMesh (collection of tetrahedrons), cdtVertices(=plcVertices)
@@ -668,7 +669,8 @@ void recoverConstraintSegments()
 
 class DegenerateVertexSetCandidate
 {
-	unsigned int pointIds[5]; // 5 vertices constitute a degeneracy set
+	public:
+		unsigned int pointIds[5];
 };
 
 
@@ -686,33 +688,33 @@ bool areCospherical(DegenerateVertexSetCandidate degenSet)
 		return false;
 }
 
-void addLocalDegeneraciesToQueue(vecor<DegenerateVertexSetCandidate> &localDegeneracySet)
+void addLocalDegeneraciesToQueue(vector<DegenerateVertexSetCandidate> &localDegeneracySet)
 {	
 	DegenerateVertexSetCandidate degenerateSetCandidate;
 	
 	for (Delaunay::Finite_cells_iterator cellIter = DT.finite_cells_begin(); cellIter != DT.finite_cells_end(); cellIter++)
 	{
 		for (unsigned int n = 0; n < 3; n++)
-			degenerateSetCandidate.pointIds[n] = (cellIter->Vertex(n)).info(); // info structure contains pointIds
+			degenerateSetCandidate.pointIds[n] = (cellIter->vertex(n))->info(); // info structure contains pointIds
 
 		for (unsigned int j = 0; j < 4; j++)
-			for (unsigned int k = 0; k < 4; k++)
-				{
-					if ((cellIter->neighbor(j))->neighbor(k) == cellIter)
-						degenerateSetCandidate.pointIds[4] = ((cellIter->neighbor)->vertex(k)).info();		
+			{
+				Vertex_handle vh = DT.mirror_vertex(cellIter, j);	
+				degenerateSetCandidate.pointIds[4] = vh->info();		
 						
-					if (areCospherical(degenerateSetCandidate))
-					{
-						localDegeneracySet.push_back(degenerateSetCandidate);	
-					}
+				if (areCospherical(degenerateSetCandidate))
+				{
+					localDegeneracySet.push_back(degenerateSetCandidate);	
 				}
+			}
 	}
 }
 
+			
 // perturbation should be such that it does not make PLC inconsistent
 bool isVertexPerturbable(unsigned pointId)
 {
-	bool pertubable = false;
+	bool perturbable = false;
 	
 		// if the vertex is collinear
 		// if the vertex is coplanar
@@ -791,11 +793,11 @@ void computeBreakPoint(Point &vb, unsigned int pointId, vector<DegenerateVertexS
 	// if vertices of localDegeneracySet[n] aren't affinely independent(4 of them are coplanar)
 		// Let C be the common circle of those coplanar vertices, then vb lines inside C
 	
-	Point v1 = plcVertices[degenSet.pointIds[0]].first;
-	Point v2 = plcVertices[degenSet.pointIds[1]].first;
-	Point v3 = plcVertices[degenSet.pointIds[2]].first;
-	Point v4 = plcVertices[degenSet.pointIds[3]].first;
-	Point v5 = plcVertices[degenSet.pointIds[4]].first;
+	Point v1 = plcVertices[localDegeneracySet[pointId].pointIds[0]].first;
+	Point v2 = plcVertices[localDegeneracySet[pointId].pointIds[1]].first;
+	Point v3 = plcVertices[localDegeneracySet[pointId].pointIds[2]].first;
+	Point v4 = plcVertices[localDegeneracySet[pointId].pointIds[3]].first;
+	Point v5 = plcVertices[localDegeneracySet[pointId].pointIds[4]].first;
 
 	if (areAffinelyIndependent(localDegeneracySet[pointId]))
 	{
@@ -814,19 +816,19 @@ void computeBreakPoint(Point &vb, unsigned int pointId, vector<DegenerateVertexS
 		Circle c;
 
 		if (coplanar(v1, v2, v3, v4))	
-			c = Circle(v1, v2, v3, v4);
+			c = Circle(v1, v2, v3); // v4 will also lie on this circle, since these vertices are co-spherical and coplanar.
 
 		if (coplanar(v2, v3, v4, v5))	
-			c = Circle(v2, v3, v4, v5);
+			c = Circle(v2, v3, v4);
 
 		if (coplanar(v3, v4, v5, v1))	
-			c = Circle(v3, v4, v5, v1);
+			c = Circle(v3, v4, v5);
 
 		if (coplanar(v4, v5, v1, v2))	
-			c = Circle(v4, v5, v1, v2);
+			c = Circle(v4, v5, v1);
 
 		if (coplanar(v5, v1, v2, v3))	
-			c = Circle(v5, v1, v2, v3);
+			c = Circle(v5, v1, v2);
 
 		vb = c.center(); 
 	}
@@ -865,13 +867,13 @@ bool isVertexEncroachingFace(Point vb, unsigned int faceId)
 	
 	Point v1(plcVertices[plcFaces[faceId].pointIds[0]].first);
 	Point v2(plcVertices[plcFaces[faceId].pointIds[1]].first);
-	Point v3(plcVerticesp[plcFaces[faceId].pointIds[2]].first);
+	Point v3(plcVertices[plcFaces[faceId].pointIds[2]].first);
 
 	Circle c(v1, v2, v3);
 
-	float centerToBreakingPointDistance = sqrt(pow(c.center().x() - vb.x(), 2) + pow(c.center.y() - vb.y(), 2) + pow(c.center..z() - vb.z(), 2));
+	float centerToBreakingPointDistance = sqrt(pow((c.center()).x() - vb.x(), 2) + pow((c.center()).y() - vb.y(), 2) + pow((c.center()).z() - vb.z(), 2));
 
-	if (c.radius() < centerToBreakingPointDistance)
+	if (sqrtf(c.squared_radius()) < centerToBreakingPointDistance)
 		return true;
 
 	return false;
@@ -933,15 +935,15 @@ void removeLocalDegeneracies()
 	cout << "\nStarting local degeneracy removal...";
 
 	// compute all local degeneracies in DT and add them to Q
-	vector<DegenerateVertexSetCandidate> localDegenercySet;
+	vector<DegenerateVertexSetCandidate> localDegeneracySet;
 	addLocalDegeneraciesToQueue(localDegeneracySet);
 
 	// repeat while Q != NULL	
-	while (localDegenercySet.size() != 0)
+	while (localDegeneracySet.size() != 0)
 	{	
-		for (unsigned int n = 0; n < localDegenercySet.size(); n++)
+		for (unsigned int n = 0; n < localDegeneracySet.size(); n++)
 		{
-			if (isDegeneracyRemovable(localDegenercySet[n]))
+			if (isDegeneracyRemovable(localDegeneracySet[n]))
 				perturbRemove(n, localDegeneracySet); 
 			else
 			{
@@ -950,7 +952,7 @@ void removeLocalDegeneracies()
 				if (isEncroachingPLC(vb))
 					boundaryProtection(vb);
 				else
-					inputPLCVertices.push(vb);		
+					plcVertices.push_back(make_pair(vb, plcVertices.size()));		
 			}						
 		}
 	}
