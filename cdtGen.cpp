@@ -6,10 +6,12 @@
 #include <CGAL/Sphere_3.h>
 #include <CGAL/Segment_3.h>
 #include <CGAL/Circle_3.h>
+#include <CGAL/Triangle_3.h>
+#include <CGAL/Tetrahedron_3.h>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Triangulation_vertex_base_with_info_3.h>
 #include <CGAL/Delaunay_triangulation_3.h>
-
+#include <CGAL/intersections.h>
 #include <CGAL/Exact_spherical_kernel_3.h>
 #include <CGAL/Spherical_kernel_intersections.h>
 #include "rply/rply.h"
@@ -32,8 +34,10 @@ typedef Line_arc_3<SK> SphericalSegment;
 typedef Sphere_3<SK> SphericalSphere;
 typedef Segment_3<SK> CGALSegment; 
 typedef Point_3<SK> SphericalPoint;
-
 typedef Delaunay::Vertex_handle Vertex_handle;
+typedef Tetrahedron_3<K> CGALTetrahedron;
+typedef Triangle_3<K> CGALTriangle;
+typedef Delaunay::Cell_iterator Cell_iterator;
 /*
  * Input  : plcVertices, plcSegments, plcFaces
  * Output : cdtTeterahedralMesh (collection of tetrahedrons), cdtVertices(=plcVertices)
@@ -989,7 +993,7 @@ void formMissingSubfaceQueue(vector<unsigned int> &missingSubfacesQueue)
 	}
 }
 
-void formCavity(vector<unsigned int>& cavity[2], unsigned int missingSubfaceId)
+void formCavity(vector<unsigned int> *cavity, unsigned int missingSubfaceId, vector<Triangle> cdtFaceList)
 {
 	// compute list of tets intersecting face number: missingSubfaceId
 	// for each intersecting tet:
@@ -1007,17 +1011,107 @@ void formCavity(vector<unsigned int>& cavity[2], unsigned int missingSubfaceId)
 					// Positive means associated facet belongs to upper cavity
 					// Negative means associated facet belongs to lower cavity	 
 
-	vector<Cell_iterator> intersectingTets;				
-	for (Delaunay::Finite_cells_iterator cit = DT.finite_cells_begin(); cit != DT.finite_cells_end(); cit++)
+	vector<unsigned int> intersectingTets;				
+	Point p1Tet, p2Tet, p3Tet, p4Tet, p1Tri, p2Tri, p3Tri;
+	
+	p1Tri = plcVertices[plcFaces[missingSubfaceId].pointIds[0]].first;
+	p2Tri = plcVertices[plcFaces[missingSubfaceId].pointIds[1]].first;
+	p3Tri = plcVertices[plcFaces[missingSubfaceId].pointIds[2]].first;
+
+	for (unsigned int n = 0; n < cdtTets.size(); n++)
 	{
-		if (areIntersecting(missingSubfaceId, cit))
-			intersectingTets.push_back(cit);
+		p1Tet = plcVertices[cdtTets[n].pointIds[0]].first;
+       		p2Tet = plcVertices[cdtTets[n].pointIds[1]].first;
+		p3Tet = plcVertices[cdtTets[n].pointIds[2]].first;
+		p4Tet = plcVertices[cdtTets[n].pointIds[3]].first;
+
+		CGALTetrahedron CGALTet(p1Tet, p2Tet, p3Tet, p4Tet);
+		CGALTriangle CGALTri(p1Tri, p2Tri, p3Tri);
+	
+		if (do_intersect(CGALTri, CGALTet))
+			intersectingTets.push_back(n);
 		else
 			continue;
-	}		
-					
+	}
+
+	// Global cavity formation
+	unsigned int tempTetId;
+	vector<int> facetVisitCounter; 
+	
+	// Initialize faceVisitCounter
+	for (unsigned int s = 0; s < cdtFaceList.size(); s++)
+		facetVisitCounter.push_back(2);
+	
+
+	// Compute facetVisitCounter
+	for (unsigned int n = 0; n < intersectingTets.size(); n++)
+	{
+		tempTetId  = intersectingTets.back();
+		intersectingTets.pop_back();
+		
+		for (unsigned int i = 0; i < 4; i++)
+			facetVisitCounter[cdtTets[tempTetId].face[i]]--; 
+	}	
+	
+	// Determine globalCavity using faceVisitCounter	
+	vector<unsigned int> globalCavity;	
+	for (unsigned int k = 0; k < facetVisitCounter.size(); k++)
+		if (facetVisitCounter[k] == 1)
+			globalCavity.push_back(k);
+		else
+			continue;	
+		
+
+	// Partition global cavity to upper and lower cavity
+		// For each face in global cavity determine position of a point on its surface wrt. missingSubface
+		// If position of this point is above this face put this face in upper cavity otherwise in bottom cavity
+	
+	Point v1 = plcVertices[plcFaces[missingSubfaceId].pointIds[0]].first; 
+	Point v2 = plcVertices[plcFaces[missingSubfaceId].pointIds[1]].first;
+	Point v3 = plcVertices[plcFaces[missingSubfaceId].pointIds[2]].first;	
+
+	for (unsigned int g = 0; g < globalCavity.size(); g++)
+	{
+		Point randomPoint(); // random point inside triangle 'g' of global cavity
+
+		while(orientation(v1, v2, v3, randomPoint) == COPLANAR)
+			randomPoint = Point(); // re-initialize
+		
+		if (orientation(v1, v2, v3, randomPoint) == CGAL_POSITIVE)
+			cavity[0].push_back(globalCavity[g]);
+		else // case of coplanarity already removed
+			cavity[1].push_back(globalCavity[g]);
+	}	
 
 }
+
+
+void createEquivalentTetrahedralization()
+{
+	// Initializes cdtTet from DT
+	unsigned int ids[4];
+	unsigned int facetIds[4];
+
+	for (Delaunay::Finite_cells_iterator cit = DT.finite_cells_begin(); cit != DT.finite_cells_end(); cit++)
+	{
+		for (unsigned int i = 0; i < 4; i++)
+			ids[i] = cit->vertex(i)->info();
+	
+		// facetIds must be wrt. index of a face in cdtFacetList
+		for (unsigned int k = 0; k < 4; k++)
+			facetIds[k] = // index into cdtFaceList[]
+			
+		cdtTets.push_back(ids, facetIds); 
+	}
+	
+}
+
+void cavityReterahedralization()
+{
+
+	// update facetlist and cdtTet after retetrahedralization
+}
+
 
 // recovers the constraint faces
 void recoverConstraintFaces()
@@ -1035,17 +1129,24 @@ void recoverConstraintFaces()
 	 			
         vector<unsigned int> missingSubfacesQueue;
 	formMissingSubfaceQueue(missingSubfacesQueue);
-	vector<Triangle> cavity[2];
+	vector<unsigned int> cavity[2];
 	unsigned int missingSubfaceId;
+	vector<Triangle> cdtFaceList;
+
+	createCDTFaceList(cdtFaceList); // contains list of unique faces in CDT
+	createEquivalentTetrahedralization(); // initializes vector<Tetrahedron> cdtTet
 	
 	while (missingSubfacesQueue.size() != 0)
 	{
-		 missingSubfaceId = missingSubfacesQueue.back();
-		 missingSubfacesQueue.pop_back();
-		 formCavity(cavity, missingSubfaceId);
+		missingSubfaceId = missingSubfacesQueue.back();
+		missingSubfacesQueue.pop_back();
+		formCavity(cavity, missingSubfaceId, cdtFaceList);
 		
-		 for (unsigned int cavityId = 0; cavityId < 2; cavityId++)
-		 	cavityReterahedralization(cavity[cavityId], cdtTets); 
+		for (unsigned int cavityId = 0; cavityId < 2; cavityId++)
+		{
+			cavityReterahedralization(cavity[cavityId]); 
+			
+		}
 	}
 
 	return;	
