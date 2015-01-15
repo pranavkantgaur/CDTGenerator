@@ -14,6 +14,9 @@
 #include <CGAL/intersections.h>
 #include <CGAL/Exact_spherical_kernel_3.h>
 #include <CGAL/Spherical_kernel_intersections.h>
+#include <CGAL/Linear_cell_complex.h>
+#include <CGAL/Linear_cell_complex_constructors.h>
+
 #include "rply/rply.h"
 
 #define Pi 22.0/7.0
@@ -38,6 +41,8 @@ typedef Delaunay::Vertex_handle Vertex_handle;
 typedef Tetrahedron_3<K> CGALTetrahedron;
 typedef Triangle_3<K> CGALTriangle;
 typedef Delaunay::Cell_iterator Cell_iterator;
+typedef Linear_cell_complex<3> lcc;
+
 /*
  * Input  : plcVertices, plcSegments, plcFaces
  * Output : cdtTeterahedralMesh (collection of tetrahedrons), cdtVertices(=plcVertices)
@@ -60,7 +65,8 @@ class Tetrahedron
 {
 	public:
 		unsigned int pointIds[4];
-		
+		//Cell_iterator neighbors[4];
+		//face_handle faces[4];
 };
 
 
@@ -68,7 +74,8 @@ vector<pair<Point, unsigned int> > plcVertices;
 vector<Segment> plcSegments;
 vector<Triangle> plcFaces;
 
-vector <Tetrahedron> cdtTets; // contains ids of vertices making tetrahedron
+
+lcc cdtMesh;
 
 Delaunay DT;
 
@@ -993,6 +1000,13 @@ void formMissingSubfaceQueue(vector<unsigned int> &missingSubfacesQueue)
 	}
 }
 
+void createEquivalentTetrahedralization()
+{
+	
+	import_from_triangulation_3(cdtMesh, DT);
+}
+
+/*
 void formCavity(vector<unsigned int> *cavity, unsigned int missingSubfaceId, vector<Triangle> cdtFaceList)
 {
 	// compute list of tets intersecting face number: missingSubfaceId
@@ -1050,7 +1064,7 @@ void formCavity(vector<unsigned int> *cavity, unsigned int missingSubfaceId, vec
 		intersectingTets.pop_back();
 		
 		for (unsigned int i = 0; i < 4; i++)
-			facetVisitCounter[cdtTets[tempTetId].face[i]]--; 
+			facetVisitCounter[cdtTets[tempTetId].facetIds[i]]--; 
 	}	
 	
 	// Determine globalCavity using faceVisitCounter	
@@ -1081,29 +1095,10 @@ void formCavity(vector<unsigned int> *cavity, unsigned int missingSubfaceId, vec
 			cavity[0].push_back(globalCavity[g]);
 		else // case of coplanarity already removed
 			cavity[1].push_back(globalCavity[g]);
+		
 	}	
 
-}
 
-
-void createEquivalentTetrahedralization()
-{
-	// Initializes cdtTet from DT
-	unsigned int ids[4];
-	unsigned int facetIds[4];
-
-	for (Delaunay::Finite_cells_iterator cit = DT.finite_cells_begin(); cit != DT.finite_cells_end(); cit++)
-	{
-		for (unsigned int i = 0; i < 4; i++)
-			ids[i] = cit->vertex(i)->info();
-	
-		// facetIds must be wrt. index of a face in cdtFacetList
-		for (unsigned int k = 0; k < 4; k++)
-			facetIds[k] = // index into cdtFaceList[]
-			
-		cdtTets.push_back(ids, facetIds); 
-	}
-	
 }
 
 void cavityReterahedralization()
@@ -1112,7 +1107,7 @@ void cavityReterahedralization()
 	// update facetlist and cdtTet after retetrahedralization
 }
 
-
+*/
 // recovers the constraint faces
 void recoverConstraintFaces()
 {
@@ -1131,11 +1126,12 @@ void recoverConstraintFaces()
 	formMissingSubfaceQueue(missingSubfacesQueue);
 	vector<unsigned int> cavity[2];
 	unsigned int missingSubfaceId;
-	vector<Triangle> cdtFaceList;
 
-	createCDTFaceList(cdtFaceList); // contains list of unique faces in CDT
-	createEquivalentTetrahedralization(); // initializes vector<Tetrahedron> cdtTet
+	vector<Triangle> cdtFacetList;
+
+	createEquivalentTetrahedralization(); 
 	
+/*	
 	while (missingSubfacesQueue.size() != 0)
 	{
 		missingSubfaceId = missingSubfacesQueue.back();
@@ -1148,7 +1144,7 @@ void recoverConstraintFaces()
 			
 		}
 	}
-
+*/
 	return;	
 }		 
 	
