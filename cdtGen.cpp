@@ -42,7 +42,7 @@ typedef Tetrahedron_3<K> CGALTetrahedron;
 typedef Triangle_3<K> CGALTriangle;
 typedef Delaunay::Cell_iterator Cell_iterator;
 typedef Linear_cell_complex<3> lcc;
-
+typedef lcc::Dart_handle DartHandle;
 /*
  * Input  : plcVertices, plcSegments, plcFaces
  * Output : cdtTeterahedralMesh (collection of tetrahedrons), cdtVertices(=plcVertices)
@@ -1003,11 +1003,12 @@ void formMissingSubfaceQueue(vector<unsigned int> &missingSubfacesQueue)
 void createEquivalentTetrahedralization()
 {
 	
-	import_from_triangulation_3(cdtMesh, DT);
+	import_from_triangulation_3(cdtMesh, DT); 
+	
 }
 
-/*
-void formCavity(vector<unsigned int> *cavity, unsigned int missingSubfaceId, vector<Triangle> cdtFaceList)
+
+void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vector<DartHandle> cdtFaceList)
 {
 	// compute list of tets intersecting face number: missingSubfaceId
 	// for each intersecting tet:
@@ -1025,38 +1026,47 @@ void formCavity(vector<unsigned int> *cavity, unsigned int missingSubfaceId, vec
 					// Positive means associated facet belongs to upper cavity
 					// Negative means associated facet belongs to lower cavity	 
 
-	vector<unsigned int> intersectingTets;				
-	Point p1Tet, p2Tet, p3Tet, p4Tet, p1Tri, p2Tri, p3Tri;
+	vector<DartHandle> intersectingTets;				
+	Point pTet[4], pTri[3];
 	
-	p1Tri = plcVertices[plcFaces[missingSubfaceId].pointIds[0]].first;
-	p2Tri = plcVertices[plcFaces[missingSubfaceId].pointIds[1]].first;
-	p3Tri = plcVertices[plcFaces[missingSubfaceId].pointIds[2]].first;
-
-	for (unsigned int n = 0; n < cdtTets.size(); n++)
+	for (unsigned int n = 0; n < 3; n++)
+		pTri[n] = plcVertices[plcFaces[missingSubfaceId].pointIds[n]].first;
+	
+	unsigned int i = 0;
+	for (lcc::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(); cellIter != cdtMesh.one_dart_per_cell<3>().end(); cellIter++)
 	{
-		p1Tet = plcVertices[cdtTets[n].pointIds[0]].first;
-       		p2Tet = plcVertices[cdtTets[n].pointIds[1]].first;
-		p3Tet = plcVertices[cdtTets[n].pointIds[2]].first;
-		p4Tet = plcVertices[cdtTets[n].pointIds[3]].first;
+			
+		i = 0;
 
-		CGALTetrahedron CGALTet(p1Tet, p2Tet, p3Tet, p4Tet);
-		CGALTriangle CGALTri(p1Tri, p2Tri, p3Tri);
+		for (lcc::One_dart_per_incident_cell_range<0, 3>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 3>(cellIter).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 3>(cellIter).end(); vertexIter++)
+		{
+			pTet[i++] = plcVertices[(unsigned int)cdtMesh.info_of_attribute<0>(cdtMesh.vertex_attribute(vertexIter))].first;
+		}
+		
+		CGALTetrahedron CGALTet(pTet[0], pTet[1], pTet[2], pTet[3]);
+		
+		CGALTriangle CGALTri(pTri[0], pTri[1], pTri[2]);
 	
 		if (do_intersect(CGALTri, CGALTet))
-			intersectingTets.push_back(n);
+			intersectingTets.push_back(cellIter);
 		else
 			continue;
 	}
-
+/*
 	// Global cavity formation
-	unsigned int tempTetId;
+	dart_handle tempTetId;
 	vector<int> facetVisitCounter; 
 	
-	// Initialize faceVisitCounter
-	for (unsigned int s = 0; s < cdtFaceList.size(); s++)
-		facetVisitCounter.push_back(2);
+
+	// initialize cdtFaceList:
+	for (dart_handle h = cdtMesh.one_dart_per_cell<2>(); h != ??; h++)
+		cdtFacetList.push_back(h);
 	
 
+	// Initialize faceVisitCounter
+	for (unsigned int s = 0; s < cdtFaceList.size(); s++)
+		facetVisitCounter.push_back(std::map(cdtFaceList[s].dart_handle, 2));
+	
 	// Compute facetVisitCounter
 	for (unsigned int n = 0; n < intersectingTets.size(); n++)
 	{
@@ -1064,14 +1074,14 @@ void formCavity(vector<unsigned int> *cavity, unsigned int missingSubfaceId, vec
 		intersectingTets.pop_back();
 		
 		for (unsigned int i = 0; i < 4; i++)
-			facetVisitCounter[cdtTets[tempTetId].facetIds[i]]--; 
+			facetVisitCounter[cdtTets[tempTetId].facetIds[i].dart_handle]--; // indexed by dart_handle 
 	}	
 	
 	// Determine globalCavity using faceVisitCounter	
-	vector<unsigned int> globalCavity;	
+	vector<dart_handle> globalCavity;	
 	for (unsigned int k = 0; k < facetVisitCounter.size(); k++)
 		if (facetVisitCounter[k] == 1)
-			globalCavity.push_back(k);
+			globalCavity.push_back(cdtFaceList[k]);
 		else
 			continue;	
 		
@@ -1098,16 +1108,88 @@ void formCavity(vector<unsigned int> *cavity, unsigned int missingSubfaceId, vec
 		
 	}	
 
-
+*/
 }
 
-void cavityReterahedralization()
+/*
+void cavityRetetrahedralization(vector <DartHandle>* cavity)
 {
 
-	// update facetlist and cdtTet after retetrahedralization
-}
+	// cavity verification/expansion
+		// for all faces 'f' in upper(or lower) cavity, 
+			// Form a queue Q of all non-strongly Delunay faces in cavity C
+			// If f is not strongly Deluanay, 
+				// Remove f from cavity list
+				// For all tetrahedra t sharing f
+					// for all other faces F of t F != f:
+						// If F is not already in cavity 
+							// add it to cavity  
+						// Else 
+							// remove it from cavity
+						// Cavity C and set of vertices of cavity V
+			// repeat untill all faces of cavity are strongly Delaunay
+	vector<dart_handle> nonStronglyDelaunayFacesInCavity;
+	unordered_set <unsigned int> cavityVerticesSet;
+	
 
+	do
+	{
+		// compute set of non-strongly Delunay faces in cavity
+
+		for (unsigned int i = 0; i < 2; i++)
+		{
+			for (unsigned int k = 0; k < cavity[i].size(); k++) 
+			{	
+				// get set of all vertices of cavity
+					// create set of vertex ids from the vertexAttribute of all vertices of each facet in cavity  					 
+					// add vertex ids to cavityVertices array 	
+				for (unsigned int n = 0; n < 3; n++)
+					cavityVerticesSet.push_back(cavity[i].element[k].getVertexId(n));		
+			}
+			for (vector<dart_handle>::iterator iter = cavity[i].begin(); iter != cavity[i].end(); iter++)
+			{
+				if (isStronglyDelaunay(iter, cavityVerticesSet))
+					continue;
+				else
+					nonStronglyDelaunayFacesInCavity.push_back(iter);
+			}
+		}
+
+		// For each non strongly Delunay face
+			// remove face from cavity[i]
+			// find tets from cdtMesh sharing it:
+			// for each such tet t:
+				// for all facets F of t, F != f
+				// if F is in cavity[i]
+					// remove F from cavity[i]
+				// else,
+					// add F to cavity[i]
+					
+		for (unsigned int h = 0; h < nonStronglyDelaunayFacesInCavity.size(); h++)
+		{
+			dart_handle tempNonStronglyDelaunayFacet = nonStronglyDelaunayFacesInCavity.back();
+			nonStronglyDelaunayFacesInCavity.pop_back();
+			
+			unsigned int facetPosition;
+			if (facetPosition = locateFacetInCavity(tempNonStronglyDelaunayFacet, cavity[i])) // found, 
+			{
+				cavity[i].erase(cavity[i].begin(). cavity[i].begin() + facetPosition);
+				// get dart_handle to tet which also shares this facet but is present outside cavity:
+				range dRange = cdtMesh.one_dart_per_incident_cell<2, 3>; // gives handle to tets sharing this facet
+				// get dart_handle to all other facets of this tet:	  
+				
+			}				
+		}
+		
+
+	
+	}while(nonStronglyDelaunayFacesInCavity.size() != 0);
+						 
+	// cavity retetrahedralization
+
+}
 */
+
 // recovers the constraint faces
 void recoverConstraintFaces()
 {

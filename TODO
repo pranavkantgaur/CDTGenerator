@@ -17,3 +17,6 @@
 #9. Use finite_edges_iterator for computing missingSegmentsQueue
 
 #10. Is there any better way to list all possible combinations(say to be able to do it in a for loop)?
+
+#11. Replace missingSegment computation using 'is_edge()' function to search for plcSegments missing from DT
+
