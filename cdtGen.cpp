@@ -17,12 +17,25 @@
 #include <CGAL/Linear_cell_complex.h>
 #include <CGAL/Linear_cell_complex_constructors.h>
 
+
 #include "rply/rply.h"
 
 #define Pi 22.0/7.0
 #define INVALID_VALUE -1.0f // used in context of distances 
 using namespace std;
 using namespace CGAL;
+
+struct MyItem
+{
+	template<class Refs>
+	struct Dart_wrapper
+	{
+		typedef CGAL::Dart<3, Refs> Dart;
+		typedef CGAL::Cell_attribute_with_point<Refs, unsigned int, Tag_true, void> Vertex_attribute;
+		typedef CGAL::cpp11::tuple<Vertex_attribute> Attributes;
+	};
+ 
+};
 
 typedef Exact_predicates_inexact_constructions_kernel K;
 typedef Triangulation_vertex_base_with_info_3<unsigned, K> Vb;
@@ -41,12 +54,17 @@ typedef Delaunay::Vertex_handle Vertex_handle;
 typedef Tetrahedron_3<K> CGALTetrahedron;
 typedef Triangle_3<K> CGALTriangle;
 typedef Delaunay::Cell_iterator Cell_iterator;
-typedef Linear_cell_complex<3> lcc;
+
+typedef Linear_cell_complex_traits<3, K> Traits;
+typedef Linear_cell_complex<3, 3, Traits, MyItem> lcc;
 typedef lcc::Dart_handle DartHandle;
+
 /*
  * Input  : plcVertices, plcSegments, plcFaces
  * Output : cdtTeterahedralMesh (collection of tetrahedrons), cdtVertices(=plcVertices)
  */
+
+
 
 class Segment
 {
@@ -1004,6 +1022,10 @@ void createEquivalentTetrahedralization()
 {
 	
 	import_from_triangulation_3(cdtMesh, DT); 
+
+	// copy vertex ids from info structure of each vertex of DT to that of 0-cells in cdtMesh
+	
+	for (One_dart_per_cell_range<0, 3>::iterator vertexIter = cdtMesh.)
 	
 }
 
@@ -1040,7 +1062,7 @@ void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vecto
 
 		for (lcc::One_dart_per_incident_cell_range<0, 3>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 3>(cellIter).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 3>(cellIter).end(); vertexIter++)
 		{
-			pTet[i++] = plcVertices[(unsigned int)cdtMesh.info_of_attribute<0>(cdtMesh.vertex_attribute(vertexIter))].first;
+			pTet[i++] = plcVertices[cdtMesh.info_of_attribute<0>(cdtMesh.vertex_attribute(vertexIter))].first;
 		}
 		
 		CGALTetrahedron CGALTet(pTet[0], pTet[1], pTet[2], pTet[3]);
@@ -1177,7 +1199,7 @@ void cavityRetetrahedralization(vector <DartHandle>* cavity)
 				// get dart_handle to tet which also shares this facet but is present outside cavity:
 				range dRange = cdtMesh.one_dart_per_incident_cell<2, 3>; // gives handle to tets sharing this facet
 				// get dart_handle to all other facets of this tet:	  
-				
+		
 			}				
 		}
 		
