@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
-#include<math.h>
+#include <math.h>
+#include <map>
 
 #include <CGAL/Object.h>
 #include <CGAL/Sphere_3.h>
@@ -16,7 +17,7 @@
 #include <CGAL/Spherical_kernel_intersections.h>
 #include <CGAL/Linear_cell_complex.h>
 #include <CGAL/Linear_cell_complex_constructors.h>
-
+#include <CGAL/enum.h>
 
 #include "rply/rply.h"
 
@@ -1025,7 +1026,7 @@ void createEquivalentTetrahedralization()
 
 	// copy vertex ids from info structure of each vertex of DT to that of 0-cells in cdtMesh
 	
-	for (One_dart_per_cell_range<0, 3>::iterator vertexIter = cdtMesh.)
+	//for (One_dart_per_cell_range<0, 3>::iterator vertexIter = cdtMesh.)
 	
 }
 
@@ -1074,36 +1075,32 @@ void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vecto
 		else
 			continue;
 	}
-/*
+
 	// Global cavity formation
-	dart_handle tempTetId;
-	vector<int> facetVisitCounter; 
-	
+	map<DartHandle, unsigned int> facetVisitCounterMap;
 
-	// initialize cdtFaceList:
-	for (dart_handle h = cdtMesh.one_dart_per_cell<2>(); h != ??; h++)
-		cdtFacetList.push_back(h);
-	
+	// Initialize facetVisitCounter
+	for (lcc::One_dart_per_cell_range<2>::iterator faceIter = cdtMesh.one_dart_per_cell<2>().begin(); faceIter != cdtMesh.one_dart_per_cell<2>().end(); faceIter++)
+		facetVisitCounterMap.insert(pair<DartHandle, unsigned int>(faceIter, 2));
 
-	// Initialize faceVisitCounter
-	for (unsigned int s = 0; s < cdtFaceList.size(); s++)
-		facetVisitCounter.push_back(std::map(cdtFaceList[s].dart_handle, 2));
-	
+	DartHandle tempTetId;
 	// Compute facetVisitCounter
 	for (unsigned int n = 0; n < intersectingTets.size(); n++)
 	{
 		tempTetId  = intersectingTets.back();
 		intersectingTets.pop_back();
 		
-		for (unsigned int i = 0; i < 4; i++)
-			facetVisitCounter[cdtTets[tempTetId].facetIds[i].dart_handle]--; // indexed by dart_handle 
+		for (lcc::One_dart_per_incident_cell_range<2 ,3>::iterator fIter = cdtMesh.one_dart_per_incident_cell<2, 3>(tempTetId).begin(); fIter != cdtMesh.one_dart_per_incident_cell<2, 3>(tempTetId).end(); fIter++)
+			facetVisitCounterMap[fIter] = facetVisitCounterMap[fIter] - 1; 
 	}	
+
+		
 	
 	// Determine globalCavity using faceVisitCounter	
-	vector<dart_handle> globalCavity;	
-	for (unsigned int k = 0; k < facetVisitCounter.size(); k++)
-		if (facetVisitCounter[k] == 1)
-			globalCavity.push_back(cdtFaceList[k]);
+	vector<DartHandle> globalCavity;	
+	for (map<DartHandle, unsigned int>::iterator iter = facetVisitCounterMap.begin(); iter != facetVisitCounterMap.end(); iter++)
+		if (facetVisitCounterMap[iter->first] == 1)
+			globalCavity.push_back(iter->first);
 		else
 			continue;	
 		
@@ -1118,19 +1115,19 @@ void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vecto
 
 	for (unsigned int g = 0; g < globalCavity.size(); g++)
 	{
-		Point randomPoint(); // random point inside triangle 'g' of global cavity
+		Point randomPoint(1,1,1); // random point inside triangle 'g' of global cavity
 
 		while(orientation(v1, v2, v3, randomPoint) == COPLANAR)
-			randomPoint = Point(); // re-initialize
+			randomPoint = Point(1,1,1); // re-initialize
 		
-		if (orientation(v1, v2, v3, randomPoint) == CGAL_POSITIVE)
+		if (orientation(v1, v2, v3, randomPoint) == CGAL::POSITIVE)
 			cavity[0].push_back(globalCavity[g]);
 		else // case of coplanarity already removed
 			cavity[1].push_back(globalCavity[g]);
 		
 	}	
 
-*/
+
 }
 
 /*
