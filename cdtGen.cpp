@@ -2,6 +2,7 @@
 #include <vector>
 #include <math.h>
 #include <map>
+#include <unordered_set>
 
 #include <CGAL/Object.h>
 #include <CGAL/Sphere_3.h>
@@ -1031,7 +1032,7 @@ void createEquivalentTetrahedralization()
 }
 
 
-void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vector<DartHandle> cdtFaceList)
+void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId)
 {
 	// compute list of tets intersecting face number: missingSubfaceId
 	// for each intersecting tet:
@@ -1115,12 +1116,12 @@ void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vecto
 
 	for (unsigned int g = 0; g < globalCavity.size(); g++)
 	{
-		Point randomPoint(1,1,1); // random point inside triangle 'g' of global cavity
+		Point randomPointOnTheFacet(1,1,1); // random point inside triangle 'g' of global cavity
 
-		while(orientation(v1, v2, v3, randomPoint) == COPLANAR)
-			randomPoint = Point(1,1,1); // re-initialize
+		while(orientation(v1, v2, v3, randomPointOnTheFacet) == COPLANAR)
+			randomPointOnTheFacet = Point(1,1,1); // re-initialize
 		
-		if (orientation(v1, v2, v3, randomPoint) == CGAL::POSITIVE)
+		if (orientation(v1, v2, v3, randomPointOnTheFacet) == CGAL::POSITIVE)
 			cavity[0].push_back(globalCavity[g]);
 		else // case of coplanarity already removed
 			cavity[1].push_back(globalCavity[g]);
@@ -1130,7 +1131,52 @@ void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vecto
 
 }
 
-/*
+bool isStronglyDelaunay(DartHandle facetHandle, unordered_set<unsigned int> cavityVerticesSet)
+{
+	// tests whether facet/triangle pointed to by facetHandle is strongly Delaunay wrt. vertices in cavityVerticesSet
+
+	// compute Delunay tetrahedralization of vertices
+		// check if the face is there in that DT 
+		// If yes then check if the enclosing sphere has any other vertex on its surface
+			// If yes, then it is Delaunay but not strongly Delaunay, return false
+			// If no, then it is strongly Delaunay, return true
+		// If no, then it is not even Delaunay, return false 	
+		
+	Delaunay tempDT;
+	vector<Point> cavityVertices;
+
+	for (unordered_set<unsigned int>::iterator vertexIter = cavityVerticesSet.begin(); vertexIter != cavityVerticesSet.end(); vertexIter++)
+		cavityVertices.push_back(plcVertices[*vertexIter].first);
+
+
+	// Compute DT
+	tempDT.insert(cavityVertices.begin(), cavityVertices.end());
+	
+	// test strong Delaunay criteria
+	Vertex_handle vh[3];
+	unsigned int i, j, k, h = 0;
+
+	for (lcc::One_dart_per_incident_cell_range<0, 2>::iterator iter = cdtMesh.one_dart_per_incident_cell<0, 2>(facetHandle).begin(); iter != cdtMesh.one_dart_per_incident_cell<0, 2>(facetHandle).end(); iter++)
+		tempDT.is_vertex(plcVertices[cdtMesh.info<0>(iter)].first, vh[h++]);
+
+
+	if (tempDT.is_facet(vh1, vh2, vh3, ch, i, j, k))
+	{
+		Sphere_3 s(vh1->point(), vh2->point(), vh3->point(), FOURTH POINT);
+
+		for (vector<Point>::iterator vIter = cavityVertices.begin(); vIter != cavityVertices.end(); vIter++)
+		{	
+			if (s.has_on_boundary(*vIter))
+				return false;	
+		}
+
+		return true;
+	}
+
+	return false;
+
+}
+
 void cavityRetetrahedralization(vector <DartHandle>* cavity)
 {
 
@@ -1147,8 +1193,8 @@ void cavityRetetrahedralization(vector <DartHandle>* cavity)
 							// remove it from cavity
 						// Cavity C and set of vertices of cavity V
 			// repeat untill all faces of cavity are strongly Delaunay
-	vector<dart_handle> nonStronglyDelaunayFacesInCavity;
-	unordered_set <unsigned int> cavityVerticesSet;
+	vector<DartHandle> nonStronglyDelaunayFacesInCavity;
+	unordered_set<unsigned int> cavityVerticesSet;
 	
 
 	do
@@ -1162,15 +1208,17 @@ void cavityRetetrahedralization(vector <DartHandle>* cavity)
 				// get set of all vertices of cavity
 					// create set of vertex ids from the vertexAttribute of all vertices of each facet in cavity  					 
 					// add vertex ids to cavityVertices array 	
-				for (unsigned int n = 0; n < 3; n++)
-					cavityVerticesSet.push_back(cavity[i].element[k].getVertexId(n));		
+				for (lcc::One_dart_per_incident_cell_range<0,2>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0,2>(cavity[i][k]).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0,2>(cavity[i][k]).end(); vertexIter++)
+		         		cavityVerticesSet.insert(cdtMesh.info<0>(vertexIter));		
+			
 			}
-			for (vector<dart_handle>::iterator iter = cavity[i].begin(); iter != cavity[i].end(); iter++)
+
+			for (vector<DartHandle>::iterator iter = cavity[i].begin(); iter != cavity[i].end(); iter++)
 			{
-				if (isStronglyDelaunay(iter, cavityVerticesSet))
+				if (isStronglyDelaunay(*iter, cavityVerticesSet))
 					continue;
 				else
-					nonStronglyDelaunayFacesInCavity.push_back(iter);
+					nonStronglyDelaunayFacesInCavity.push_back(*iter);
 			}
 		}
 
@@ -1182,7 +1230,7 @@ void cavityRetetrahedralization(vector <DartHandle>* cavity)
 				// if F is in cavity[i]
 					// remove F from cavity[i]
 				// else,
-					// add F to cavity[i]
+	/*				// add F to cavity[i]
 					
 		for (unsigned int h = 0; h < nonStronglyDelaunayFacesInCavity.size(); h++)
 		{
@@ -1201,13 +1249,13 @@ void cavityRetetrahedralization(vector <DartHandle>* cavity)
 		}
 		
 
-	
+*/	
 	}while(nonStronglyDelaunayFacesInCavity.size() != 0);
 						 
 	// cavity retetrahedralization
 
 }
-*/
+
 
 // recovers the constraint faces
 void recoverConstraintFaces()
@@ -1225,27 +1273,28 @@ void recoverConstraintFaces()
 	 			
         vector<unsigned int> missingSubfacesQueue;
 	formMissingSubfaceQueue(missingSubfacesQueue);
-	vector<unsigned int> cavity[2];
+	vector<DartHandle> cavity[2];
 	unsigned int missingSubfaceId;
 
 	vector<Triangle> cdtFacetList;
 
 	createEquivalentTetrahedralization(); 
 	
-/*	
+	
 	while (missingSubfacesQueue.size() != 0)
 	{
 		missingSubfaceId = missingSubfacesQueue.back();
 		missingSubfacesQueue.pop_back();
-		formCavity(cavity, missingSubfaceId, cdtFaceList);
-		
+		formCavity(cavity, missingSubfaceId);
+/*		
 		for (unsigned int cavityId = 0; cavityId < 2; cavityId++)
 		{
 			cavityReterahedralization(cavity[cavityId]); 
 			
 		}
+		*/
 	}
-*/
+
 	return;	
 }		 
 	
