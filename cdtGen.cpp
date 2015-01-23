@@ -1219,7 +1219,7 @@ bool isCellOutsideCavity(DartHandle cellHandle, vector<DartHandle> cavity)
 
 
 
-void cavityRetetrahedralization(vector <DartHandle>* cavity)
+void cavityRetetrahedralization(vector <DartHandle> &cavity)
 {
 
 	// cavity verification/expansion
@@ -1240,24 +1240,21 @@ void cavityRetetrahedralization(vector <DartHandle>* cavity)
 
 	// compute set of non-strongly Delunay faces in cavity
 
-	for (unsigned int i = 0; i < 2; i++)
-	{
+	
 		
-		nonStronglyDelaunayFacesInCavity.clear();
-
 		do
 		{	
-			for (unsigned int k = 0; k < cavity[i].size(); k++) 
+			for (unsigned int k = 0; k < cavity.size(); k++) 
 			{	
 				// get set of all vertices of cavity
 					// create set of vertex ids from the vertexAttribute of all vertices of each facet in cavity  					 
 					// add vertex ids to cavityVertices array 	
-				for (lcc::One_dart_per_incident_cell_range<0,2>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0,2>(cavity[i][k]).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0,2>(cavity[i][k]).end(); vertexIter++)
+				for (lcc::One_dart_per_incident_cell_range<0,2>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0,2>(cavity[k]).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0,2>(cavity[k]).end(); vertexIter++)
 		         		cavityVerticesSet.insert(cdtMesh.info<0>(vertexIter));		
 			
 			}
 
-			for (vector<DartHandle>::iterator iter = cavity[i].begin(); iter != cavity[i].end(); iter++)
+			for (vector<DartHandle>::iterator iter = cavity.begin(); iter != cavity.end(); iter++)
 			{
 				if (isStronglyDelaunay(*iter, cavityVerticesSet))
 			        	continue;
@@ -1282,20 +1279,20 @@ void cavityRetetrahedralization(vector <DartHandle>* cavity)
 				nonStronglyDelaunayFacesInCavity.pop_back();
 				
 				unsigned int facetPosition1, facetPosition2;
-				if ((facetPosition1 = locateFacetInCavity(tempNonStronglyDelaunayFacet, cavity[i])) != -1) // found, 
+				if ((facetPosition1 = locateFacetInCavity(tempNonStronglyDelaunayFacet, cavity)) != -1) // found, 
 				{
 			
 					// find tet from cdtMesh sharing it:
 					for (lcc::One_dart_per_incident_cell_range<2, 3>::iterator cellIter = cdtMesh.one_dart_per_incident_cell<2, 3>(tempNonStronglyDelaunayFacet).begin(); cellIter != cdtMesh.one_dart_per_incident_cell<2, 3>(tempNonStronglyDelaunayFacet).end(); cellIter++)
 					{
-						if (isCellOutsideCavity(cellIter, cavity[i]))
+						if (isCellOutsideCavity(cellIter, cavity))
 						{
 							for (lcc::One_dart_per_incident_cell_range<2, 3>::iterator faceIter = cdtMesh.one_dart_per_incident_cell<2, 3>(cellIter).begin(); faceIter != cdtMesh.one_dart_per_incident_cell<2, 3>(cellIter).end(); faceIter++)
 							{
-								if ((facetPosition2 = locateFacetInCavity(faceIter, cavity[i])) != -1)
-									cavity[i].erase(cavity[i].begin(), cavity[i].begin() + facetPosition2);
+								if ((facetPosition2 = locateFacetInCavity(faceIter, cavity)) != -1)
+									cavity.erase(cavity.begin(), cavity.begin() + facetPosition2);
 								else // add facet to the cavity
-									cavity[i].push_back(faceIter);
+									cavity.push_back(faceIter);
 							}
 						}
 
@@ -1304,13 +1301,12 @@ void cavityRetetrahedralization(vector <DartHandle>* cavity)
 							
 					}
 					// remove facet from cavity(remove from cdtMesh as well)
-					cavity[i].erase(cavity[i].begin(), cavity[i].begin() + facetPosition1); // removed at the end to maintain closeness of cavity from performin inCavity predicates
+					cavity.erase(cavity.begin(), cavity.begin() + facetPosition1); // removed at the end to maintain closeness of cavity from performin inCavity predicates
 				}				
 		
 			}
 		}while(nonStronglyDelaunayFacesInCavity.size() != 0);
 
-	}
 
 }
 
@@ -1344,13 +1340,13 @@ void recoverConstraintFaces()
 		missingSubfaceId = missingSubfacesQueue.back();
 		missingSubfacesQueue.pop_back();
 		formCavity(cavity, missingSubfaceId);
-/*		
+		
 		for (unsigned int cavityId = 0; cavityId < 2; cavityId++)
 		{
-			cavityReterahedralization(cavity[cavityId]); 
+			cavityRetetrahedralization(cavity[cavityId]); 
 			
 		}
-		*/
+		
 	}
 
 	return;	
