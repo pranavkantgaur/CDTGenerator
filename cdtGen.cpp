@@ -1154,15 +1154,16 @@ bool isStronglyDelaunay(DartHandle facetHandle, unordered_set<unsigned int> cavi
 	
 	// test strong Delaunay criteria
 	Vertex_handle vh[3];
-	unsigned int i, j, k, h = 0;
+	int i, j, k, h = 0;
+	Delaunay::Cell_handle ch;
 
 	for (lcc::One_dart_per_incident_cell_range<0, 2>::iterator iter = cdtMesh.one_dart_per_incident_cell<0, 2>(facetHandle).begin(); iter != cdtMesh.one_dart_per_incident_cell<0, 2>(facetHandle).end(); iter++)
 		tempDT.is_vertex(plcVertices[cdtMesh.info<0>(iter)].first, vh[h++]);
 
 
-	if (tempDT.is_facet(vh1, vh2, vh3, ch, i, j, k))
+	if (tempDT.is_facet(vh[0], vh[1], vh[2], ch, i, j, k))
 	{
-		Sphere_3 s(vh1->point(), vh2->point(), vh3->point(), FOURTH POINT);
+		Sphere s(vh[0]->point(), vh[1]->point(), vh[2]->point(), ((*ch).vertex(6 - i - j - k))->point());
 
 		for (vector<Point>::iterator vIter = cavityVertices.begin(); vIter != cavityVertices.end(); vIter++)
 		{	
