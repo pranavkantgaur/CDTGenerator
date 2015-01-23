@@ -18,5 +18,8 @@
 
 #10. Is there any better way to list all possible combinations(say to be able to do it in a for loop)?
 
+#11. Initialize info() of cells in LCC after it is imported from DT.
+
+#12. Add code for generating random points on the surface of a triangle(i.e. bounded plane).
 #11. Replace missingSegment computation using 'is_edge()' function to search for plcSegments missing from DT
 
