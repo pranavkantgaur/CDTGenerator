@@ -1178,6 +1178,47 @@ bool isStronglyDelaunay(DartHandle facetHandle, unordered_set<unsigned int> cavi
 
 }
 
+
+
+int locateFacetInCavity(DartHandle nonStronglyDelaunayFacet, vector<DartHandle> cavity)
+{
+
+	//if (facetPosition = locateFacetInCavity(tempNonStronglyDelaunayFacet, cavity[i])) // found, 
+	int facetLocation = 0;
+	for (vector<DartHandle>::iterator facetIter = cavity.begin(); facetIter != cavity.end(); facetIter++)
+	{
+		if (nonStronglyDelaunayFacet == *facetIter)
+			return facetLocation;
+		else
+			facetLocation++;
+	}
+	return -1;
+}
+
+
+bool isCellOutsideCavity(DartHandle cellHandle, vector<DartHandle> cavity)
+{
+	// create Polyhedron_3 from cavity
+	// check if the tet/barycenter of tetrahedron is inside cavity()
+	// if the point is on the interior for all faces of cavity, then point/triangle face is inside cavity
+	
+
+	// Another approach:
+		// Convert tet & cavity to Nef_polyhedra
+		// Determine intersection
+			// If intersection is tet itself
+				// return false
+			// else, 
+				// return true	   
+
+
+
+	return false;
+}
+
+
+
+
 void cavityRetetrahedralization(vector <DartHandle>* cavity)
 {
 
@@ -1196,14 +1237,16 @@ void cavityRetetrahedralization(vector <DartHandle>* cavity)
 			// repeat untill all faces of cavity are strongly Delaunay
 	vector<DartHandle> nonStronglyDelaunayFacesInCavity;
 	unordered_set<unsigned int> cavityVerticesSet;
-	
 
-	do
+	// compute set of non-strongly Delunay faces in cavity
+
+	for (unsigned int i = 0; i < 2; i++)
 	{
-		// compute set of non-strongly Delunay faces in cavity
+		
+		nonStronglyDelaunayFacesInCavity.clear();
 
-		for (unsigned int i = 0; i < 2; i++)
-		{
+		do
+		{	
 			for (unsigned int k = 0; k < cavity[i].size(); k++) 
 			{	
 				// get set of all vertices of cavity
@@ -1217,11 +1260,11 @@ void cavityRetetrahedralization(vector <DartHandle>* cavity)
 			for (vector<DartHandle>::iterator iter = cavity[i].begin(); iter != cavity[i].end(); iter++)
 			{
 				if (isStronglyDelaunay(*iter, cavityVerticesSet))
-					continue;
+			        	continue;
 				else
 					nonStronglyDelaunayFacesInCavity.push_back(*iter);
 			}
-		}
+		
 
 		// For each non strongly Delunay face
 			// remove face from cavity[i]
@@ -1231,29 +1274,43 @@ void cavityRetetrahedralization(vector <DartHandle>* cavity)
 				// if F is in cavity[i]
 					// remove F from cavity[i]
 				// else,
-	/*				// add F to cavity[i]
+					// add F to cavity[i]
 					
-		for (unsigned int h = 0; h < nonStronglyDelaunayFacesInCavity.size(); h++)
-		{
-			dart_handle tempNonStronglyDelaunayFacet = nonStronglyDelaunayFacesInCavity.back();
-			nonStronglyDelaunayFacesInCavity.pop_back();
-			
-			unsigned int facetPosition;
-			if (facetPosition = locateFacetInCavity(tempNonStronglyDelaunayFacet, cavity[i])) // found, 
+			for (unsigned int h = 0; h < nonStronglyDelaunayFacesInCavity.size(); h++)
 			{
-				cavity[i].erase(cavity[i].begin(). cavity[i].begin() + facetPosition);
-				// get dart_handle to tet which also shares this facet but is present outside cavity:
-				range dRange = cdtMesh.one_dart_per_incident_cell<2, 3>; // gives handle to tets sharing this facet
-				// get dart_handle to all other facets of this tet:	  
-		
-			}				
-		}
-		
+				DartHandle tempNonStronglyDelaunayFacet = nonStronglyDelaunayFacesInCavity.back();
+				nonStronglyDelaunayFacesInCavity.pop_back();
+				
+				unsigned int facetPosition1, facetPosition2;
+				if ((facetPosition1 = locateFacetInCavity(tempNonStronglyDelaunayFacet, cavity[i])) != -1) // found, 
+				{
+			
+					// find tet from cdtMesh sharing it:
+					for (lcc::One_dart_per_incident_cell_range<2, 3>::iterator cellIter = cdtMesh.one_dart_per_incident_cell<2, 3>(tempNonStronglyDelaunayFacet).begin(); cellIter != cdtMesh.one_dart_per_incident_cell<2, 3>(tempNonStronglyDelaunayFacet).end(); cellIter++)
+					{
+						if (isCellOutsideCavity(cellIter, cavity[i]))
+						{
+							for (lcc::One_dart_per_incident_cell_range<2, 3>::iterator faceIter = cdtMesh.one_dart_per_incident_cell<2, 3>(cellIter).begin(); faceIter != cdtMesh.one_dart_per_incident_cell<2, 3>(cellIter).end(); faceIter++)
+							{
+								if ((facetPosition2 = locateFacetInCavity(faceIter, cavity[i])) != -1)
+									cavity[i].erase(cavity[i].begin(), cavity[i].begin() + facetPosition2);
+								else // add facet to the cavity
+									cavity[i].push_back(faceIter);
+							}
+						}
 
-*/	
-	}while(nonStronglyDelaunayFacesInCavity.size() != 0);
-						 
-	// cavity retetrahedralization
+						else 
+							continue; // skip and check next neighbor cell
+							
+					}
+					// remove facet from cavity(remove from cdtMesh as well)
+					cavity[i].erase(cavity[i].begin(), cavity[i].begin() + facetPosition1); // removed at the end to maintain closeness of cavity from performin inCavity predicates
+				}				
+		
+			}
+		}while(nonStronglyDelaunayFacesInCavity.size() != 0);
+
+	}
 
 }
 
