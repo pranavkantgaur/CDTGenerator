@@ -1198,18 +1198,24 @@ int locateFacetInCavity(DartHandle nonStronglyDelaunayFacet, vector<DartHandle> 
 
 bool isCellOutsideCavity(DartHandle cellHandle, vector<DartHandle> cavity)
 {
-	// create Polyhedron_3 from cavity
-	// check if the tet/barycenter of tetrahedron is inside cavity()
-	// if the point is on the interior for all faces of cavity, then point/triangle face is inside cavity
-	
 
-	// Another approach:
+
+	// Approach 1:
 		// Convert tet & cavity to Nef_polyhedra
 		// Determine intersection
 			// If intersection is tet itself
 				// return false
 			// else, 
 				// return true	   
+				
+	// Approach 2:
+		// Take a random ray out of barycentre of tet
+		// Count number of intersections of the ray with polyhedron
+		// If number of intersections:
+			// Even:
+				// return true
+			// Odd:
+				// return false 			 
 
 
 
