@@ -5,6 +5,7 @@
 #include <unordered_set>
 
 #include <CGAL/Object.h>
+#include <CGAL/Ray_3.h>
 #include <CGAL/Sphere_3.h>
 #include <CGAL/Segment_3.h>
 #include <CGAL/Circle_3.h>
@@ -1241,7 +1242,7 @@ bool isCellOutsideCavity(DartHandle cellHandle, vector<DartHandle> cavity)
 		// generate a random ray
 		Point randomPoint(1, 12, 1);
 
-		Segment_3<K> randomRay(tetBarycenter, randomPoint);
+		Ray_3<K> randomRay(tetBarycenter, randomPoint);
 		unsigned int intersectionCount = 0;
 
 		for (vector<DartHandle>::iterator facetIter = cavity.begin(); facetIter != cavity.end(); facetIter++)
