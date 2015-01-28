@@ -4,6 +4,7 @@
 #include <map>
 #include <unordered_set>
 
+#include <CGAL/Random.h>
 #include <CGAL/Object.h>
 #include <CGAL/Ray_3.h>
 #include <CGAL/Sphere_3.h>
@@ -1115,13 +1116,41 @@ void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId)
 	Point v2 = plcVertices[plcFaces[missingSubfaceId].pointIds[1]].first;
 	Point v3 = plcVertices[plcFaces[missingSubfaceId].pointIds[2]].first;	
 
+	Random rnd1(30.0), rnd2(10.0);
+
+	float s = rnd1.uniform_real<float>(); 
+	float t = rnd2.uniform_real<float>();
+	Point *points[3];
+	unsigned int n = 0;
+	float xRand, yRand, zRand;
+
+
 	for (unsigned int g = 0; g < globalCavity.size(); g++)
 	{
-		Point randomPointOnTheFacet(1,1,1); // random point inside triangle 'g' of global cavity
-
-		while(orientation(v1, v2, v3, randomPointOnTheFacet) == COPLANAR)
-			randomPointOnTheFacet = Point(1,1,1); // re-initialize
 		
+		n = 0;		
+		
+		for (lcc::One_dart_per_incident_cell_range<0, 2>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 2>(globalCavity[g]).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 2>(globalCavity[g]).end(); vertexIter++)
+			points[n++] = &plcVertices[cdtMesh.info<0>(vertexIter)].first;
+		
+		xRand = (1.0 - s - t) * points[0]->x() + s * points[1]->x() + t * points[2]->x(); // parametric representation of a point on the plane
+		yRand = (1.0 - s - t) * points[0]->y() + s * points[1]->y() + t * points[2]->y();	
+		zRand = (1.0 - s - t) * points[0]->z() + s * points[1]->z() + t * points[2]->z();
+	
+		Point randomPointOnTheFacet(xRand, yRand, zRand); // random point inside triangle 'g' of global cavity
+			
+		while(orientation(v1, v2, v3, randomPointOnTheFacet) == COPLANAR)
+		{
+			s = rnd1.uniform_real<float>();
+			t = rnd2.uniform_real<float>();
+			
+			xRand = (1.0 - s - t) * points[0]->x() + s * points[1]->x() + t * points[2]->x();
+			yRand = (1.0 - s - t) * points[0]->y() + s * points[1]->y() + t * points[2]->y();	
+			zRand = (1.0 - s - t) * points[0]->z() + s * points[1]->z() + t * points[2]->z();
+
+			randomPointOnTheFacet = Point(xRand, yRand, zRand); // re-initialize
+		}
+
 		if (orientation(v1, v2, v3, randomPointOnTheFacet) == CGAL::POSITIVE)
 			cavity[0].push_back(globalCavity[g]);
 		else // case of coplanarity already removed
@@ -1240,7 +1269,12 @@ bool isCellOutsideCavity(DartHandle cellHandle, vector<DartHandle> cavity)
 		Point tetBarycenter(x, y, z);
 	
 		// generate a random ray
-		Point randomPoint(1, 12, 1);
+		
+		Random rndGenerator1(50.0); // some numbers given as seed
+		Random rndGenerator2(60.0);
+		Random rndGenerator3(70.0);
+
+		Point randomPoint(rndGenerator1.uniform_real<float>(), rndGenerator2.uniform_real<float>(), rndGenerator3.uniform_real<float>());
 
 		Ray_3<K> randomRay(tetBarycenter, randomPoint);
 		unsigned int intersectionCount = 0;
