@@ -1209,17 +1209,64 @@ bool isCellOutsideCavity(DartHandle cellHandle, vector<DartHandle> cavity)
 				// return true	   
 				
 	// Approach 2:
-		// Take a random ray out of barycentre of tet
+		// Take a random ray out of barycenter of tetrahedron
 		// Count number of intersections of the ray with polyhedron
 		// If number of intersections:
 			// Even:
 				// return true
 			// Odd:
-				// return false 			 
+				// return false 		
+				
+		Point p[4];
 
+		unsigned int i = 0;
+		for (lcc::One_dart_per_incident_cell_range<0, 3>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 3>(cellHandle).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 3>(cellHandle).end(); vertexIter++)
+			p[i++] = plcVertices[cdtMesh.info<0>(vertexIter)].first;
+		
+		float x = 0.0, y = 0.0, z = 0.0;
 
+		for (unsigned int n = 0; n < 4; n++)
+		{
+			x += p[n].x();
+			y += p[n].y();
+			z += p[n].z();
+		}
 
-	return false;
+			x /= 4.0;
+			y /= 4.0;
+			z /= 4.0;
+
+		Point tetBarycenter(x, y, z);
+	
+		// generate a random ray
+		Point randomPoint(1, 12, 1);
+
+		Segment_3<K> randomRay(tetBarycenter, randomPoint);
+		unsigned int intersectionCount = 0;
+
+		for (vector<DartHandle>::iterator facetIter = cavity.begin(); facetIter != cavity.end(); facetIter++)
+		{
+			// compute its intersection with all faces of cavity
+			// count number of intersections
+			Point facetVertices[3];
+			
+			unsigned int k = 0;	
+			for (lcc::One_dart_per_incident_cell_range<0, 2>::iterator pointIter = cdtMesh.one_dart_per_incident_cell<0, 2>(*facetIter).begin(); pointIter != cdtMesh.one_dart_per_incident_cell<0, 2>(*facetIter).end(); pointIter++)
+				facetVertices[k++] = plcVertices[cdtMesh.info<0>(pointIter)].first;
+		
+
+			Triangle_3<K> cavityFacet(facetVertices[0], facetVertices[1], facetVertices[2]); 
+		
+			if (do_intersect(randomRay, cavityFacet))
+				intersectionCount++;
+			else
+				continue;
+		}
+		
+		if (intersectionCount % 2 == 0)
+			return true;
+		else
+			return false;
 }
 
 
