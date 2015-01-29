@@ -437,7 +437,7 @@ bool containsSegment(unsigned int faceId, unsigned int segmentId)
 }
 
 
-void updatePLCAndDT(Point v, unsigned int missingSegmentId)
+void updatePLCAndDT(Point &v, unsigned int missingSegmentId)
 {
 	// vertex
 	
@@ -464,9 +464,15 @@ void updatePLCAndDT(Point v, unsigned int missingSegmentId)
 	unsigned int v1, v2, v3;
 	Triangle newFace1, newFace2;
 
-	for (unsigned int d = 0; d < plcFaces.size(); d++)
+	unsigned int k = plcFaces.size();
+
+	for (unsigned int d = 0; d < k; d++)
+	{
 		if (containsSegment(d, missingSegmentId))
 		{
+			//newFace1 = new Triangle;
+		       	//newFace2 = new Triangle;
+
 			newFace1.pointIds[0] = plcFaces[d].pointIds[0];
 			newFace1.pointIds[1] = plcFaces[d].pointIds[1];
 			newFace1.pointIds[2] = plcVertices.size() - 1;
@@ -478,9 +484,13 @@ void updatePLCAndDT(Point v, unsigned int missingSegmentId)
 			plcFaces.push_back(newFace1);
 			plcFaces.push_back(newFace2);
 			plcFaces.erase(plcFaces.begin() + d);		
+			
+			d -= 1;
+			k -= 1;
 		}
+	}
 
-
+	
 	// DT
 	computeDelaunayTetrahedralization();
 
@@ -668,7 +678,8 @@ void splitMissingSegment(unsigned int missingSegmentId)
 		v = newPoint;
 	}
 
-	// udpdate plc and DT
+	// update plc and DT
+	updatePLCAndDT(v, missingSegmentId);
 	
 	return;
 }
@@ -693,11 +704,11 @@ void recoverConstraintSegments()
 		i++;
 	}
 	
-	cout << "\nIn the loop" << i << "number of times" << "\n";
+	cout << "\nIn the loop " << i << " number of times" << "\n";
 	
 	return;
 }
-
+/*
 /////////////////////////////////////////////// Local Degeneracy Removal begin ///////////////////////////////////////////////////
 
 class DegenerateVertexSetCandidate
@@ -780,17 +791,7 @@ bool isDegeneracyRemovable(DegenerateVertexSetCandidate degenCandidate)
 {
 	bool removable = false;
 	
-/*	for (unsigned int n = 0; n < 5; n++)
-		if (isVertexPerturbable(degenCandidate.pointIds[n]))
-			if (isVertexSegmentSafePerturbable())
-			{
-				removable = true;
-				break;
-			}
-			else
-				continue;
 
-*/
 
 	return removable;
 }
@@ -1437,7 +1438,7 @@ void recoverConstraintFaces()
 	return;	
 }		 
 	
-
+*/
 
 /////////////////////////////////////////////// Facet recovery ends /////////////////////////////////////////////////////////////
 	
@@ -1448,9 +1449,9 @@ int main()
 	readPLCInput();
 	computeDelaunayTetrahedralization();
 	recoverConstraintSegments();
-	removeLocalDegeneracies();
+/*	removeLocalDegeneracies();
 	recoverConstraintFaces();
-
+*/
 	return 0;
 }
 
