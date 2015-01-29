@@ -708,7 +708,7 @@ void recoverConstraintSegments()
 	
 	return;
 }
-/*
+
 /////////////////////////////////////////////// Local Degeneracy Removal begin ///////////////////////////////////////////////////
 
 class DegenerateVertexSetCandidate
@@ -1438,7 +1438,7 @@ void recoverConstraintFaces()
 	return;	
 }		 
 	
-*/
+
 
 /////////////////////////////////////////////// Facet recovery ends /////////////////////////////////////////////////////////////
 	
@@ -1449,9 +1449,9 @@ int main()
 	readPLCInput();
 	computeDelaunayTetrahedralization();
 	recoverConstraintSegments();
-/*	removeLocalDegeneracies();
+	removeLocalDegeneracies();
 	recoverConstraintFaces();
-*/
+
 	return 0;
 }
 
