@@ -65,7 +65,7 @@ typedef lcc::Dart_handle DartHandle;
 
 /*
  * Input  : plcVertices, plcSegments, plcFaces
- * Output : cdtTeterahedralMesh (collection of tetrahedrons), cdtVertices(=plcVertices)
+ * Output : cdtMesh(linear cell complex containing output tetrahedra)
  */
 
 
@@ -221,7 +221,7 @@ void computeDelaunayTetrahedralization()
 
 
 
-///////////////////////////////////////////// Segment recovery ///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////// Segment recovery //////////////////////////////////////////////////////////////
 
 
 void formMissingSegmentsQueue(vector<unsigned int> &missingSegmentQueue)
@@ -1389,13 +1389,11 @@ void cavityRetetrahedralization(vector <DartHandle> &cavity)
 							
 					}
 					// remove facet from cavity(remove from cdtMesh as well)
-					cavity.erase(cavity.begin(), cavity.begin() + facetPosition1); // removed at the end to maintain closeness of cavity from performin inCavity predicates
+					cavity.erase(cavity.begin(), cavity.begin() + facetPosition1); // removed at the end to maintain closeness of cavity from performing inCavity predicates
 				}				
 		
 			}
 		}while(nonStronglyDelaunayFacesInCavity.size() != 0);
-
-
 }
 
 
@@ -1421,8 +1419,7 @@ void recoverConstraintFaces()
 	vector<Triangle> cdtFacetList;
 
 	createEquivalentTetrahedralization(); 
-	
-	
+
 	while (missingSubfacesQueue.size() != 0)
 	{
 		missingSubfaceId = missingSubfacesQueue.back();
