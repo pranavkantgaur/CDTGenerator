@@ -291,10 +291,18 @@ void computeReferencePoint(Point *refPoint, unsigned int missingSegmentId)
 	
 	
 	Point &A = plcVertices[plcSegments[missingSegmentId].pointIds[0]].first;
+
 	Point &B = plcVertices[plcSegments[missingSegmentId].pointIds[1]].first;
+
+
+	cout << "\nA = (" << A.x() << ", " << A.y() << ", " << A.z() << ")";
+	cout << "\nB = (" << B.x() << ", " << B.y() << ", " << B.z() << ")\n"; 
+
 
 	float missingSegmentLength = sqrt(pow((A.x() - B.x()), 2) + pow((A.y() - B.y()), 2) + pow((A.z() - B.z()), 2));
 	
+	cout << "\nSegment length: " << missingSegmentLength;
+
 	float sphereRadius = (missingSegmentLength / 2.0);
 	Point sphereCenter = Point((A.x() + B.x()) / 2.0,  (A.y() + B.y()) / 2.0, (A.z() + B.z()) / 2.0);
 
@@ -310,7 +318,8 @@ void computeReferencePoint(Point *refPoint, unsigned int missingSegmentId)
 		{
 			
 			encroachingCandidateDistance = sqrt(pow(sphereCenter.x() - (plcVertices[n].first).x(), 2) + pow(sphereCenter.y() - (plcVertices[n].first).y(), 2) + pow(sphereCenter.z() - (plcVertices[n].first).z(), 2));
-			if (encroachingCandidateDistance <= sqrt(smallestCircumsphere.squared_radius()) / 2.0) // encroaching vertex
+	
+			if (encroachingCandidateDistance <= sqrt(smallestCircumsphere.squared_radius())) // encroaching vertex
 				circumradiusMap.push_back(computeCircumradius(A, B, plcVertices[n].first));
 			else // not encroaching
 				circumradiusMap.push_back(INVALID_VALUE);
@@ -330,6 +339,7 @@ void computeReferencePoint(Point *refPoint, unsigned int missingSegmentId)
 				maxCircumradius = circumradiusMap[i];
 				refPoint = &(plcVertices[i].first);
 			}	
+
 	return;
 }
 
@@ -621,9 +631,13 @@ void splitMissingSegment(unsigned int missingSegmentId)
 
 		else
 		{
-			cout << "Case 2: Sphere and segment do not intersect";
+			cout << "\nCase 2: Sphere and segment do not intersect";
 			cout << "\nSphere center:" << "(" << acuteParent.x() << "," << acuteParent.y() << "," << acuteParent.z() << ")" ;
-			cout << "\nSphere radius:" << ApRefPointLength << "\n";
+			cout << "\nSphere radius:" << ApRefPointLength;
+			cout <<"\nSegment Endpoint 1: (" << p1.x() << ", " << p1.y() << ", " << p1.z() << ")";
+			cout <<"\nSegment Endpoint 2: (" << p2.x() << ", " << p2.y() << ", " << p2.z() << ")\n";
+
+
 			exit(0);
 		}
 
