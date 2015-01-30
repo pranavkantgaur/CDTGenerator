@@ -18,3 +18,5 @@
 
 #10. Replace missingSegment computation using 'is_edge()' function to search for plcSegments missing from DT
 
+#11. How to remove hardcoded seeds for CGAL random number generator?
+
