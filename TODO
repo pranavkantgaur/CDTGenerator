@@ -1,15 +1,16 @@
 #1. Use CGAL::Linear_cell_complex as PLC. Add required functions e.g. locate() to get handle to the point in LCC nearest to the query point.
 
-#2. Use CGAL::Delaunay_triangulation_3
+#2. Input should allow for more file options than ply.
 
-#3. Input should allow for more file options than ply.
+#3. If time available, see why g++ -lgmp -lCGAL rply.cpp cdtCode.cpp does not link whereas, g++ rply.cpp cdtCode.cpp -lgmp -lCGAL does? Also there is issue in example usage of -l option given in 'man gcc' :(
 
-#4. If time available, see why g++ -lgmp -lCGAL rply.cpp cdtCode.cpp does not link whereas, g++ rply.cpp cdtCode.cpp -lgmp -lCGAL does? Also there is issue in example usage of -l option given in 'man gcc' :(
+#4. Replace naive code for finding all possible pairs of segments.
 
-#5. Add definition of hash function for storing local degeneracies and missing faces.
+#5. Add Point_3 of type float in CGAL.
 
-#6. Replace naive code for finding all possible pairs of segments.
+#6. Function for writing output mesh back in PLY format.
 
+<<<<<<< HEAD
 #7. Function for writing output mesh back in PLY format.
 
 #8. Use finite_edges_iterator for computing missingSegmentsQueue
@@ -19,4 +20,15 @@
 #10. Replace missingSegment computation using 'is_edge()' function to search for plcSegments missing from DT
 
 #11. Add code for sewing upper and lower cavities back to cdtMesh.
+=======
+#7. Use finite_edges_iterator for computing missingSegmentsQueue
+
+#8. Is there any better way to list all possible combinations(say to be able to do it in a for loop)?
+
+#9. Initialize info() of cells in LCC after it is imported from DT.
+
+#10. Replace missingSegment computation using 'is_edge()' function to search for plcSegments missing from DT
+
+#11. How to remove hardcoded seeds for CGAL random number generator?
+>>>>>>> ac8a3379af792b8c27da55b257e9f1040dfab046
 
