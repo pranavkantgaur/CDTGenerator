@@ -1019,7 +1019,7 @@ void formMissingSubfaceQueue(vector<unsigned int> &missingSubfacesQueue)
 	// If not, add them to missingSubfaceQueue
 	// Else, continue
 	Delaunay::Cell_handle ch;
-	int i , j , k;
+	int i, j, k;
 	
 	Delaunay::Vertex v1, v2, v3;
 	Vertex_handle vh1, vh2, vh3;
@@ -1040,12 +1040,36 @@ void formMissingSubfaceQueue(vector<unsigned int> &missingSubfacesQueue)
 void createEquivalentTetrahedralization()
 {
 	
-	import_from_triangulation_3(cdtMesh, DT); 
+	map<Delaunay::Cell_handle, lcc::Dart_handle> *dtVolumeToLccDartMap;
+	import_from_triangulation_3(cdtMesh, DT, dtVolumeToLccDartMap);
 
-	// copy vertex ids from info structure of each vertex of DT to that of 0-cells in cdtMesh
-	
-	//for (One_dart_per_cell_range<0, 3>::iterator vertexIter = cdtMesh.)
-	
+	// copy info from DT to lcc 0-cells
+	for (Delaunay::Finite_cells_iterator delaunayCellIter = DT.finite_cells_begin(); delaunayCellIter != DT.finite_cells_end(); delaunayCellIter++)
+	{
+		lcc::Dart_handle lccCellHandle = (*dtVolumeToLccDartMap)[delaunayCellIter];
+
+		for (unsigned int n = 0; n < 4; n++)
+		{
+			Point_3<K> delaunayPoint = (delaunayCellIter->vertex(n))->point();
+
+			for (lcc::One_dart_per_incident_cell_range<0, 3>::iterator lccPointIter = cdtMesh.one_dart_per_incident_cell<0, 3>(lccCellHandle).begin(); lccPointIter != cdtMesh.one_dart_per_incident_cell<0, 3>(lccCellHandle).end(); lccPointIter++)
+			{
+		//		if (lccPointIter == delaunayPoint) 
+		//			cdtMesh.set_info<0>(lccPointIter) = delaunayPoint.info();
+				float delX = delaunayPoint.x();
+				float delY = delaunayPoint.y();
+				float delZ = delaunayPoint.z();
+
+
+				float lccX = (cdtMesh.point(lccPointIter)).x();
+				float lccY = (cdtMesh.point(lccPointIter)).y();
+				float lccZ = (cdtMesh.point(lccPointIter)).z();
+
+				if (delX == lccX && delY == lccY && delZ == lccZ)			
+					cdtMesh.info<0>(lccPointIter) = (delaunayCellIter->vertex(n))->info();
+			}
+		}
+	}
 }
 
 
@@ -1081,7 +1105,7 @@ void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId)
 
 		for (lcc::One_dart_per_incident_cell_range<0, 3>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 3>(cellIter).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 3>(cellIter).end(); vertexIter++)
 		{
-			pTet[i++] = plcVertices[cdtMesh.info_of_attribute<0>(cdtMesh.vertex_attribute(vertexIter))].first;
+			pTet[i++] = plcVertices[cdtMesh.info<0>(vertexIter)].first;
 		}
 		
 		CGALTetrahedron CGALTet(pTet[0], pTet[1], pTet[2], pTet[3]);
@@ -1409,6 +1433,13 @@ void cavityRetetrahedralization(vector <DartHandle> &cavity)
 		
 			}
 		}while(nonStronglyDelaunayFacesInCavity.size() != 0);
+
+
+
+
+		// TODO
+		// Cavity retetrahedralization:
+		// Sew retetrahedralzed cavity back to original cdtMesh
 }
 
 
