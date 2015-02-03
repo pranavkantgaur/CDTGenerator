@@ -1078,7 +1078,7 @@ void createEquivalentTetrahedralization()
 }
 
 
-void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId)
+void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vector<DartHandle>& lcc3CellsToBeRemoved)
 {
 	// compute list of tets intersecting face number: missingSubfaceId
 	// for each intersecting tet:
@@ -1118,7 +1118,10 @@ void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId)
 		CGALTriangle CGALTri(pTri[0], pTri[1], pTri[2]);
 	
 		if (do_intersect(CGALTri, CGALTet))
+		{
 			intersectingTets.push_back(cellIter);
+			lcc3CellsToBeRemoved.push_back(cellIter);
+		}
 		else
 			continue;
 	}
@@ -1351,7 +1354,7 @@ bool isCellOutsideCavity(DartHandle cellHandle, vector<DartHandle> cavity)
 
 
 
-void cavityRetetrahedralization(vector <DartHandle> &cavity)
+void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>& lcc3CellsToBeRemoved)
 {
 
 	// cavity verification/expansion
@@ -1419,6 +1422,9 @@ void cavityRetetrahedralization(vector <DartHandle> &cavity)
 					{
 						if (isCellOutsideCavity(cellIter, cavity))
 						{
+							
+							lcc3CellsToBeRemoved.push_back(cellIter);
+
 							for (lcc::One_dart_per_incident_cell_range<2, 3>::iterator faceIter = cdtMesh.one_dart_per_incident_cell<2, 3>(cellIter).begin(); faceIter != cdtMesh.one_dart_per_incident_cell<2, 3>(cellIter).end(); faceIter++)
 							{
 								if ((facetPosition2 = locateFacetInCavity(faceIter, cavity)) != -1)
@@ -1432,8 +1438,9 @@ void cavityRetetrahedralization(vector <DartHandle> &cavity)
 							continue; // skip and check next neighbor cell
 							
 					}
-					// remove facet from cavity(remove from cdtMesh as well)
-					cavity.erase(cavity.begin(), cavity.begin() + facetPosition1); // removed at the end to maintain closeness of cavity from performing inCavity predicates
+					// remove facet from cavity
+					cavity.erase(cavity.begin(), cavity.begin() + facetPosition1); 
+					
 				}				
 		
 			}
@@ -1442,7 +1449,13 @@ void cavityRetetrahedralization(vector <DartHandle> &cavity)
 
 
 
-		// TODO
+		
+		// Remove cells from cdtMesh(creates space for retetrahedralization)
+		for (vector<DartHandle>::iterator cIter = lcc3CellsToBeRemoved.begin(); cIter != lcc3CellsToBeRemoved.end(); cIter++)
+			remove_cell<lcc, 3>(cdtMesh, *cIter);
+		
+
+
 		// Cavity retetrahedralization:
 			// Compute DT of vertices of input cavity
 			// import it to lcc
@@ -1462,7 +1475,7 @@ void cavityRetetrahedralization(vector <DartHandle> &cavity)
 			cavityVertices.push_back(plcVertices[*pointIdIter]);
 
 		
-		 // TODO : create cavity vertices
+		//create cavity vertices
 		Delaunay cavityDT;
 		lcc cavityLCC;
 
@@ -1473,7 +1486,22 @@ void cavityRetetrahedralization(vector <DartHandle> &cavity)
 		copyInfoFromDTToLCC(cavityDT, cavityLCC, dtCellToLCCCellMap);
 	
 		// Sew retetrahedralized cavity back to original cdtMesh
-			// Use sew functions to sew the cavity lcc to cdtMesh 
+		// Add cavityLCC to cdtMesh
+		Point_3<K> tempPt[4];
+		unsigned int x;
+
+		for (lcc::One_dart_per_cell_range<3>::iterator cIter = cavityLCC.one_dart_per_cell<3>().begin(); cIter != cavityLCC.one_dart_per_cell<3>().end(); cIter++)
+		{
+			x = 0;
+
+			for (lcc::One_dart_per_incident_cell_range<0, 3>::iterator vIter = cavityLCC.one_dart_per_incident_cell<0, 3>(cIter).begin(); vIter != cavityLCC.one_dart_per_incident_cell<0, 3>(cIter).end(); vIter++)
+				tempPt[x++] = cdtMesh.point(vIter); 			
+				
+			cdtMesh.make_tetrahedron(tempPt[0], tempPt[1], tempPt[2], tempPt[3]);
+		}
+
+		//cdtMesh.sew3_same_facets();
+		
 }
 
 
@@ -1497,6 +1525,7 @@ void recoverConstraintFaces()
 	unsigned int missingSubfaceId;
 
 	vector<Triangle> cdtFacetList;
+	vector<DartHandle> lcc3CellsToBeRemoved;
 
 	createEquivalentTetrahedralization(); 
 
@@ -1504,11 +1533,11 @@ void recoverConstraintFaces()
 	{
 		missingSubfaceId = missingSubfacesQueue.back();
 		missingSubfacesQueue.pop_back();
-		formCavity(cavity, missingSubfaceId);
+		formCavity(cavity, missingSubfaceId, lcc3CellsToBeRemoved);
 		
 		for (unsigned int cavityId = 0; cavityId < 2; cavityId++)
 		{
-			cavityRetetrahedralization(cavity[cavityId]); 
+			cavityRetetrahedralization(cavity[cavityId], lcc3CellsToBeRemoved); 
 			
 		}
 		
