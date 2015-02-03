@@ -35,7 +35,7 @@ struct MyItem
 	struct Dart_wrapper
 	{
 		typedef CGAL::Dart<3, Refs> Dart;
-		typedef CGAL::Cell_attribute_with_point<Refs, unsigned int, Tag_true, void> Vertex_attribute;
+		typedef CGAL::Cell_attribute_with_point<Refs, unsigned int, Tag_true> Vertex_attribute;
 		typedef CGAL::cpp11::tuple<Vertex_attribute> Attributes;
 	};
  
@@ -1500,7 +1500,7 @@ void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>&
 			cdtMesh.make_tetrahedron(tempPt[0], tempPt[1], tempPt[2], tempPt[3]);
 		}
 
-		//cdtMesh.sew3_same_facets();
+		cdtMesh.sew3_same_facets();
 		
 }
 
