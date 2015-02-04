@@ -205,6 +205,59 @@ void readPLCInput()
 	cout << "Number of segments:" << plcSegments.size();
 }
 
+
+void writePLYOutput()
+{
+	// use rPLY for writing DT to PLY file
+	p_ply delaunayMeshPLY;
+
+	if((delaunayMeshPLY = ply_create("delaunay.ply", PLY_ASCII, NULL, NULL, NULL)) == NULL)
+	{
+		cout << "\nCannot write Mesh output!!";
+		exit(0);
+	}
+	 
+	else
+	{
+		ply_add_element(delaunayMeshPLY, "vertex", DT.number_of_vertices()); 
+	      	ply_add_property(delaunayMeshPLY, "x", 	PLY_FLOAT, PLY_UIN32, PLY_FLOAT);
+		ply_add_property(delaunayMeshPLY, "y", PLY_FLOAT, PLY_UIN32, PLY_FLOAT);
+		ply_add_property(delaunayMeshPLY, "z", PLY_FLOAT, PLY_UIN32, PLY_FLOAT);
+		
+		float x, y, z;
+		Point p;
+
+		for (Delaunay::Finite_vertices_iterator vIter = DT.finite_vertices_begin(); vIter != DT.finite_vertices_end(); vIter++)
+		{
+			p = vIter->point();
+			x = p.x();
+			y = p.y();
+			z = p.z();
+
+			ply_write(delaunayMeshPLY, x);
+			ply_write(delaunayMeshPLY, y);
+			ply_write(delaunayMeshPLY, z);
+		}
+		
+		ply_add_element(delaunayMeshPLY, "face", DT.number_of_facets());
+		ply_add_list_property(delaunayMeshPLY, "vertex_indices", PLY_UCHAR, PLY_INT32);	
+
+		for (Delaunay::Finite_facets_iterator fIter = DT.finite_facets_begin(); fIter != DT.finite_facets_end(); fIter++)
+		{
+			ply_write(delaunayMeshPLY, 3);
+			ply_write(delaunayMeshPLY, (fIter->first)->vertex(0)->info());
+			ply_write(delaunayMeshPLY, (fIter->first)->vertex(1)->info());
+			ply_write(delaunayMeshPLY, (fIter->first)->vertex(2)->info());
+		}
+
+		ply_write_header(delaunayMeshPLY);
+		ply_close(delaunayMeshPLY);
+	}
+}
+
+
+
+
 //////////////////////////////////////////////////// Done with reading input PLC ////////////////////////////////////////////////
 // computes delaunay tetrahedralization
 void computeDelaunayTetrahedralization()
@@ -217,6 +270,7 @@ void computeDelaunayTetrahedralization()
 	cout << "Number of vertices in Delaunay tetrahedralization:" << DT.number_of_vertices() << "\n";
 	cout << "Number of tetrahedrons in Delaunay tetrahedralization:" << DT.number_of_cells() << "\n";
 
+	writePLYOutput();
 }
 
 

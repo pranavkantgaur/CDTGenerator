@@ -6,14 +6,12 @@
 
 #4. Replace naive code for finding all possible pairs of segments.
 
-#5. Function for writing output mesh back in PLY format.
+#5. Use finite_edges_iterator for computing missingSegmentsQueue
 
-#6. Use finite_edges_iterator for computing missingSegmentsQueue
+#6. Is there any better way to list all possible combinations(say to be able to do it in a for loop)?
 
-#7. Is there any better way to list all possible combinations(say to be able to do it in a for loop)?
+#7. Replace missingSegment computation using 'is_edge()' function to search for plcSegments missing from DT
 
-#8. Replace missingSegment computation using 'is_edge()' function to search for plcSegments missing from DT
-
-#9. How to remove hardcoded seeds for CGAL random number generator?
+#8. How to remove hardcoded seeds for CGAL random number generator?
 
 
