@@ -119,7 +119,7 @@ static int vertex_cb(p_ply_argument argument)
 	// insert the vertex into plcVertex
 	if (eol)
 	{
-		plcVertices.push_back(make_pair(Point(tempPoint[0],tempPoint[1],tempPoint[2]), pointCount++));
+		plcVertices.push_back(pair<Point, unsigned int>(Point(tempPoint[0],tempPoint[1],tempPoint[2]), pointCount++));
 		dimensionId = 0;
 	}
 	
@@ -206,6 +206,29 @@ void readPLCInput()
 }
 
 
+
+class MyVertex 
+{
+
+	public:
+		Point point;
+		unsigned int vertexId;
+	
+		MyVertex(Point aPoint, unsigned int aVertexId) 
+		{
+			point = aPoint;
+			vertexId = aVertexId;
+		}	
+
+		bool operator < (const MyVertex& anotherVertex) const
+		{
+			return (vertexId < anotherVertex.vertexId);
+		}
+};
+
+
+
+
 void writePLYOutput()
 {
 	// use rPLY for writing DT to PLY file
@@ -231,24 +254,30 @@ void writePLYOutput()
 			cout << "\nHeader not writen" << flush;
 
 
+		vector<MyVertex> orderedPLCVertices;
+		
+		//Lets sort the vertices before writing them to file
+		for (Delaunay::Finite_vertices_iterator vit = DT.finite_vertices_begin(); vit != DT.finite_vertices_end(); vit++)
+			orderedPLCVertices.push_back(MyVertex(vit->point(), vit->info()));
+
+		sort(orderedPLCVertices.begin(), orderedPLCVertices.end());
+
 		float x, y, z;
 		Point p;
 	
-		for (Delaunay::Finite_vertices_iterator vIter = DT.finite_vertices_begin(); vIter != DT.finite_vertices_end(); vIter++)
+		for (vector<MyVertex>::iterator orderedVit = orderedPLCVertices.begin(); orderedVit != orderedPLCVertices.end(); orderedVit++)
 		{
-			p = vIter->point();
+			p = orderedVit->point;
 			x = p.x();			
 			y = p.y();
 			z = p.z();
 			ply_write(delaunayMeshPLY, x);
 			ply_write(delaunayMeshPLY, y);
 			ply_write(delaunayMeshPLY, z);
-			
-			
-		
-		}
-		
 
+			cout << "\n" << orderedVit->vertexId;
+		}
+	
 		for (Delaunay::Finite_facets_iterator fIter = DT.finite_facets_begin(); fIter != DT.finite_facets_end(); fIter++)
 		{
 			ply_write(delaunayMeshPLY, 3);
