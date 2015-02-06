@@ -224,40 +224,45 @@ void writePLYOutput()
 		ply_add_scalar_property(delaunayMeshPLY, "y", PLY_FLOAT);
 		ply_add_scalar_property(delaunayMeshPLY, "z", PLY_FLOAT);
 		
-		ply_add_element(delaunayMeshPLY, "face", DT.number_of_facets());
+		ply_add_element(delaunayMeshPLY, "face", DT.number_of_finite_facets());
 		ply_add_list_property(delaunayMeshPLY, "vertex_indices", PLY_UCHAR, PLY_INT32);	
 
-	
+		if(!ply_write_header(delaunayMeshPLY))
+			cout << "\nHeader not writen" << flush;
+
+
 		float x, y, z;
 		Point p;
 	
 		for (Delaunay::Finite_vertices_iterator vIter = DT.finite_vertices_begin(); vIter != DT.finite_vertices_end(); vIter++)
 		{
 			p = vIter->point();
-			 
 			x = p.x();			
 			y = p.y();
 			z = p.z();
-			
-		
 			ply_write(delaunayMeshPLY, x);
 			ply_write(delaunayMeshPLY, y);
 			ply_write(delaunayMeshPLY, z);
+			
+			
+		
 		}
 		
+
 		for (Delaunay::Finite_facets_iterator fIter = DT.finite_facets_begin(); fIter != DT.finite_facets_end(); fIter++)
 		{
 			ply_write(delaunayMeshPLY, 3);
-			ply_write(delaunayMeshPLY, (fIter->first)->vertex(0)->info());
-			ply_write(delaunayMeshPLY, (fIter->first)->vertex(1)->info());
-			ply_write(delaunayMeshPLY, (fIter->first)->vertex(2)->info());
+			
+			for (unsigned int i = 0; i < 4; i++)
+				if (fIter->second != i)
+					ply_write(delaunayMeshPLY, (fIter->first)->vertex(i)->info());
+		
 		}
 
-		if(!ply_write_header(delaunayMeshPLY))
-			cout << "\nHeader not writen" << flush;
-
-		ply_close(delaunayMeshPLY);
+			ply_close(delaunayMeshPLY);
 	}
+
+	exit(0);
 }
 
 
