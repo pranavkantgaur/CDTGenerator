@@ -216,13 +216,6 @@ typedef struct t_ply_ {
 /* ----------------------------------------------------------------------
  * I/O functions and drivers
  * ---------------------------------------------------------------------- */
-//static t_ply_idriver ply_idriver_ascii;
-//static t_ply_idriver ply_idriver_binary;
-//static t_ply_idriver ply_idriver_binary_reverse;
-//static t_ply_odriver ply_odriver_ascii;
-//static t_ply_odriver ply_odriver_binary;
-//static t_ply_odriver ply_odriver_binary_reverse;
-
 static int ply_read_word(p_ply ply);
 static int ply_check_word(p_ply ply);
 static void ply_finish_word(p_ply ply, size_t size);
