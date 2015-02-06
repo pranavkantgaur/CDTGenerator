@@ -246,7 +246,10 @@ void writePLYOutput()
 	      	ply_add_scalar_property(delaunayMeshPLY, "x", PLY_FLOAT);
 		ply_add_scalar_property(delaunayMeshPLY, "y", PLY_FLOAT);
 		ply_add_scalar_property(delaunayMeshPLY, "z", PLY_FLOAT);
-		
+		ply_add_scalar_property(delaunayMeshPLY, "red", PLY_UCHAR);
+		ply_add_scalar_property(delaunayMeshPLY, "green", PLY_UCHAR);
+		ply_add_scalar_property(delaunayMeshPLY, "blue", PLY_UCHAR);
+
 		ply_add_element(delaunayMeshPLY, "face", DT.number_of_finite_facets());
 		ply_add_list_property(delaunayMeshPLY, "vertex_indices", PLY_UCHAR, PLY_INT32);	
 
@@ -275,8 +278,21 @@ void writePLYOutput()
 			ply_write(delaunayMeshPLY, y);
 			ply_write(delaunayMeshPLY, z);
 
-			cout << "\n" << orderedVit->vertexId;
+			if (orderedVit->vertexId == 0)
+			{
+				ply_write(delaunayMeshPLY, 255);
+				ply_write(delaunayMeshPLY, 0);			
+				ply_write(delaunayMeshPLY, 0);				
+			}
+
+			else
+			{
+				ply_write(delaunayMeshPLY, 0);
+				ply_write(delaunayMeshPLY, 0);			
+				ply_write(delaunayMeshPLY, 0);				
+			}
 		}
+	
 	
 		for (Delaunay::Finite_facets_iterator fIter = DT.finite_facets_begin(); fIter != DT.finite_facets_end(); fIter++)
 		{
