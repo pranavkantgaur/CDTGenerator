@@ -246,10 +246,6 @@ void writePLYOutput()
 	      	ply_add_scalar_property(delaunayMeshPLY, "x", PLY_FLOAT);
 		ply_add_scalar_property(delaunayMeshPLY, "y", PLY_FLOAT);
 		ply_add_scalar_property(delaunayMeshPLY, "z", PLY_FLOAT);
-		ply_add_scalar_property(delaunayMeshPLY, "red", PLY_UCHAR);
-		ply_add_scalar_property(delaunayMeshPLY, "green", PLY_UCHAR);
-		ply_add_scalar_property(delaunayMeshPLY, "blue", PLY_UCHAR);
-
 		ply_add_element(delaunayMeshPLY, "face", DT.number_of_finite_facets());
 		ply_add_list_property(delaunayMeshPLY, "vertex_indices", PLY_UCHAR, PLY_INT32);	
 
@@ -277,20 +273,6 @@ void writePLYOutput()
 			ply_write(delaunayMeshPLY, x);
 			ply_write(delaunayMeshPLY, y);
 			ply_write(delaunayMeshPLY, z);
-
-			if (orderedVit->vertexId == 0)
-			{
-				ply_write(delaunayMeshPLY, 255);
-				ply_write(delaunayMeshPLY, 0);			
-				ply_write(delaunayMeshPLY, 0);				
-			}
-
-			else
-			{
-				ply_write(delaunayMeshPLY, 0);
-				ply_write(delaunayMeshPLY, 0);			
-				ply_write(delaunayMeshPLY, 0);				
-			}
 		}
 	
 	
@@ -301,13 +283,12 @@ void writePLYOutput()
 			for (unsigned int i = 0; i < 4; i++)
 				if (fIter->second != i)
 					ply_write(delaunayMeshPLY, (fIter->first)->vertex(i)->info());
-		
 		}
 
 			ply_close(delaunayMeshPLY);
 	}
 
-	exit(0);
+	
 }
 
 
