@@ -331,12 +331,9 @@ void formMissingSegmentsQueue(vector<unsigned int> &missingSegmentQueue)
 		int i, j;
 
 		if (DT.is_vertex(p1, vh1))
-		{
 			if (DT.is_vertex(p2, vh2))
 				if (DT.is_edge(vh1, vh2, c, i, j))
 					missingSegmentQueue.push_back(m);
-		}
-
 	}
 
 	cout << "\nTotal number of missing constraint segments:" << missingSegmentQueue.size() << "\n";
@@ -371,8 +368,8 @@ void computeReferencePoint(Point *refPoint, unsigned int missingSegmentId)
 	Point &B = plcVertices[plcSegments[missingSegmentId].pointIds[1]].first;
 
 
-	cout << "\nA = (" << A.x() << ", " << A.y() << ", " << A.z() << ")";
-	cout << "\nB = (" << B.x() << ", " << B.y() << ", " << B.z() << ")\n"; 
+	//cout << "\nA = (" << A.x() << ", " << A.y() << ", " << A.z() << ")";
+	//cout << "\nB = (" << B.x() << ", " << B.y() << ", " << B.z() << ")\n"; 
 
 
 	float missingSegmentLength = sqrt(pow((A.x() - B.x()), 2) + pow((A.y() - B.y()), 2) + pow((A.z() - B.z()), 2));
@@ -785,17 +782,17 @@ void recoverConstraintSegments()
 	unsigned int missingSegment;
 
 	formMissingSegmentsQueue(missingSegmentQueue);
-	int i = 0;
-	while (missingSegmentQueue.size() != 0)
-	{
+//	int i = 0;
+//	while (missingSegmentQueue.size() != 0)
+//	{
 		missingSegment = missingSegmentQueue.back();
 		missingSegmentQueue.pop_back();
 		splitMissingSegment(missingSegment);
-		formMissingSegmentsQueue(missingSegmentQueue);
-		i++;
-	}
+//		formMissingSegmentsQueue(missingSegmentQueue);
+//		i++;
+//	}
 	
-	cout << "\nIn the loop " << i << " number of times" << "\n";
+//	cout << "\nIn the loop " << i << " number of times" << "\n";
 	
 	return;
 }
@@ -1634,8 +1631,8 @@ int main()
 	readPLCInput();
 	computeDelaunayTetrahedralization();
 	recoverConstraintSegments();
-	removeLocalDegeneracies();
-	recoverConstraintFaces();
+	//removeLocalDegeneracies();
+	//recoverConstraintFaces();
 
 	return 0;
 }
