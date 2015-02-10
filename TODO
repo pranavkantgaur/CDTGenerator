@@ -10,8 +10,6 @@
 
 #6. Is there any better way to list all possible combinations(say to be able to do it in a for loop)?
 
-#7. Replace missingSegment computation using 'is_edge()' function to search for plcSegments missing from DT
-
-#8. How to remove hardcoded seeds for CGAL random number generator?
+#7. How to remove hardcoded seeds for CGAL random number generator?
 
 

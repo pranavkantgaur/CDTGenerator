@@ -18,17 +18,13 @@ PLY reading/writing is performed using RPly\cite{rply} library. It was checked u
 \subsection{Issues}
 Here are the issues faced/currently present in PLY reading writing:
 \begin{enumerate}
-	\item Some facets have vertices writen in \textit{clockwise} order, resulting in holes in the rendered tetrahedrlization. However, this also revealed bug in AnuVi which is rendering all facets regardless of their orientation.
-		\subsubsection{Solution(s)}
-		\begin{enumerate}
-			\item Regarding vertex ordering in facet a query\cite{cgalForumMessage1} has been posted on CGAL forum.
-		\item Mr. S. K. Bose is handling the issue of rendering on AnuVi.	
-		\end{enumerate}
-
+\item Some facets have vertices writen in \textit{clockwise} order, resulting in holes in the rendered tetrahedrlization. However, this also revealed bug in AnuVi which is rendering all facets regardless of their orientation.
+\subsubsection{Solution(s)}
+\begin{enumerate}
+\item Regarding vertex ordering in facet a query\cite{cgalForumMessage1} has been posted on CGAL forum.
+\item Mr. S. K. Bose is handling the issue of rendering on AnuVi.	
+\end{enumerate}
 \end{enumerate}		
-
-
-
 
 \begin{thebibliography}{1}
 \bibitem{rply}

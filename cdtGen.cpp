@@ -321,36 +321,22 @@ void formMissingSegmentsQueue(vector<unsigned int> &missingSegmentQueue)
 
 	missingSegmentQueue.clear();
 
-
-	bool  segmentFound;
-
 	for (unsigned int m = 0; m < plcSegments.size(); m++)
 	{
-		segmentFound = false;
+		Delaunay::Vertex_handle vh1, vh2;
+		Point p1 = plcVertices[plcSegments[m].pointIds[0]].first;
+		Point p2 = plcVertices[plcSegments[m].pointIds[1]].first;
 
-		for (Delaunay::Finite_cells_iterator cit = DT.finite_cells_begin(); cit != DT.finite_cells_end(); cit++)
+		Delaunay::Cell_handle c;
+		int i, j;
+
+		if (DT.is_vertex(p1, vh1))
 		{
-			// since a tet is fully connected I only need to find if there is a tet containing both vertices			
-			for (unsigned int i = 0; i < 4; i++)
-			{
-				if ((cit->vertex(i))->info() == plcSegments[m].pointIds[0])
-					for (unsigned int j = 0; j != i && j < 4; j++)
-					{	if ((cit->vertex(j))->info() == plcSegments[m].pointIds[1])
-						{
-							segmentFound = true;
-							break;	// segment found!!
-						}
-					}
-				if (segmentFound)
-					break;
-			}
-		
-			if (segmentFound)
-				break;
+			if (DT.is_vertex(p2, vh2))
+				if (DT.is_edge(vh1, vh2, c, i, j))
+					missingSegmentQueue.push_back(m);
 		}
-	
-		if (!segmentFound)
-			missingSegmentQueue.push_back(m);
+
 	}
 
 	cout << "\nTotal number of missing constraint segments:" << missingSegmentQueue.size() << "\n";
@@ -559,6 +545,7 @@ void updatePLCAndDT(Point &v, unsigned int missingSegmentId)
 
 	// faces
 	// Find out the faces sharing that segment
+	
 	 	//For each face sharing this segment edge,
 			// Partition the face into 2 triangles
 	unsigned int v1, v2, v3;
