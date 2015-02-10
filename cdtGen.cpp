@@ -782,18 +782,18 @@ void recoverConstraintSegments()
 	unsigned int missingSegment;
 
 	formMissingSegmentsQueue(missingSegmentQueue);
-//	int i = 0;
-//	while (missingSegmentQueue.size() != 0)
-//	{
+/*	int i = 0;
+	while (missingSegmentQueue.size() != 0)
+	{
 		missingSegment = missingSegmentQueue.back();
 		missingSegmentQueue.pop_back();
 		splitMissingSegment(missingSegment);
-//		formMissingSegmentsQueue(missingSegmentQueue);
-//		i++;
-//	}
+		formMissingSegmentsQueue(missingSegmentQueue);
+		i++;
+	}
 	
-//	cout << "\nIn the loop " << i << " number of times" << "\n";
-	
+	cout << "\nIn the loop " << i << " number of times" << "\n";
+*/	
 	return;
 }
 
