@@ -1,0 +1,41 @@
+\documentclass{article}
+
+\usepackage{url}
+
+
+
+\begin{document}
+\title{CDT generator: Testing report}
+\author{Pranav Kant Gaur}
+\maketitle
+
+\section{Objective}
+This report documents the complete testing process adopted for verification and validation of the developed CDT generator.
+
+\section{Testing PLY import and Export}
+PLY reading/writing is performed using RPly\cite{rply} library. It was checked using reading a cube dataset as input and writing Delaunay tetrahedralization of vertices of cube as outout in a PLY file. Later, it was visualized using MeshLab and AnuVi to conform the vertices, faces and tetrahedrons were all written correctly back to PLY file.
+
+\subsection{Issues}
+Here are the issues faced/currently present in PLY reading writing:
+\begin{enumerate}
+	\item Some facets have vertices writen in \textit{clockwise} order, resulting in holes in the rendered tetrahedrlization. However, this also revealed bug in AnuVi which is rendering all facets regardless of their orientation.
+		\subsubsection{Solution(s)}
+		\begin{enumerate}
+			\item Regarding vertex ordering in facet a query\cite{cgalForumMessage1} has been posted on CGAL forum.
+		\item Mr. S. K. Bose is handling the issue of rendering on AnuVi.	
+		\end{enumerate}
+
+\end{enumerate}		
+
+
+
+
+\begin{thebibliography}{1}
+\bibitem{rply}
+\url{http://w3.impa.br/~diego/software/rply/}	
+\bibitem{cgalForumMessage1}
+\url{http://cgal-discuss.949826.n4.nabble.com/Issue-in-visualizing-Delaunay-tetrahedralization-of-a-cube-td4660416.html}	
+
+\end{thebibliography}
+
+\end{document}
