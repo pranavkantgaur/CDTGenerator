@@ -12,4 +12,4 @@
 
 #7. How to remove hardcoded seeds for CGAL random number generator?
 
-
+#8. Add termination criteria using local feature size for each vertex.
