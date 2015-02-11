@@ -332,7 +332,7 @@ void formMissingSegmentsQueue(vector<unsigned int> &missingSegmentQueue)
 
 		if (DT.is_vertex(p1, vh1))
 			if (DT.is_vertex(p2, vh2))
-				if (DT.is_edge(vh1, vh2, c, i, j))
+				if (!DT.is_edge(vh1, vh2, c, i, j))
 					missingSegmentQueue.push_back(m);
 	}
 
