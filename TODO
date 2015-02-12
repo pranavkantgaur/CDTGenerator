@@ -13,3 +13,5 @@
 #7. How to remove hardcoded seeds for CGAL random number generator?
 
 #8. Add termination criteria using local feature size for each vertex.
+
+#9. Add algo. visualization for debugging using PCL. Maybe it can be later extended to interactive visualization where input can be given interactively.

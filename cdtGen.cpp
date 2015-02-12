@@ -23,6 +23,10 @@
 #include <CGAL/enum.h>
 
 #include "rply/rply.h"
+#include "pcl/PolygonMesh.h"
+#include "pcl/visualization/pcl_visualizer.h"
+
+
 
 #define Pi 22.0/7.0
 #define INVALID_VALUE -1.0f // used in context of distances 
@@ -307,6 +311,40 @@ void computeDelaunayTetrahedralization()
 	cout << "Number of tetrahedrons in Delaunay tetrahedralization:" << DT.number_of_cells() << "\n";
 
 	writePLYOutput();
+
+	// Update the view in the viewer since points and Delaunay triangulation has changed
+	pcl::PolygonMesh mesh;
+
+	mesh.cloud.width = DT.number_of_vertices();
+	mesh.cloud.height = 1;
+	mesh.cloud.is_dense = 1;
+
+	for (Delaunay::Finite_vertices_iterator vIter = DT.finite_vertices_begin(); vIter != DT.finite_vertices_end(); vIter++)
+	{
+		mesh.cloud.data.push_back((vIter->point()).x());
+		mesh.cloud.data.push_back((vIter->point()).y());
+	       	mesh.cloud.data.push_back((vIter->point()).z());
+	}
+
+	pcl::Vertices v;
+
+	for (Delaunay::Finite_facets_iterator fIter = DT.finite_facets_begin(); fIter != DT.finite_facets_end(); fIter++)
+	{
+		for (unsigned int i = 0; i < 4; i++)
+			if (i != fIter->second)
+				v.vertices.push_back((fIter->first)->vertex(i)->info());				
+		mesh.polygons.push_back(v);
+
+		v.vertices.clear();
+	}
+
+	pcl::visualization::PCLVisualizer viewer("Execution status");
+	viewer.addPolygonMesh(mesh);
+	
+	while(!viewer.wasStopped())
+	{
+		viewer.spinOnce();
+	}	
 }
 
 
@@ -374,7 +412,7 @@ void computeReferencePoint(Point *refPoint, unsigned int missingSegmentId)
 
 	float missingSegmentLength = sqrt(pow((A.x() - B.x()), 2) + pow((A.y() - B.y()), 2) + pow((A.z() - B.z()), 2));
 	
-	cout << "\nSegment length: " << missingSegmentLength;
+	//cout << "\nSegment length: " << missingSegmentLength;
 
 	float sphereRadius = (missingSegmentLength / 2.0);
 	Point sphereCenter = Point((A.x() + B.x()) / 2.0,  (A.y() + B.y()) / 2.0, (A.z() + B.z()) / 2.0);
@@ -706,16 +744,8 @@ void splitMissingSegment(unsigned int missingSegmentId)
 		else
 		{
 			cout << "\nCase 2: Sphere and segment do not intersect";
-			cout << "\nSphere center:" << "(" << acuteParent.x() << "," << acuteParent.y() << "," << acuteParent.z() << ")" ;
-			cout << "\nSphere radius:" << ApRefPointLength;
-			cout <<"\nSegment Endpoint 1: (" << p1.x() << ", " << p1.y() << ", " << p1.z() << ")";
-			cout <<"\nSegment Endpoint 2: (" << p2.x() << ", " << p2.y() << ", " << p2.z() << ")\n";
-
-
 			exit(0);
 		}
-
-		
 		
 		float vrefpointLength = computeSegmentLength(v, refPoint);
 		
@@ -782,18 +812,18 @@ void recoverConstraintSegments()
 	unsigned int missingSegment;
 
 	formMissingSegmentsQueue(missingSegmentQueue);
-/*	int i = 0;
-	while (missingSegmentQueue.size() != 0)
-	{
+//	int i = 0;
+//	while (missingSegmentQueue.size() != 0)
+//	{
 		missingSegment = missingSegmentQueue.back();
 		missingSegmentQueue.pop_back();
 		splitMissingSegment(missingSegment);
-		formMissingSegmentsQueue(missingSegmentQueue);
-		i++;
-	}
+//		formMissingSegmentsQueue(missingSegmentQueue);
+//		i++;
+//	}
 	
-	cout << "\nIn the loop " << i << " number of times" << "\n";
-*/	
+//	cout << "\nIn the loop " << i << " number of times" << "\n";
+	
 	return;
 }
 
