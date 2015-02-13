@@ -15,3 +15,5 @@
 #8. Add termination criteria using local feature size for each vertex.
 
 #9. Add algo. visualization for debugging using PCL. Maybe it can be later extended to interactive visualization where input can be given interactively.
+
+#10. Represent plcVertices, plcFaces, plcSegments as unordered sets.

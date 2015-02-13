@@ -68,7 +68,7 @@ typedef Linear_cell_complex<3, 3, Traits, MyItem> lcc;
 typedef lcc::Dart_handle DartHandle;
 
 /*
- * Input  : plcVertices, plcSegments, plcFaces
+ * Input  : plcVertices, plcSegments, plcFaces(triangles only)
  * Output : cdtMesh(linear cell complex containing output tetrahedra)
  */
 
@@ -91,15 +91,66 @@ class Tetrahedron
 {
 	public:
 		unsigned int pointIds[4];
-		//Cell_iterator neighbors[4];
-		//face_handle faces[4];
 };
 
-
+/*
 vector<pair<Point, unsigned int> > plcVertices;
 vector<Segment> plcSegments;
 vector<Triangle> plcFaces;
+*/
 
+// hash class for Point
+class pointHash
+{
+	void operator = (Point a, Point b)
+	{
+		return	(a.x() == b.x()) && (a.y() == b.y()) && (a.z() == b.z());
+	}
+};
+
+
+
+class segmentHash
+{
+	void operator = (Segment a, Segment b)
+	{
+		unordered_set<unsigned int> pointIdSet;
+
+		for (unsigned int k = 0; k < 2; k++)
+			pointIdSet.insert(b.pointIds[k]);
+
+		if (a.pointIds[0] != a.pointIds[1])
+			if (pointIdSet.find(a.pointIds[0]) != pointIdSet.end())
+				if (pointIdSet.find(a.pointIds[1]) ! = pointIdSet.end())
+					return true;		
+		else
+			return false;
+	}
+};
+
+class triangleHash
+{
+	void operator = (Triangle a, Triangle b)
+	{
+		unordered_set<unsigned int> pointIdSet;
+
+		for (unsigned int k = 0; k < 3; k++)
+			pointIdSet.insert(b.pointIds[k]);
+
+		if (a.pointIds[0] != a.pointIds[1] && a.pointIds[0] != a.pointIds[2] && a.pointIds[1] != a.pointIds[2])
+			if (pointIdSet.find(a.pointIds[0]) != pointIdSet.end())
+				if (pointIdSet.find(a.pointIds[1]) ! = pointIdSet.end())
+					if (pointIdSet.find(a.pointIds[2]) != pointIdSet.end())
+						return true;		
+		else
+			return false;
+	}
+};
+
+
+unordered_set<Point, pointHash> plcVertices;
+unordered_set<Segment, segmentHash> plcSegments;
+unordered_set<Triangle, triangleHash> plcFaces;
 
 lcc cdtMesh;
 
@@ -142,8 +193,7 @@ static int face_cb(p_ply_argument argument)
         	case 0:
 	        case 1: 
         		tempFace.pointIds[pointId++] = ply_get_argument_value(argument);
-			
-	                break;
+		        break;
         	case 2:	
 			tempFace.pointIds[pointId] = ply_get_argument_value(argument);
 			pointId = 0;				
@@ -161,13 +211,12 @@ static int face_cb(p_ply_argument argument)
 			tempSegments[2].pointIds[0] = tempFace.pointIds[2];
 			tempSegments[2].pointIds[1] = tempFace.pointIds[3];
 
-
 			plcSegments.push_back(tempSegments[0]);
 			plcSegments.push_back(tempSegments[1]);		
 			plcSegments.push_back(tempSegments[2]);
-		
 			break;
-        	default: 
+        
+		default: 
                 	break;
         } 
     
@@ -313,7 +362,7 @@ void computeDelaunayTetrahedralization()
 	writePLYOutput();
 
 	// Update the view in the viewer since points and Delaunay triangulation has changed
-	pcl::PolygonMesh mesh;
+	/*pcl::PolygonMesh mesh;
 
 	mesh.cloud.width = DT.number_of_vertices();
 	mesh.cloud.height = 1;
@@ -345,6 +394,7 @@ void computeDelaunayTetrahedralization()
 	{
 		viewer.spinOnce();
 	}	
+*/
 }
 
 
@@ -812,17 +862,17 @@ void recoverConstraintSegments()
 	unsigned int missingSegment;
 
 	formMissingSegmentsQueue(missingSegmentQueue);
-//	int i = 0;
-//	while (missingSegmentQueue.size() != 0)
-//	{
+	int i = 0;
+	while (missingSegmentQueue.size() != 0)
+	{
 		missingSegment = missingSegmentQueue.back();
 		missingSegmentQueue.pop_back();
 		splitMissingSegment(missingSegment);
-//		formMissingSegmentsQueue(missingSegmentQueue);
-//		i++;
-//	}
+		formMissingSegmentsQueue(missingSegmentQueue);
+		i++;
+	}
 	
-//	cout << "\nIn the loop " << i << " number of times" << "\n";
+	cout << "\nIn the loop " << i << " number of times" << "\n";
 	
 	return;
 }
