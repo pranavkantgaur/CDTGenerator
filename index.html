@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Constrained Delaunay Tetrahedralization Generator by pranavkantgaur</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1 class="header">Constrained Delaunay Tetrahedralization Generator</h1>
+        <p class="header">Implementation of the paper &quot;Meshing piecewise linear complex using CDT&quot; by Hang Si et. al</p>
+
+        <ul>
+          <li class="download"><a class="buttons" href="https://github.com/pranavkantgaur/CDTGenerator/zipball/master">Download ZIP</a></li>
+          <li class="download"><a class="buttons" href="https://github.com/pranavkantgaur/CDTGenerator/tarball/master">Download TAR</a></li>
+          <li><a class="buttons github" href="https://github.com/pranavkantgaur/CDTGenerator">View On GitHub</a></li>
+        </ul>
+
+        <p class="header">This project is maintained by <a class="header name" href="https://github.com/pranavkantgaur">pranavkantgaur</a></p>
+
+
+      </header>
+      <section>
+        <h1>
+<a id="cdtgenerator" class="anchor" href="#cdtgenerator" aria-hidden="true"><span class="octicon octicon-link"></span></a>CDTGenerator</h1>
+
+<p>This project is an implementation of the paper "Meshing piecewise linear complex using CDT" by Hang Si et. al. Constrained Delaunay tetrahedralization attempts to retain Delunay property for cells while ensuring preservation of constraint vertices, segments and facets. </p>
+
+<h2>
+<a id="algorithm-overview" class="anchor" href="#algorithm-overview" aria-hidden="true"><span class="octicon octicon-link"></span></a>Algorithm overview</h2>
+
+<p>Algorithm is based on <a href="www.cs.berkeley.edu/%7Ejrs/papers/cdt.pdf">Shewchuck's theorem</a> which states that: 'If a PLC <em>X</em> is <em>edge protected</em> and there are no cospherical 5-points in vertex set of <em>X</em> then CDT of X exists'. This algorithm first transforms the input <em>Piecewise linear complex</em>(or PLC) to a PLC which is edge protected and then removes any degenerate point set and then tranformed PLC is guarnateed to have CDT. Precisely,
+1. Computes initial Delaunay tetrahedralization
+2. Makes segments <em>strongly delaunay</em>
+3. Removes <em>local</em> degeneracies
+4. Recovers facets using <em>cavity retetrahedralization</em> </p>
+
+<h1>
+<a id="dependencies" class="anchor" href="#dependencies" aria-hidden="true"><span class="octicon octicon-link"></span></a>Dependencies</h1>
+
+<p>This implementation extensively uses CGAL's <a href="http://doc.cgal.org/latest/Triangulation_3/index.html#Triangulation_3Delaunay">Delaunay triangulation</a> and <a href="http://doc.cgal.org/latest/Linear_cell_complex/index.html">Linear Cell complex</a> modules. </p>
+
+<h1>
+<a id="building" class="anchor" href="#building" aria-hidden="true"><span class="octicon octicon-link"></span></a>Building</h1>
+
+<p>The code is under testing right now but one can get fair idea of overall steps involved in implementation of Hang Si's Constrained Delaunay tetrahedralization(CDT) algorithm.</p>
+
+<h1>
+<a id="extension" class="anchor" href="#extension" aria-hidden="true"><span class="octicon octicon-link"></span></a>Extension</h1>
+
+<p>Main objective is to extend this implementation to support adaptive Constrained Delaunay tetrahedralization for 3D domain.</p>
+      </section>
+      <footer>
+        <p><small>Hosted on <a href="http://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
+      </footer>
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+		
+  </body>
+</html>
