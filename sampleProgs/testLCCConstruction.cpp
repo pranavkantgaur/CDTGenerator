@@ -89,10 +89,20 @@ int main()
 	cubeLCC.sew<2>(d9, d10);
 	cubeLCC.sew<2>(d11, d12);
 
-	// TODO:
-	// Add remaining sew<2> calls here
+	cubeLCC.sew<2>(cubeLCC.beta(d1, 1), cubeLCC.beta(d4, 1));	
+	cubeLCC.sew<2>(cubeLCC.beta(d1, 1, 1), cubeLCC.beta(d12, 1));
+	cubeLCC.sew<2>(cubeLCC.beta(d2, 1, 1), cubeLCC.beta(d8, 1));
+	cubeLCC.sew<2>(cubeLCC.beta(d2, 1), cubeLCC.beta(d10, 1));	//TODO
+	cubeLCC.sew<2>(cubeLCC.beta(d3, 1), cubeLCC.beta(d12, 1, 1));
+	cubeLCC.sew<2>(cubeLCC.beta(d3, 1, 1), cubeLCC.beta(d6, 1));
 	
-
+	cubeLCC.sew<2>(cubeLCC.beta(d4, 1, 1), cubeLCC.beta(d9, 1, 1));
+	cubeLCC.sew<2>(cubeLCC.beta(d5, 1, 1), cubeLCC.beta(d11, 1));
+	cubeLCC.sew<2>(cubeLCC.beta(d5, 1), cubeLCC.beta(d7, 1));
+	cubeLCC.sew<2>(cubeLCC.beta(d6, 1, 1), cubeLCC.beta(d9, 1));
+	cubeLCC.sew<2>(cubeLCC.beta(d7, 1, 1), cubeLCC.beta(d10, 1, 1));
+	cubeLCC.sew<2>(cubeLCC.beta(d8, 1, 1), cubeLCC.beta(d11, 1, 1));
+	
 	// Verify correctness
 	unsigned int nVertices = 0;
 	for (LCC::One_dart_per_cell_range<0>::iterator vIter = cubeLCC.one_dart_per_cell<0>().begin(); vIter != cubeLCC.one_dart_per_cell<0>().end(); vIter++)
