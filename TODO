@@ -17,3 +17,6 @@
 #9. Add algo. visualization for debugging using PCL. Maybe it can be later extended to interactive visualization where input can be given interactively.
 
 #10. Represent plcVertices, plcFaces, plcSegments as unordered sets.
+
+#11. Use beta links in LCC to sew all adjacent faces in testLCCConstruction.cpp
+

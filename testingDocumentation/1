@@ -1,0 +1,26 @@
+\documentclass{article}
+
+\usepackage{url}
+
+
+
+\begin{document}
+\title{CDT generator: Testing report}
+\author{Pranav Kant Gaur}
+\maketitle
+
+\section{Objective}
+This report documents the complete testing process adopted for verification and validation of the developed CDT generator.
+
+\section{Testing PLY import and Export}
+PLY reading/writing is performed using RPly\cite{rply} library.
+
+
+
+\begin{thebibliography}
+\bibitem{rply}
+\url{http://w3.impa.br/~diego/software/rply/}	
+
+\end{thebibliography}
+
+\end{document}
