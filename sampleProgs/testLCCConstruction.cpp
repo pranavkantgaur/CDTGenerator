@@ -90,11 +90,11 @@ int main()
 	cubeLCC.sew<2>(d11, d12);
 
 	cubeLCC.sew<2>(cubeLCC.beta(d1, 1), cubeLCC.beta(d4, 1));	
-	cubeLCC.sew<2>(cubeLCC.beta(d1, 1, 1), cubeLCC.beta(d12, 1));
-	cubeLCC.sew<2>(cubeLCC.beta(d2, 1, 1), cubeLCC.beta(d8, 1));
-	cubeLCC.sew<2>(cubeLCC.beta(d2, 1), cubeLCC.beta(d10, 1));	//TODO
-	cubeLCC.sew<2>(cubeLCC.beta(d3, 1), cubeLCC.beta(d12, 1, 1));
-	cubeLCC.sew<2>(cubeLCC.beta(d3, 1, 1), cubeLCC.beta(d6, 1));
+	cubeLCC.sew<2>(cubeLCC.beta(d1, 1, 1), cubeLCC.beta(d12, 1)); 
+	cubeLCC.sew<2>(cubeLCC.beta(d2, 1), cubeLCC.beta(d8, 1));
+	cubeLCC.sew<2>(cubeLCC.beta(d2, 1, 1), cubeLCC.beta(d10, 1));	
+	cubeLCC.sew<2>(cubeLCC.beta(d3, 1, 1), cubeLCC.beta(d12, 1, 1));
+	cubeLCC.sew<2>(cubeLCC.beta(d3, 1), cubeLCC.beta(d6, 1));
 	
 	cubeLCC.sew<2>(cubeLCC.beta(d4, 1, 1), cubeLCC.beta(d9, 1, 1));
 	cubeLCC.sew<2>(cubeLCC.beta(d5, 1, 1), cubeLCC.beta(d11, 1));
