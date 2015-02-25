@@ -39,6 +39,8 @@ class Triangle
 
 vector<Point> vertexVector;
 vector<Triangle> faceVector;
+LCC lcc;
+
 
 static float tempPoint[3];
 unsigned int dimensionId = 0;
@@ -124,7 +126,15 @@ void generateLCC()
 {
 	unsigned int vertexIds[3];
 	CGALPoint trianglePoints[3];
-	LCC lcc;
+	
+	// reserve a mark
+	int sewedMark = lcc.get_new_mark();
+
+	if (sewedMark == -1)
+	{
+		cout << "\nNo free mark available!!";
+		exit(0);
+	}
 
 	for (unsigned int n = 0, m = faceVector.size(); n < m; n++)
 	{
@@ -136,7 +146,8 @@ void generateLCC()
 	
 		lcc.make_triangle(trianglePoints[0], trianglePoints[1], trianglePoints[2]);
 	}
-	// remove duplicates
+
+	// sew facets with same geometry
 	lcc.sew3_same_facets();
 	
 	// sew facets sharing edge
@@ -144,30 +155,59 @@ void generateLCC()
 	{
 		for (LCC::One_dart_per_incident_cell_range<1, 2>::iterator segIter1 = lcc.one_dart_per_incident_cell<1, 2>(facetIter1).begin(), segIterEnd1 = lcc.one_dart_per_incident_cell<1, 2>(facetIter1).end(); segIter1 != segIterEnd1; segIter1++)
 		{
-			//if (segIter.mark == false) // not sewed till now
-				for (LCC::One_dart_per_cell_range<2>::iterator facetIter2 = lcc.one_dart_per_cell<2>().begin(), facetIter2End = lcc.one_dart_per_cell<2>().end(); (facetIter2 != facetIter2End) /*&& (*facetIter2 != *facetIter1)*/; facetIter2++)
+			if (!lcc.is_marked(segIter1, sewedMark)) // not sewed till now
+			{
+				for (LCC::One_dart_per_cell_range<2>::iterator facetIter2 = lcc.one_dart_per_cell<2>().begin(), facetIter2End = lcc.one_dart_per_cell<2>().end(); (facetIter2 != facetIter2End) && (facetIter2 != facetIter1); facetIter2++)
 				{
 					for (LCC::One_dart_per_incident_cell_range<1, 2>::iterator segIter2 = lcc.one_dart_per_incident_cell<1, 2>(facetIter2).begin(), segIterEnd2 = lcc.one_dart_per_incident_cell<1, 2>(facetIter2).end(); segIter2 != segIterEnd2; segIter2++)
-						if (lcc.is_sewable<2>(segIter1,segIter2)) 
+					{	if (lcc.is_sewable<2>(segIter1,segIter2)) 
 						{
-							lcc.sew<2>(segIter1, segIter2);
-				//			d1.mark = d2.mark = true; // mark them as sewed
+							lcc.sew<2>(segIter1, segIter2);													  lcc.mark(segIter1, sewedMark);
+							lcc.mark(segIter2, sewedMark);
 							break;
 						}
 						else
 							continue;
+					}
 				}
-	//		else
-	//			continue;
+			}	
+			else
+				continue;
 		}
 	}
 
+	lcc.free_mark(sewedMark); 
+
 	return;
 }
+
+void testLCC()
+{
+	unsigned int nVertices = 0;
+	for (LCC::One_dart_per_cell_range<0>::iterator vIter = lcc.one_dart_per_cell<0>().begin(); vIter != lcc.one_dart_per_cell<0>().end(); vIter++)
+		nVertices++;
+
+	cout << "Number of vertices: " << nVertices << "\n";	
+
+	
+	unsigned int nSegments = 0;
+	for (LCC::One_dart_per_cell_range<1>::iterator sIter = lcc.one_dart_per_cell<1>().begin(); sIter != lcc.one_dart_per_cell<1>().end(); sIter++)
+		nSegments++;
+
+	cout << "Number of segments: " << nSegments << "\n";	
+
+	unsigned int nFaces = 0;
+	for (LCC::One_dart_per_cell_range<2>::iterator fIter = lcc.one_dart_per_cell<2>().begin(); fIter != lcc.one_dart_per_cell<2>().end(); fIter++)
+		nFaces++;
+
+	cout << "Number of faces: " << nFaces << "\n";	
+}
+
 
 int main()
 {
 	readPLYDataset();
 	generateLCC();
+	testLCC();
 	return 0;
 }
