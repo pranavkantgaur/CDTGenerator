@@ -12,6 +12,8 @@ using namespace CGAL;
 typedef Exact_predicates_inexact_constructions_kernel K;
 typedef Point_3<K> CGALPoint;
 typedef Linear_cell_complex<3, 3> LCC;
+typedef LCC::Dart_handle DartHandle;
+
 
 class Point
 {
@@ -126,6 +128,7 @@ void generateLCC()
 {
 	unsigned int vertexIds[3];
 	CGALPoint trianglePoints[3];
+	vector <pair<DartHandle, DartHandle> > twoCellsToBeSewed;
 	
 	// reserve a mark
 	int sewedMark = lcc.get_new_mark();
@@ -160,10 +163,12 @@ void generateLCC()
 				for (LCC::One_dart_per_cell_range<2>::iterator facetIter2 = lcc.one_dart_per_cell<2>().begin(), facetIter2End = lcc.one_dart_per_cell<2>().end(); (facetIter2 != facetIter2End) && (facetIter2 != facetIter1); facetIter2++)
 				{
 					for (LCC::One_dart_per_incident_cell_range<1, 2>::iterator segIter2 = lcc.one_dart_per_incident_cell<1, 2>(facetIter2).begin(), segIterEnd2 = lcc.one_dart_per_incident_cell<1, 2>(facetIter2).end(); segIter2 != segIterEnd2; segIter2++)
-					{	if (lcc.is_sewable<2>(segIter1,segIter2)) 
+					{	if (lcc.is_sewable<2>(segIter1, segIter2)) 
 						{
-							lcc.sew<2>(segIter1, segIter2);													  lcc.mark(segIter1, sewedMark);
+							
+							lcc.mark(segIter1, sewedMark);
 							lcc.mark(segIter2, sewedMark);
+							twoCellsToBeSewed.push_back(pair<DartHandle, DartHandle>(segIter1, segIter2));
 							break;
 						}
 						else
@@ -177,6 +182,12 @@ void generateLCC()
 	}
 
 	lcc.free_mark(sewedMark); 
+
+	// sew the faces sharing an edge
+	for (vector<pair<DartHandle, DartHandle> >::iterator dIter = twoCellsToBeSewed.begin(), dIterEnd = twoCellsToBeSewed.end(); dIter != dIterEnd; dIter++)
+		lcc.sew<2>(dIter->first, dIter->second);
+	
+
 
 	return;
 }
