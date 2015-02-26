@@ -18,7 +18,7 @@ typedef LCC::Dart_handle DartHandle;
 class Point
 {
 	public:
-		float x, y, z;
+		float  x, y, z;
 		Point(float aX, float aY, float aZ)
 		{
 			x = aX;
@@ -124,6 +124,18 @@ void readPLYDataset()
 	cout << "Number of faces:" << faceVector.size() << "\n";
 }
 
+
+bool areGeometricallySame(DartHandle d1, DartHandle d2)
+{
+	
+	if (lcc.point(d1) == lcc.point(lcc.beta(d2, 1)))
+			if (lcc.point(lcc.beta(d1, 1)) == lcc.point(d2))
+				return true;
+	return false;
+}
+
+
+
 void generateLCC()
 {
 	unsigned int vertexIds[3];
@@ -145,49 +157,47 @@ void generateLCC()
 			vertexIds[k] = faceVector[n].pointIds[k];
 	
 		for (unsigned int i = 0; i < 3; i++)
-			trianglePoints[i] = CGALPoint(vertexVector[vertexIds[i]].x, vertexVector[i].y, vertexVector[i].z);
-	
+			trianglePoints[i] = CGALPoint(vertexVector[vertexIds[i]].x, vertexVector[vertexIds[i]].y, vertexVector[vertexIds[i]].z);
+			
 		lcc.make_triangle(trianglePoints[0], trianglePoints[1], trianglePoints[2]);
 	}
 
-	// sew facets with same geometry
-	lcc.sew3_same_facets();
-	
 	// sew facets sharing edge
-	for (LCC::One_dart_per_cell_range<2>::iterator facetIter1 = lcc.one_dart_per_cell<2>().begin(), facetEnd1 = lcc.one_dart_per_cell<2>().end(); facetIter1 != facetEnd1; facetIter1++)
+	for (LCC::Dart_range::iterator segIter1 = lcc.darts().begin(), segIterEnd1 = lcc.darts().end(); segIter1 != segIterEnd1; segIter1++)
 	{
-		for (LCC::One_dart_per_incident_cell_range<1, 2>::iterator segIter1 = lcc.one_dart_per_incident_cell<1, 2>(facetIter1).begin(), segIterEnd1 = lcc.one_dart_per_incident_cell<1, 2>(facetIter1).end(); segIter1 != segIterEnd1; segIter1++)
+		if (!lcc.is_marked(segIter1, sewedMark)) // not sewed till now
 		{
-			if (!lcc.is_marked(segIter1, sewedMark)) // not sewed till now
+			for (LCC::Dart_range::iterator segIter2 = lcc.darts().begin(), segIterEnd2 = lcc.darts().end(); segIter2 != segIterEnd2; segIter2++)
 			{
-				for (LCC::One_dart_per_cell_range<2>::iterator facetIter2 = lcc.one_dart_per_cell<2>().begin(), facetIter2End = lcc.one_dart_per_cell<2>().end(); (facetIter2 != facetIter2End) && (facetIter2 != facetIter1); facetIter2++)
+				if (!lcc.is_marked(segIter2, sewedMark) && lcc.is_sewable<2>(segIter1, segIter2))
 				{
-					for (LCC::One_dart_per_incident_cell_range<1, 2>::iterator segIter2 = lcc.one_dart_per_incident_cell<1, 2>(facetIter2).begin(), segIterEnd2 = lcc.one_dart_per_incident_cell<1, 2>(facetIter2).end(); segIter2 != segIterEnd2; segIter2++)
-					{	if (lcc.is_sewable<2>(segIter1, segIter2)) 
-						{
-							
-							lcc.mark(segIter1, sewedMark);
-							lcc.mark(segIter2, sewedMark);
-							twoCellsToBeSewed.push_back(pair<DartHandle, DartHandle>(segIter1, segIter2));
-							break;
-						}
-						else
-							continue;
+					if (areGeometricallySame(segIter1, segIter2)) // checks the geometry of segments
+					{
+						lcc.mark(segIter1, sewedMark);
+						lcc.mark(segIter2, sewedMark);
+						twoCellsToBeSewed.push_back(pair<DartHandle, DartHandle>(segIter1, segIter2));
+						break;
 					}
 				}
-			}	
-			else
-				continue;
-		}
+				else
+					continue;
+			}
+		}	
+		else
+			continue;
 	}
-
-	lcc.free_mark(sewedMark); 
-
-	// sew the faces sharing an edge
-	for (vector<pair<DartHandle, DartHandle> >::iterator dIter = twoCellsToBeSewed.begin(), dIterEnd = twoCellsToBeSewed.end(); dIter != dIterEnd; dIter++)
-		lcc.sew<2>(dIter->first, dIter->second);
 	
+	// sew the faces sharing an edge
+	unsigned int k = 0;
+	for (vector<pair<DartHandle, DartHandle> >::iterator dIter = twoCellsToBeSewed.begin(), dIterEnd = twoCellsToBeSewed.end(); dIter != dIterEnd; dIter++)
+		if (lcc.is_sewable<2>(dIter->first, dIter->second))
+		{
+			lcc.sew<2>(dIter->first, dIter->second);
+			k++;	
+		}
 
+	cout << "\nNumber of sewable facets: " << k;
+	cout << "\nNumber of pairs to be sewed: " << twoCellsToBeSewed.size() << "\n";
 
 	return;
 }
@@ -198,20 +208,20 @@ void testLCC()
 	for (LCC::One_dart_per_cell_range<0>::iterator vIter = lcc.one_dart_per_cell<0>().begin(); vIter != lcc.one_dart_per_cell<0>().end(); vIter++)
 		nVertices++;
 
-	cout << "Number of vertices: " << nVertices << "\n";	
+	cout << "\nNumber of vertices: " << nVertices;	
 
 	
 	unsigned int nSegments = 0;
 	for (LCC::One_dart_per_cell_range<1>::iterator sIter = lcc.one_dart_per_cell<1>().begin(); sIter != lcc.one_dart_per_cell<1>().end(); sIter++)
 		nSegments++;
 
-	cout << "Number of segments: " << nSegments << "\n";	
+	cout << "\nNumber of segments: " << nSegments;	
 
 	unsigned int nFaces = 0;
 	for (LCC::One_dart_per_cell_range<2>::iterator fIter = lcc.one_dart_per_cell<2>().begin(); fIter != lcc.one_dart_per_cell<2>().end(); fIter++)
 		nFaces++;
 
-	cout << "Number of faces: " << nFaces << "\n";	
+	cout << "\nNumber of faces: " << nFaces << "\n";	
 }
 
 
