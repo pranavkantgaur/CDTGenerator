@@ -278,6 +278,9 @@ void writePLYOutput(LCC &lcc, string fileName)
 void computeDelaunayTetrahedralization()
 {	
 
+
+	// TODO:Add DartHandle info with each vertex
+
 	DT.insert(plcVertices.begin(), plcVertices.end());
 
 	cout << "\nDelaunay tetrahedralization computed!!";
@@ -313,7 +316,6 @@ void formMissingSegmentsQueue(vector<DartHandle> &missingSegmentQueue)
 
 	return;
 }
-
 
 unsigned int computeCircumradius(Point &A, Point &B, Point &encroachingCandidate)
 {
@@ -442,8 +444,6 @@ bool isVertexAcute(DartHandle inputPointHandle)
 unsigned int determineSegmentType(DartHandle missingSegmentHandle)
 {
 
-	// if both endpoints of the segment are acute, type 1
-	// if only one endpoint acute, type 2	
 	Point &A = plc.point(missingSegmentHandle);
 	Point &B = plc.point(plc.beta(missingSegmentHandle, 1));
 
@@ -477,125 +477,72 @@ bool containsSegment(unsigned int faceId, unsigned int segmentId)
 }
 
 
-void updatePLCAndDT(Point &v, unsigned int missingSegmentId)
+void updatePLCAndDT(Point &v, DartHandle missingSegmentHandle)
 {
-	// vertex
-	plcVertices.push_back(make_pair(v, plcVertices.size()));
+	// TODO: update PLC
+	lcc.insert_cell_0_in_cell_1(v, missingSegmentHandle);
 	
-	// segments
-	Segment AN, NB;
 
-	AN.pointIds[0] = plcSegments[missingSegmentId].pointIds[0];
-	AN.pointIds[1] = plcVertices.size() - 1; // since new vertex has been inserted at the end
-	NB.pointIds[0] = plcVertices.size() - 1;
-	NB.pointIds[1] = plcSegments[missingSegmentId].pointIds[1];
-	
-	plcSegments.push_back(AN);
-	plcSegments.push_back(NB);
-
-	plcSegments.erase(plcSegments.begin() + missingSegmentId);
-
-	// faces
-	// Find out the faces sharing that segment
-	
-	 	//For each face sharing this segment edge,
-			// Partition the face into 2 triangles
-	unsigned int v1, v2, v3;
-	Triangle newFace1, newFace2;
-
-	unsigned int k = plcFaces.size();
-
-	for (unsigned int d = 0; d < k; d++)
-	{
-		if (containsSegment(d, missingSegmentId))
-		{
-			//newFace1 = new Triangle;
-		       	//newFace2 = new Triangle;
-
-			newFace1.pointIds[0] = plcFaces[d].pointIds[0];
-			newFace1.pointIds[1] = plcFaces[d].pointIds[1];
-			newFace1.pointIds[2] = plcVertices.size() - 1;
-			
-			newFace2.pointIds[0] = plcFaces[d].pointIds[0];
-			newFace2.pointIds[1] = plcFaces[d].pointIds[2];
-			newFace2.pointIds[2] = plcVertices.size() - 1;
-	
-			plcFaces.push_back(newFace1);
-			plcFaces.push_back(newFace2);
-			plcFaces.erase(plcFaces.begin() + d);		
-			
-			d -= 1;
-			k -= 1;
-		}
-	}
-
-	
-	// DT
-	computeDelaunayTetrahedralization();
-
-
+	// updated DT
+	computeDelaunayTetrahedralization(); 
 }
 
 
 void splitMissingSegment(DartHandle missingSegmentHandle)
 {
 
-	// Apply rules to split the segments into strongly Delaunay subsegments
-	Point vb, refPoint;
-	Point sphereCenter;
+	CGALPoint vb, refPoint;
+	CGALPoint sphereCenter;
 	float sphereRadius;
-
 	unsigned int segmentType;
 	segmentType = determineSegmentType(missingSegmentHandle);
 
 	computeReferencePoint(&refPoint, missingSegmentId);
 	
-	unsigned int A = plcSegments[missingSegmentId].pointIds[0];
-	unsigned int B = plcSegments[missingSegmentId].pointIds[1];
+	CGALPoint A = plc.point(missingSegmentHandle);
+	CGALPoint B = plc.point(plc.beta(missingSegmentHandle, 1));
 	
 	float AP, PB, AB;
 
-	Point v;
+	CGALPoint v;
 
 	if (segmentType == 1)
 	{
-		Point &Areference = plcVertices[A].first;
-		Point &Breference = plcVertices[B].first;
-		AP = computeSegmentLength(Areference, refPoint);
-		AB = computeSegmentLength(Areference, Breference);
+		AP = computeSegmentLength(A, refPoint);
+		AB = computeSegmentLength(A, B);
 		
 		if (AP < 0.5f * AB)
 		{
-			sphereCenter = Areference;
+			sphereCenter = A;
 			sphereRadius = AP;
 		}
 
 		else if (PB < 0.5 * AB)
 		{
-			sphereCenter = Breference;
+			sphereCenter = B;
 			sphereRadius = PB;
 		}
 
 		else
 		{
-			sphereCenter = Areference;
+			sphereCenter = A;
 			sphereRadius = 0.5 * AB; 
 		}	
 
-		SphericalPoint sphericalSphereCenter = SphericalPoint(sphereCenter.x(), sphereCenter.y(), sphereCenter.z());
+		CGALSphericalPoint sphericalSphereCenter = CGALSphericalPoint(sphereCenter.x(), sphereCenter.y(), sphereCenter.z());
+		CGALSphericalSphere s = CGALSphericalSphere(sphericalSphereCenter, pow(sphereRadius, 2));
 
-		SphericalSphere s = SphericalSphere(sphericalSphereCenter, pow(sphereRadius, 2));
-
-		SphericalPoint p1 = SphericalPoint(plcVertices[plcSegments[missingSegmentId].pointIds[0]].first.x(), plcVertices[plcSegments[missingSegmentId].pointIds[0]].first.y(), plcVertices[plcSegments[missingSegmentId].pointIds[0]].first.z());
-
-		SphericalPoint p2 = SphericalPoint(plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.x(), plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.y(), plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.z());
+		CGALSphericalPoint p1 = CGALSphericalPoint(A.x(), A.y(), A.z());
+		CGALSphericalPoint p2 = CGALSphericalPoint(B.x(), B.y(), B.z());
 
 		CGALSegment seg(p1, p2);
-		SphericalSegment lineArc(seg);
+		CGALSphericalSegment lineArc(seg);
 		vector<Object> intersections;
+		
 		CGAL::intersection(lineArc, s, back_inserter(intersections));
+		
 		if (intersections.size() > 0)
-		{	v = object_cast<Point>(intersections.back());
+		{	v = object_cast<CGALPoint>(intersections.back());
 			intersections.pop_back();
 		}
 
@@ -608,17 +555,17 @@ void splitMissingSegment(DartHandle missingSegmentHandle)
 
 	else if (segmentType == 2)
 	{
-		unsigned int acuteParentId; 
-		Segment ApB; 
+		DartHandle acuteParentHandle; 
+		DartHandle ApB[1]; 
 		float vbLength;
-		A = plcSegments[missingSegmentId].pointIds[0];
-		B = plcSegments[missingSegmentId].pointIds[1];
+		DartHandle AHandle = missingSegmentHandle;
+		DartHandle BHandle = plc.beta(missingSegmentHandle, 1);
 
-		if (isVertexAcute(A) && !isVertexAcute(B))
-			acuteParentId = plcSegments[missingSegmentId].pointIds[0];
-	        else if (isVertexAcute(B) && !isVertexAcute(A))
+		if (isVertexAcute(AHandle) && !isVertexAcute(BHandle))
+			acuteParentHandle = AHandle;
+	        else if (isVertexAcute(BHandle) && !isVertexAcute(AHandle))
 		{
-			acuteParentId = plcSegments[missingSegmentId].pointIds[1];
+			acuteParentHandle = BHandle;
 			// swap A <-> B 
 			unsigned int t;
 			t = A;
@@ -629,24 +576,24 @@ void splitMissingSegment(DartHandle missingSegmentHandle)
 		
 		// Segment calculations
 		
-		ApB.pointIds[0] = acuteParentId;
-		ApB.pointIds[1] = B;
+		ApB[0] = acuteParentHandle;
+		ApB[1] = BHandle;
 		
 	
-		SphericalPoint p1(plcVertices[acuteParentId].first.x(), plcVertices[acuteParentId].first.y(), plcVertices[acuteParentId].first.z());
-		SphericalPoint p2(plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.x(), plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.y(), plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.z());
+		CGALSphericalPoint p1(plc.point(acuteParentHandle).x(), plc.point(acuteParentHandle).y(), plc.point(acuteParentHandle).z());
+		CGALSphericalPoint p2(plc.Point(BHandle).x(), plc.point(BHandle).y(), plc.point(BHandle).z());
 		
 		CGALSegment seg(p1, p2);
-		SphericalSegment lineArc(seg);
+		CGALSphericalSegment lineArc(seg);
 		
 		/// Sphere calculations
-		SphericalPoint acuteParent = SphericalPoint(plcVertices[acuteParentId].first.x(), plcVertices[acuteParentId].first.y(), plcVertices[acuteParentId].first.z());
+		CGALSphericalPoint acuteParent(plc.point(acuteParentHandle).x(), plc.point(acuteParentHandle).y(), plc.point(acuteParentHandle).z());
 		
-		Point acuteParentLinearField(plcVertices[acuteParentId].first.x(), plcVertices[acuteParentId].first.y(), plcVertices[acuteParentId].first.z());
+		CGALPoint acuteParentLinearField(plc.point(acuteParentHandle).x(), plc.point(acuteParentHandle).y(), plc.point(acuteParentHandle).z());
 	
 		float ApRefPointLength = computeSegmentLength(acuteParentLinearField, refPoint);
 
-		SphericalSphere s(acuteParent, pow(ApRefPointLength, 2));
+		CGALSphericalSphere s(acuteParent, pow(ApRefPointLength, 2));
 
 		vector<Object> intersections;
 
@@ -700,21 +647,18 @@ void splitMissingSegment(DartHandle missingSegmentHandle)
 
 	else if (segmentType == 3) // meaning both A & B are acute
 	{
-		static vector<unsigned int> acuteParentMap; // will store acute parent ID for each vertex
-		unsigned int acuteParentId;
-		// split the segment to create 2 type-2 segments:
-		// Lets insert the new point at the mid of the segment
-		Point newPoint;
-		float x = (plcVertices[A].first.x() + plcVertices[B].first.x()) / 2.0;
-		float y = (plcVertices[A].first.y() + plcVertices[B].first.y()) / 2.0;
-		float z = (plcVertices[A].first.z() + plcVertices[B].first.z()) / 2.0;
-		newPoint = Point(x, y, z); // must be collinear with A and B, we now have AX, XB
+		CGALPoint newPoint;
+		
+		float x = (A.x() + B.x()) / 2.0;
+		float y = (A.y() + B.y()) / 2.0;
+		float z = (A.z() + B.z()) / 2.0;
+		newPoint = CGALPoint(x, y, z); 
 		
 		v = newPoint;
 	}
 
 	// update plc and DT
-	updatePLCAndDT(v, missingSegmentId);
+	updatePLCAndDT(v, missingSegmentHandle);
 	
 	return;
 }
