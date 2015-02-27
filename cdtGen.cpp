@@ -290,18 +290,14 @@ void computeDelaunayTetrahedralization()
 ///////////////////////////////////////////// Segment recovery //////////////////////////////////////////////////////////////
 
 
-void formMissingSegmentsQueue(vector<unsigned int> &missingSegmentQueue)
+void formMissingSegmentsQueue(vector<DartHandle> &missingSegmentQueue)
 {
-	// collect pointers to all segments in plcSegments which are not in DT	
-	// while inserting points in DT set a id for each point
-
 	missingSegmentQueue.clear();
 
-	for (unsigned int m = 0; m < plcSegments.size(); m++)
+	for (LCC::One_dart_per_cell_range<1>::iterator segmentIter = plc.one_dart_per_cell<1>().begin(), segmentIterEnd = plc.one_dart_per_cell<1>().end(); segmentIter != segmentIterEnd; segmentIter++)
 	{
-		Delaunay::Vertex_handle vh1, vh2;
-		Point p1 = plcVertices[plcSegments[m].pointIds[0]].first;
-		Point p2 = plcVertices[plcSegments[m].pointIds[1]].first;
+		CGALPoint p1 = plc.point(segmentIter);
+		CGALPoint p2 = plc.point(plc.beta(segmentIter, 1));
 
 		Delaunay::Cell_handle c;
 		int i, j;
@@ -309,7 +305,7 @@ void formMissingSegmentsQueue(vector<unsigned int> &missingSegmentQueue)
 		if (DT.is_vertex(p1, vh1))
 			if (DT.is_vertex(p2, vh2))
 				if (!DT.is_edge(vh1, vh2, c, i, j))
-					missingSegmentQueue.push_back(m);
+					missingSegmentQueue.push_back(segmentIter);
 	}
 
 	cout << "\nTotal number of missing constraint segments:" << missingSegmentQueue.size() << "\n";
@@ -332,44 +328,31 @@ unsigned int computeCircumradius(Point &A, Point &B, Point &encroachingCandidate
 	return circumradius = (a * b * c) / sqrt((a + b + c) * (b + c - a) * (c + a - b) * (a + b - c));
 }
 
-void computeReferencePoint(Point *refPoint, unsigned int missingSegmentId)
+void computeReferencePoint(Point *refPoint, DartHandle missingSegmentHandle)
 {
-	// compute a reference point p such that:
-	// p encroaches missingSegment	
-	// p has the largest circumradius of smallest circumsphere out of all encroaching vertices
-	
-	
-	Point &A = plcVertices[plcSegments[missingSegmentId].pointIds[0]].first;
 
-	Point &B = plcVertices[plcSegments[missingSegmentId].pointIds[1]].first;
-
-
-	//cout << "\nA = (" << A.x() << ", " << A.y() << ", " << A.z() << ")";
-	//cout << "\nB = (" << B.x() << ", " << B.y() << ", " << B.z() << ")\n"; 
-
+	Point &A = plc.point(missingSegmentHandle);
+	Point &B = plc.point(plc.beta(missingSegmentHandle, 1));
 
 	float missingSegmentLength = sqrt(pow((A.x() - B.x()), 2) + pow((A.y() - B.y()), 2) + pow((A.z() - B.z()), 2));
-	
-	//cout << "\nSegment length: " << missingSegmentLength;
-
 	float sphereRadius = (missingSegmentLength / 2.0);
-	Point sphereCenter = Point((A.x() + B.x()) / 2.0,  (A.y() + B.y()) / 2.0, (A.z() + B.z()) / 2.0);
+	CGALPoint sphereCenter = Point((A.x() + B.x()) / 2.0,  (A.y() + B.y()) / 2.0, (A.z() + B.z()) / 2.0);
 
 	Sphere smallestCircumsphere(sphereCenter, pow(sphereRadius, 2));
-
-
+	
 	float encroachingCandidateDistance;
 	vector<float> circumradiusMap; // value is computed only for those points which are encroaching
 	
-	for (unsigned int n = 0; n < plcVertices.size(); n++)
+	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>.end(); pIter != pIterEnd; pIter++)
 	{
-		if (n != plcSegments[missingSegmentId].pointIds[0] && n != plcSegments[missingSegmentId].pointIds[1])
+		CGALPoint candidatePoint = plc.point(pIter);
+		
+		if (candidatePoint != A && candidatePoint != B)
 		{
-			
-			encroachingCandidateDistance = sqrt(pow(sphereCenter.x() - (plcVertices[n].first).x(), 2) + pow(sphereCenter.y() - (plcVertices[n].first).y(), 2) + pow(sphereCenter.z() - (plcVertices[n].first).z(), 2));
+			encroachingCandidateDistance = sqrt(pow(sphereCenter.x() - candidatePoint.x(), 2) + pow(sphereCenter.y() - candidatePoint.y(), 2) + pow(sphereCenter.z() - candidatePoint.z(), 2));
 	
 			if (encroachingCandidateDistance <= sqrt(smallestCircumsphere.squared_radius())) // encroaching vertex
-				circumradiusMap.push_back(computeCircumradius(A, B, plcVertices[n].first));
+				circumradiusMap.push_back(computeCircumradius(A, B, candidatePoint));
 			else // not encroaching
 				circumradiusMap.push_back(INVALID_VALUE);
 		
@@ -380,31 +363,32 @@ void computeReferencePoint(Point *refPoint, unsigned int missingSegmentId)
 
 	// select the one with maximum circumradius.
 	float maxCircumradius = INVALID_VALUE;
-	
-	for (unsigned int i = 0; i < plcVertices.size(); i++)
-		if (circumradiusMap[i] != INVALID_VALUE)
-			if (maxCircumradius < circumradiusMap[i])
+	size_t vertexId = 0;
+
+	for (LCC::One_dart_per_cell_range<0>::iterator pointIter = plc.one_dart_per_cell<0>().begin(), pointIterEnd = plc.one_dart_per_cell<0>.end(); pointIter != pointIterEnd; pointIter++, vertexId++)
+		if (circumradiusMap[vertexId] != INVALID_VALUE)
+			if (maxCircumradius < circumradiusMap[vertexId])
 			{
-				maxCircumradius = circumradiusMap[i];
-				refPoint = &(plcVertices[i].first);
+				maxCircumradius = circumradiusMap[vertexId];
+				refPoint = &(plc.point(pointIter));
 			}	
 
 	return;
 }
 
-float dotProduct (unsigned segment1Id, unsigned int segment2Id)
+float dotProduct (DartHandle segment1Handle, DartHandle segment2Handle)
 {
-	Point segment1Vertex[2];
-	Point segment2Vertex[2];
+	CGALPoint segment1Vertex[2];
+	CGALPoint segment2Vertex[2];
 
-	for (unsigned int i = 0; i < 2; i++)
-	{
-		segment1Vertex[i] = plcVertices[plcSegments[segment1Id].pointIds[i]].first;
-		segment2Vertex[i] = plcVertices[plcSegments[segment2Id].pointIds[i]].first;
-	}
+	segment1Vertex[0] = plc.point(segment1Handle);
+	segment1Vertex[1] = plc.point(plc.beta(segment1Handle, 1));
 
-	Point vector1 = Point(segment1Vertex[0].x() - segment1Vertex[1].x(), segment1Vertex[0].y() - segment1Vertex[1].y(), segment1Vertex[0].z() - segment1Vertex[1].z());
-	Point vector2 = Point(segment2Vertex[0].x() - segment2Vertex[1].x(), segment2Vertex[0].y() - segment2Vertex[1].y(), segment2Vertex[0].z() - segment2Vertex[1].z());
+	segment2Vertex[0] = plc.point(segment2Handle);
+	segment2Vertex[1] = plc.point(plc.beta(segment2Handle, 1));
+
+	CGALPoint vector1 = CGALPoint(segment1Vertex[0].x() - segment1Vertex[1].x(), segment1Vertex[0].y() - segment1Vertex[1].y(), segment1Vertex[0].z() - segment1Vertex[1].z());
+	CGALPoint vector2 = CGALPoint(segment2Vertex[0].x() - segment2Vertex[1].x(), segment2Vertex[0].y() - segment2Vertex[1].y(), segment2Vertex[0].z() - segment2Vertex[1].z());
 
 
 	float v1Dotv2 = vector1.x() * vector2.x() + vector1.y() * vector2.y() + vector1.z() * vector2.z();
@@ -413,14 +397,14 @@ float dotProduct (unsigned segment1Id, unsigned int segment2Id)
 
 }
 
-float vectorMagnitude(unsigned int inputSegmentId)
+float vectorMagnitude(DartHandle inputSegmentHandle)
 {
-	Point segmentVertices[2];
+	CGALPoint segmentVertices[2];
 
-	for (unsigned int i = 0; i < 2; i++)
-		segmentVertices[i] = plcVertices[plcSegments[inputSegmentId].pointIds[i]].first;
+	segmentVertices[0] = plc.point(inputSegmentHandle);
+	segmentVertices[1] = plc.point(plc.beta(inputSegmentHandle, 1));	
 
-	Point vector = Point(segmentVertices[0].x() - segmentVertices[1].x(), segmentVertices[0].y() - segmentVertices[1].y(), segmentVertices[0].z() - segmentVertices[1].z());
+	CGALPoint vector = Point(segmentVertices[0].x() - segmentVertices[1].x(), segmentVertices[0].y() - segmentVertices[1].y(), segmentVertices[0].z() - segmentVertices[1].z());
 
 	float vectorMagnitude = sqrtf(powf(vector.x(), 2.0) + powf(vector.y(), 2.0) + powf(vector.z(), 2.0));
 
@@ -428,44 +412,43 @@ float vectorMagnitude(unsigned int inputSegmentId)
 }
 
 
-float computeAngleBetweenSegments(unsigned int segment1Id, unsigned int segment2Id)
+float computeAngleBetweenSegments(DartHandle segment1Handle, DartHandle segment2Handle)
 {
-	float angle = acosf(dotProduct(segment1Id, segment2Id) / (vectorMagnitude(segment1Id) * vectorMagnitude(segment2Id)));
+
+	float angle = acosf(dotProduct(segment1Handle, segment2Handle) / (vectorMagnitude(segment1Handle) * vectorMagnitude(segment2Handle)));
 
 	return (angle * 180.0f / Pi); // conversion to degrees
 }
 
-bool isVertexAcute(unsigned int inputPointId)
+bool isVertexAcute(DartHandle inputPointHandle)
 {
 	// Determine segment-pair(involving A) 
-	vector<unsigned int> incidentOnInputPoint;
+	vector<DartHandle> incidentOnInputPoint;
 
-	for (unsigned int n = 0; n < plcSegments.size(); n++) 
-	{
-		if (plcSegments[n].pointIds[0] == inputPointId || plcSegments[n].pointIds[1] == inputPointId)
-			incidentOnInputPoint.push_back(n);
-	}
+	 
+	for (LCC::One_dart_per_incident_cell_range<1, 0>::iterator incidentSegmentIter = plc.one_dart_per_incident_cell<1, 0>(inputPointHandle).begin(), incidentSegmentIterEnd = plc.one_dart_per_incident_cell<1, 0>(inputPointHandle).end(); incidentSegmentIter++)
+		incidentOnInputPoint.push_back(incidentSegmentIter);
 
 	// Compute angle between all possible pairs(NAIVE SOLUTION)
-	for (vector<unsigned int>::iterator segIter1 = incidentOnInputPoint.begin(); segIter1 != incidentOnInputPoint.end(); segIter1++) 
-		for (vector<unsigned int>::iterator segIter2 = incidentOnInputPoint.begin(); *segIter1 != *segIter2 && segIter2 != incidentOnInputPoint.end(); segIter2++)
-			if (computeAngleBetweenSegments(*segIter1, *segIter2) < 90.0f)
+	for (vector<DartHandle>::iterator segIter1 = incidentOnInputPoint.begin(); segIter1 != incidentOnInputPoint.end(); segIter1++) 
+		for (vector<DartHandle>::iterator segIter2 = incidentOnInputPoint.begin(); *segIter1 != *segIter2 && segIter2 != incidentOnInputPoint.end(); segIter2++)
+			if (computeAngleBetweenSegments(segIter1, segIter2) < 90.0f)
 				return true;
 
 	return false; 
 }
 
 
-unsigned int determineSegmentType(unsigned int missingSegmentId)
+unsigned int determineSegmentType(DartHandle missingSegmentHandle)
 {
 
 	// if both endpoints of the segment are acute, type 1
 	// if only one endpoint acute, type 2	
-	Point &A = plcVertices[plcSegments[missingSegmentId].pointIds[0]].first;
-	Point &B = plcVertices[plcSegments[missingSegmentId].pointIds[1]].first;
+	Point &A = plc.point(missingSegmentHandle);
+	Point &B = plc.point(plc.beta(missingSegmentHandle, 1));
 
-	bool vertexAIsAcute = isVertexAcute(plcSegments[missingSegmentId].pointIds[0]);
-	bool vertexBIsAcute = isVertexAcute(plcSegments[missingSegmentId].pointIds[1]);
+	bool vertexAIsAcute = isVertexAcute(missingSegmentHandle);
+	bool vertexBIsAcute = isVertexAcute(plc.beta(missingSegmentHandle, 1));
 
 	if (!vertexAIsAcute && !vertexBIsAcute)	
 		return 1;
@@ -483,8 +466,6 @@ float computeSegmentLength(Point &A, Point &B)
 	return sLength;
 }
 
-
-
 bool containsSegment(unsigned int faceId, unsigned int segmentId)
 {
 	for (unsigned int i = 0; i < 3; i++)
@@ -499,13 +480,11 @@ bool containsSegment(unsigned int faceId, unsigned int segmentId)
 void updatePLCAndDT(Point &v, unsigned int missingSegmentId)
 {
 	// vertex
-	
 	plcVertices.push_back(make_pair(v, plcVertices.size()));
 	
 	// segments
 	Segment AN, NB;
 
-	
 	AN.pointIds[0] = plcSegments[missingSegmentId].pointIds[0];
 	AN.pointIds[1] = plcVertices.size() - 1; // since new vertex has been inserted at the end
 	NB.pointIds[0] = plcVertices.size() - 1;
@@ -558,7 +537,7 @@ void updatePLCAndDT(Point &v, unsigned int missingSegmentId)
 }
 
 
-void splitMissingSegment(unsigned int missingSegmentId)
+void splitMissingSegment(DartHandle missingSegmentHandle)
 {
 
 	// Apply rules to split the segments into strongly Delaunay subsegments
@@ -567,7 +546,7 @@ void splitMissingSegment(unsigned int missingSegmentId)
 	float sphereRadius;
 
 	unsigned int segmentType;
-	segmentType = determineSegmentType(missingSegmentId);
+	segmentType = determineSegmentType(missingSegmentHandle);
 
 	computeReferencePoint(&refPoint, missingSegmentId);
 	
@@ -746,8 +725,8 @@ void recoverConstraintSegments()
 	// I/P: plc1, DT1
 	// O/P: plc2, DT2
 	
-	vector<unsigned int> missingSegmentQueue;// stores index of missing segments into plcSegments	
-	unsigned int missingSegment;
+	vector<DartHandle> missingSegmentQueue;
+	DartHandle missingSegment;
 
 	formMissingSegmentsQueue(missingSegmentQueue);
 	int i = 0;
@@ -765,7 +744,7 @@ void recoverConstraintSegments()
 	return;
 }
 
-/////////////////////////////////////////////// Local Degeneracy Removal begin ///////////////////////////////////////////////////
+////////////////////////////////////////////// Local Degeneracy Removal begin ///////////////////////////////////////////////////
 
 class DegenerateVertexSetCandidate
 {
