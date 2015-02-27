@@ -130,7 +130,6 @@ void readPLYDataset()
 		exit(0);
 	}
 
-
 	ply_close(inputPLY);
 
 	cout << "Number of vertices:" << vertexVector.size() << "\n";
