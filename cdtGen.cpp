@@ -34,19 +34,20 @@ typedef Exact_predicates_inexact_constructions_kernel K;
 typedef Triangulation_vertex_base_with_info_3<DartHandle, K> Vb; 
 typedef Triangulation_data_structure_3<Vb> Tds;
 typedef Delaunay_triangulation_3<K, Tds, Fast_location> Delaunay;
-typedef Delaunay::Point Point;
-typedef Sphere_3<K> Sphere;
-typedef Circle_3<K> Circle;
-
-typedef Exact_spherical_kernel_3 SK;
-typedef Line_arc_3<SK> SphericalSegment;
-typedef Sphere_3<SK> SphericalSphere;
-typedef Segment_3<SK> CGALSegment; 
-typedef Point_3<SK> SphericalPoint;
 typedef Delaunay::Vertex_handle Vertex_handle;
+typedef Delaunay::Cell_iterator Cell_iterator;
+
+typedef Point_3<K> CGALPoint;
+typedef Circle_3<K> CGALCircle;
+typedef Sphere_3<K> CGALSphere;
 typedef Tetrahedron_3<K> CGALTetrahedron;
 typedef Triangle_3<K> CGALTriangle;
-typedef Delaunay::Cell_iterator Cell_iterator;
+
+typedef Exact_spherical_kernel_3 SK;
+typedef Line_arc_3<SK> CGALSphericalSegment;
+typedef Sphere_3<SK> CGALSphericalSphere;
+typedef Segment_3<SK> CGALSphericalSegment; 
+typedef Point_3<SK> CGALSphericalPoint;
 
 typedef Linear_cell_complex_traits<3, K> Traits;
 typedef Linear_cell_complex<3, 3, Traits> LCC;
@@ -58,7 +59,7 @@ typedef LCC::Dart_handle DartHandle;
  */
 
 // Input
-LCC PLC;
+LCC plc;
 
 // Intermidiate global structures
 Delaunay DT;
@@ -150,125 +151,138 @@ void readPLCInput()
 
 	ply_close(inputPLY);
 
-	cout << "Number of vertices:" << plcVertices.size() << "\n";
-	cout << "Number of faces:" << plcFaces.size() << "\n";
-	cout << "Number of segments:" << plcSegments.size();
-}
+	cout << "Number of vertices:" << plcVertexVector.size() << "\n";
+	cout << "Number of faces:" << plcFaceVector.size() << "\n";
 
+	// Initialize PLC
+	vector<pair<DartHandle, DartHandle> > twoCellsToBeSewed;
+	size_t vertexIds[3];
+ 
+	int sewedMark = lcc.get_new_mark();
 
-void writePLYOutput()
-{
-	// use rPLY for writing DT to PLY file
-	p_ply delaunayMeshPLY;
-
-	if((delaunayMeshPLY = ply_create("delaunay.ply", PLY_ASCII, NULL, 0, NULL)) == NULL)
+	if (sewedMark == -1)
 	{
-		cout << "\nCannot write Mesh output!!";
+		cout << "\nNo free mark available!!";
 		exit(0);
 	}
-	 
-	else
+
+	for (unsigned int n = 0, m = faceVector.size(); n < m; n++)
 	{
-		ply_add_element(delaunayMeshPLY, "vertex", DT.number_of_vertices()); 
-	      	ply_add_scalar_property(delaunayMeshPLY, "x", PLY_FLOAT);
-		ply_add_scalar_property(delaunayMeshPLY, "y", PLY_FLOAT);
-		ply_add_scalar_property(delaunayMeshPLY, "z", PLY_FLOAT);
-		ply_add_element(delaunayMeshPLY, "face", DT.number_of_finite_facets());
-		ply_add_list_property(delaunayMeshPLY, "vertex_indices", PLY_UCHAR, PLY_INT32);	
-
-		if(!ply_write_header(delaunayMeshPLY))
-			cout << "\nHeader not writen" << flush;
-
-
-		vector<MyVertex> orderedPLCVertices;
-		
-		//Lets sort the vertices before writing them to file
-		for (Delaunay::Finite_vertices_iterator vit = DT.finite_vertices_begin(); vit != DT.finite_vertices_end(); vit++)
-			orderedPLCVertices.push_back(MyVertex(vit->point(), vit->info()));
-
-		sort(orderedPLCVertices.begin(), orderedPLCVertices.end());
-
-		float x, y, z;
-		Point p;
+		for (unsigned int k = 0; k < 3; k++)
+			vertexIds[k] = plcFaceVector[n].pointIds[k];
 	
-		for (vector<MyVertex>::iterator orderedVit = orderedPLCVertices.begin(); orderedVit != orderedPLCVertices.end(); orderedVit++)
-		{
-			p = orderedVit->point;
-			x = p.x();			
-			y = p.y();
-			z = p.z();
-			ply_write(delaunayMeshPLY, x);
-			ply_write(delaunayMeshPLY, y);
-			ply_write(delaunayMeshPLY, z);
-		}
-	
-	
-		for (Delaunay::Finite_facets_iterator fIter = DT.finite_facets_begin(); fIter != DT.finite_facets_end(); fIter++)
-		{
-			ply_write(delaunayMeshPLY, 3);
+		for (unsigned int i = 0; i < 3; i++)
+			trianglePoints[i] = CGALPoint(plcVertexVector[vertexIds[i]].x(), plcVertexVector[vertexIds[i]].y(), plcVertexVector[vertexIds[i]].z());
 			
-			for (unsigned int i = 0; i < 4; i++)
-				if (fIter->second != i)
-					ply_write(delaunayMeshPLY, (fIter->first)->vertex(i)->info());
-		}
-
-			ply_close(delaunayMeshPLY);
+		plc.make_triangle(trianglePoints[0], trianglePoints[1], trianglePoints[2]);
 	}
 
+	// sew facets sharing edge
+	for (LCC::Dart_range::iterator segIter1 = plc.darts().begin(), segIterEnd1 = plc.darts().end(); segIter1 != segIterEnd1; segIter1++)
+	{
+		if (!plc.is_marked(segIter1, sewedMark)) // not sewed till now
+		{
+			for (LCC::Dart_range::iterator segIter2 = plc.darts().begin(), segIterEnd2 = plc.darts().end(); segIter2 != segIterEnd2; segIter2++)
+			{
+				if (!plc.is_marked(segIter2, sewedMark) && plc.is_sewable<2>(segIter1, segIter2))
+				{
+					if (areGeometricallySame(segIter1, segIter2)) // checks the geometry of segments
+					{
+						plc.mark(segIter1, sewedMark);
+						plc.mark(segIter2, sewedMark);
+						twoCellsToBeSewed.push_back(pair<DartHandle, DartHandle>(segIter1, segIter2));
+						break;
+					}
+				}
+				else
+					continue;
+			}
+		}	
+		else
+			continue;
+	}
 	
+	// sew the faces sharing an edge
+	unsigned int k = 0;
+	for (vector<pair<DartHandle, DartHandle> >::iterator dIter = twoCellsToBeSewed.begin(), dIterEnd = twoCellsToBeSewed.end(); dIter != dIterEnd; dIter++)
+		if (plc.is_sewable<2>(dIter->first, dIter->second))
+		{
+			plc.sew<2>(dIter->first, dIter->second);
+			k++;	
+		}
+
+	cout << "\nNumber of sewable facets: " << k;
+	cout << "\nNumber of pairs to be sewed: " << twoCellsToBeSewed.size() << "\n";
 }
 
 
 
+void writePLYOutput(LCC &lcc, string fileName)
+{
+	p_ply lccOutputPLY;
 
-//
+	if ((lccOutputPLY = ply_create(filename.c_str(), PLY_ASCII, NULL, 0, NULL)) == NULL)
+	{
+		cout << "\nCannot open file for writing!!";
+		exit(0);
+	}
+
+	// count number of vertices and faces in LCC
+	size_t nVertices = 0, nFaces = 0;
+	for (LCC::One_dart_per_cell_range<0>::iterator pointCountIter = lcc.one_dart_per_cell<0>().begin(), pointCountIterEnd = lcc.one_dart_per_cell<0>().end(); pointCountIter != pointCountIterEnd; pointCountIter++)
+		nVertices++;
+
+	for (LCC::One_dart_per_cell_range<2>::iterator faceCountIter = lcc.one_dart_per_cell<2>().begin(), faceCountIterEnd = lcc.one_dart_per_cell<2>().end(); faceCountIter != faceCountIterEnd; faceCountIter++)
+		nFaces++;
+
+	ply_add_element(lccOutputPLY, "vertex", nVertices);
+	ply_add_scalar_property(lccOutputPLY, "x", PLY_FLOAT);
+	ply_add_scalar_property(lccOutputPLY, "y", PLY_FLOAT);
+	ply_add_scalar_property(lccOutputPLY, "z", PLY_FLOAT);
+
+	ply_add_element(lccOutputPLY, "face", nFaces);
+	ply_add_list_property(lccOutputPLY, "vertex_indices", PLY_UCHAR, PLY_INT32);
+
+	if (!ply_write_header(lccOutputPLY))
+	{
+		cout << "Header cannot be writen!!";
+		exit(0);
+	}
+
+	// write vertices
+	size_t pointId = 0;
+	for (LCC::One_dart_per_cell_range<0>::iterator pointIter = lcc.one_dart_per_cell<0>().begin(), pointIterEnd = lcc.one_dart_per_cell<0>().end(); pointIter != pointIterEnd; pointIter++)
+	{
+		CGALPoint pt = lcc.point(pointIter); 
+		
+		ply_write(lccOutputPLY, pt.x());
+		ply_write(lccOutputPLY, pt.y());
+		ply_write(lccOutputPLY, pt.z());
+
+		lcc.info<0>(pointIter) = pointId++;
+	}
+	
+        // write polygons	
+	for (LCC::One_dart_per_cell_range<2>::iterator faceIter = lcc.one_dart_per_cell<2>().begin(), faceIterEnd = lcc.one_dart_per_cell<2>().end(); faceIter != faceIterEnd; faceIter++)
+	{
+		ply_write(lccOutputPLY, 3);
+		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pointInFaceIter = lcc.one_dart_per_incident_cell<0, 2>(faceIter).begin(), pointInFaceIterEnd = lcc.one_dart_per_incident_cell<0, 2>(faceIter).end(); pointInFaceIter != pointInFaceIterEnd; pointInFaceIter++)
+			ply_write(lccOutputPLY, lcc.info<0>(pointInFaceIter)); 
+	}
+
+	ply_close(lccOutputPLY);			
+}
+
+
 // computes delaunay tetrahedralization
 void computeDelaunayTetrahedralization()
 {	
-	// Add vertex id with each vertex which will be used for relating these vertices with plcSegments, plcFaces 
+
 	DT.insert(plcVertices.begin(), plcVertices.end());
 
-	cout << "\nDelaunay tetrahedralization computed!!\n";
-
-	cout << "Number of vertices in Delaunay tetrahedralization:" << DT.number_of_vertices() << "\n";
-	cout << "Number of tetrahedrons in Delaunay tetrahedralization:" << DT.number_of_cells() << "\n";
-
-	writePLYOutput();
-
-	// Update the view in the viewer since points and Delaunay triangulation has changed
-	/*pcl::PolygonMesh mesh;
-
-	mesh.cloud.width = DT.number_of_vertices();
-	mesh.cloud.height = 1;
-	mesh.cloud.is_dense = 1;
-
-	for (Delaunay::Finite_vertices_iterator vIter = DT.finite_vertices_begin(); vIter != DT.finite_vertices_end(); vIter++)
-	{
-		mesh.cloud.data.push_back((vIter->point()).x());
-		mesh.cloud.data.push_back((vIter->point()).y());
-	       	mesh.cloud.data.push_back((vIter->point()).z());
-	}
-
-	pcl::Vertices v;
-
-	for (Delaunay::Finite_facets_iterator fIter = DT.finite_facets_begin(); fIter != DT.finite_facets_end(); fIter++)
-	{
-		for (unsigned int i = 0; i < 4; i++)
-			if (i != fIter->second)
-				v.vertices.push_back((fIter->first)->vertex(i)->info());				
-		mesh.polygons.push_back(v);
-
-		v.vertices.clear();
-	}
-
-	pcl::visualization::PCLVisualizer viewer("Execution status");
-	viewer.addPolygonMesh(mesh);
-	
-	while(!viewer.wasStopped())
-	{
-		viewer.spinOnce();
-	}	
-*/
+	cout << "\nDelaunay tetrahedralization computed!!";
+	cout << "\nNumber of vertices in Delaunay tetrahedralization:" << DT.number_of_vertices();
+	cout << "\nNumber of tetrahedrons in Delaunay tetrahedralization:" << DT.number_of_cells();
 }
 
 
