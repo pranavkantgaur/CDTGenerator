@@ -23,9 +23,6 @@
 #include <CGAL/enum.h>
 
 #include "rply/rply.h"
-#include "pcl/PolygonMesh.h"
-#include "pcl/visualization/pcl_visualizer.h"
-
 
 
 #define Pi 22.0/7.0
@@ -33,20 +30,8 @@
 using namespace std;
 using namespace CGAL;
 
-struct MyItem
-{
-	template<class Refs>
-	struct Dart_wrapper
-	{
-		typedef CGAL::Dart<3, Refs> Dart;
-		typedef CGAL::Cell_attribute_with_point<Refs, unsigned int, Tag_true> Vertex_attribute;
-		typedef CGAL::cpp11::tuple<Vertex_attribute> Attributes;
-	};
- 
-};
-
 typedef Exact_predicates_inexact_constructions_kernel K;
-typedef Triangulation_vertex_base_with_info_3<unsigned, K> Vb;
+typedef Triangulation_vertex_base_with_info_3<DartHandle, K> Vb; 
 typedef Triangulation_data_structure_3<Vb> Tds;
 typedef Delaunay_triangulation_3<K, Tds, Fast_location> Delaunay;
 typedef Delaunay::Point Point;
@@ -64,98 +49,29 @@ typedef Triangle_3<K> CGALTriangle;
 typedef Delaunay::Cell_iterator Cell_iterator;
 
 typedef Linear_cell_complex_traits<3, K> Traits;
-typedef Linear_cell_complex<3, 3, Traits, MyItem> lcc;
-typedef lcc::Dart_handle DartHandle;
+typedef Linear_cell_complex<3, 3, Traits> LCC;
+typedef LCC::Dart_handle DartHandle;
 
 /*
- * Input  : plcVertices, plcSegments, plcFaces(triangles only)
- * Output : cdtMesh(linear cell complex containing output tetrahedra)
+ * Input  : PLC(represented using CGAL's LCC structure)
+ * Output : cdtMesh(again, LCC)
  */
 
+// Input
+LCC PLC;
 
-
-class Segment
-{
-	public:
-		unsigned int pointIds[2]; // index into the plcVertices vector
-};
-
+// Intermidiate global structures
+Delaunay DT;
+vector <Point> plcVertexVector;
 class Triangle
 {
-	public:
-		unsigned int pointIds[3];
-		
+	size_t pointIds[3];
 };
 
-class Tetrahedron
-{
-	public:
-		unsigned int pointIds[4];
-};
+vector <Triangle> plcFaceVector;
 
-/*
-vector<pair<Point, unsigned int> > plcVertices;
-vector<Segment> plcSegments;
-vector<Triangle> plcFaces;
-*/
-
-// hash class for Point
-class pointHash
-{
-	void operator = (Point a, Point b)
-	{
-		return	(a.x() == b.x()) && (a.y() == b.y()) && (a.z() == b.z());
-	}
-};
-
-
-
-class segmentHash
-{
-	void operator = (Segment a, Segment b)
-	{
-		unordered_set<unsigned int> pointIdSet;
-
-		for (unsigned int k = 0; k < 2; k++)
-			pointIdSet.insert(b.pointIds[k]);
-
-		if (a.pointIds[0] != a.pointIds[1])
-			if (pointIdSet.find(a.pointIds[0]) != pointIdSet.end())
-				if (pointIdSet.find(a.pointIds[1]) ! = pointIdSet.end())
-					return true;		
-		else
-			return false;
-	}
-};
-
-class triangleHash
-{
-	void operator = (Triangle a, Triangle b)
-	{
-		unordered_set<unsigned int> pointIdSet;
-
-		for (unsigned int k = 0; k < 3; k++)
-			pointIdSet.insert(b.pointIds[k]);
-
-		if (a.pointIds[0] != a.pointIds[1] && a.pointIds[0] != a.pointIds[2] && a.pointIds[1] != a.pointIds[2])
-			if (pointIdSet.find(a.pointIds[0]) != pointIdSet.end())
-				if (pointIdSet.find(a.pointIds[1]) ! = pointIdSet.end())
-					if (pointIdSet.find(a.pointIds[2]) != pointIdSet.end())
-						return true;		
-		else
-			return false;
-	}
-};
-
-
-unordered_set<Point, pointHash> plcVertices;
-unordered_set<Segment, segmentHash> plcSegments;
-unordered_set<Triangle, triangleHash> plcFaces;
-
-lcc cdtMesh;
-
-Delaunay DT;
-
+// Output
+LCC cdtMesh;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -169,12 +85,10 @@ static int vertex_cb(p_ply_argument argument)
 	long eol;
 	ply_get_argument_user_data(argument, NULL, &eol);
 	tempPoint[dimensionId++] = ply_get_argument_value(argument);
-	
-
 	// insert the vertex into plcVertex
 	if (eol)
 	{
-		plcVertices.push_back(pair<Point, unsigned int>(Point(tempPoint[0],tempPoint[1],tempPoint[2]), pointCount++));
+		plcVertexVector.push_back(Point(tempPoint[0],tempPoint[1],tempPoint[2]));
 		dimensionId = 0;
 	}
 	
@@ -197,26 +111,9 @@ static int face_cb(p_ply_argument argument)
         	case 2:	
 			tempFace.pointIds[pointId] = ply_get_argument_value(argument);
 			pointId = 0;				
-			plcFaces.push_back(tempFace);
-	                
-			// extract corresponding segments as well
-			Segment tempSegments[3]; // each face will give 3 segments
-			
-			tempSegments[0].pointIds[0] = tempFace.pointIds[0];
-			tempSegments[0].pointIds[1] = tempFace.pointIds[1];
-			
-			tempSegments[1].pointIds[0] = tempFace.pointIds[1];
-			tempSegments[1].pointIds[1] = tempFace.pointIds[2];
-		
-			tempSegments[2].pointIds[0] = tempFace.pointIds[2];
-			tempSegments[2].pointIds[1] = tempFace.pointIds[3];
-
-			plcSegments.push_back(tempSegments[0]);
-			plcSegments.push_back(tempSegments[1]);		
-			plcSegments.push_back(tempSegments[2]);
+			plcFaceVector.push_back(tempFace);
 			break;
-        
-		default: 
+       		default: 
                 	break;
         } 
     
@@ -257,29 +154,6 @@ void readPLCInput()
 	cout << "Number of faces:" << plcFaces.size() << "\n";
 	cout << "Number of segments:" << plcSegments.size();
 }
-
-
-
-class MyVertex 
-{
-
-	public:
-		Point point;
-		unsigned int vertexId;
-	
-		MyVertex(Point aPoint, unsigned int aVertexId) 
-		{
-			point = aPoint;
-			vertexId = aVertexId;
-		}	
-
-		bool operator < (const MyVertex& anotherVertex) const
-		{
-			return (vertexId < anotherVertex.vertexId);
-		}
-};
-
-
 
 
 void writePLYOutput()
@@ -347,7 +221,7 @@ void writePLYOutput()
 
 
 
-//////////////////////////////////////////////////// Done with reading input PLC ////////////////////////////////////////////////
+//
 // computes delaunay tetrahedralization
 void computeDelaunayTetrahedralization()
 {	
