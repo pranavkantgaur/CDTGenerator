@@ -277,11 +277,12 @@ void writePLYOutput(LCC &lcc, string fileName)
 // computes delaunay tetrahedralization
 void computeDelaunayTetrahedralization()
 {	
+	vector <pair <CGALPoint, DartHandle> > lccVertexVector;
 
+	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
+		lccVertexVector.push_back(plc.point(pIter), pIter);
 
-	// TODO:Add DartHandle info with each vertex
-
-	DT.insert(plcVertices.begin(), plcVertices.end());
+	DT.insert(lccVertexVector.begin(), lccVertexVector.end());
 
 	cout << "\nDelaunay tetrahedralization computed!!";
 	cout << "\nNumber of vertices in Delaunay tetrahedralization:" << DT.number_of_vertices();
@@ -466,24 +467,12 @@ float computeSegmentLength(Point &A, Point &B)
 	return sLength;
 }
 
-bool containsSegment(unsigned int faceId, unsigned int segmentId)
-{
-	for (unsigned int i = 0; i < 3; i++)
-		if (plcSegments[segmentId].pointIds[0] == plcFaces[faceId].pointIds[i])
-			for (unsigned int n = 0; i !=n && n < 3; n++)
-				if (plcSegments[segmentId].pointIds[2] == plcFaces[faceId].pointIds[n])
-					return true;
-	return false;
-}
-
-
 void updatePLCAndDT(Point &v, DartHandle missingSegmentHandle)
 {
-	// TODO: update PLC
-	lcc.insert_cell_0_in_cell_1(v, missingSegmentHandle);
-	
 
-	// updated DT
+	// update PLC
+	insert_point_in_cell<1>(missingSegmentHandle, v);
+	// update DT
 	computeDelaunayTetrahedralization(); 
 }
 
@@ -693,19 +682,19 @@ void recoverConstraintSegments()
 class DegenerateVertexSetCandidate
 {
 	public:
-		unsigned int pointIds[5];
+		DartHandle pointHandles[5];
 };
 
 
 // returns true if  given vertices are co-spherical
 bool areCospherical(DegenerateVertexSetCandidate degenSet)
 {	
-	Point p[5];
+	CGALPoint p[5];
 	
 	for (unsigned int i = 0; i < 5; i++)	
-		p[i] = plcVertices[degenSet.pointIds[i]].first;
+		p[i] = plc.point(degenSet[i]);
 
-	if (CGAL::side_of_bounded_sphere(p[0],p[1],p[2],p[3],p[4]) == CGAL::ON_BOUNDARY)
+	if (side_of_bounded_sphere(p[0], p[1], p[2], p[3], p[4]) == ON_BOUNDARY)
 		return true;
 	else
 		return false;
@@ -784,82 +773,69 @@ void perturbRemove(unsigned int pointId, vector<DegenerateVertexSetCandidate>& l
 bool areAffinelyIndependent(DegenerateVertexSetCandidate degenSet)
 {
 
-	// test each 4-tuple for coplanarity
-	// If they are coplanar then return false
-	// else return true
-	Point v1 = plcVertices[degenSet.pointIds[0]].first;
-	Point v2 = plcVertices[degenSet.pointIds[1]].first;
-	Point v3 = plcVertices[degenSet.pointIds[2]].first;
-	Point v4 = plcVertices[degenSet.pointIds[3]].first;
-	Point v5 = plcVertices[degenSet.pointIds[4]].first;
+	CGALPoint v1 = plc.point(degenSet[pointId].pointHandles[0]);
+	CGALPoint v2 = plc.point(degenSet[pointId].pointHandles[1]);
+	CGALPoint v3 = plc.point(degenSet[pointId].pointHandles[2]);
+	CGALPoint v4 = plc.point(degenSet[pointId].pointHandles[3]);
+	CGALPoint v5 = plc.point(degenSet[pointId].pointHandles[4]);
 
 	if (coplanar(v1, v2, v3, v4) || coplanar(v2, v3, v4, v5) || coplanar(v3, v4, v5, v1) || coplanar(v4, v5, v1, v2) || coplanar(v5, v1, v2, v3))
 		return false;
 
-	return true; // because no 4-tuple of points are coplanar
+	return true; 
 }
 
-void computeBreakPoint(Point &vb, unsigned int pointId, vector<DegenerateVertexSetCandidate> &localDegeneracySet)
+void computeBreakPoint(CGALPoint &vb, unsigned int pointId, vector<DegenerateVertexSetCandidate> &localDegeneracySet)
 {
-	// if vertices of localDeneracySet[n] are affinely independent
-		// Let S be there common sphere, then vb is inside s
-	// if vertices of localDegeneracySet[n] aren't affinely independent(4 of them are coplanar)
-		// Let C be the common circle of those coplanar vertices, then vb lines inside C
-	
-	Point v1 = plcVertices[localDegeneracySet[pointId].pointIds[0]].first;
-	Point v2 = plcVertices[localDegeneracySet[pointId].pointIds[1]].first;
-	Point v3 = plcVertices[localDegeneracySet[pointId].pointIds[2]].first;
-	Point v4 = plcVertices[localDegeneracySet[pointId].pointIds[3]].first;
-	Point v5 = plcVertices[localDegeneracySet[pointId].pointIds[4]].first;
+
+	CGALPoint v1 = plc.point(localDegeneracySet[pointId].pointHandles[0]);
+	CGALPoint v2 = plc.point(localDegeneracySet[pointId].pointHandles[1]);
+	CGALPoint v3 = plc.point(localDegeneracySet[pointId].pointHandles[2]);
+	CGALPoint v4 = plc.point(localDegeneracySet[pointId].pointHandles[3]);
+	CGALPoint v5 = plc.point(localDegeneracySet[pointId].pointHandles[4]);
 
 	if (areAffinelyIndependent(localDegeneracySet[pointId]))
 	{
-		// find common sphere
-		// if I define a sphere using only 4 of these vertices then that will be shared by 5 as well:
-	
-		Sphere s(v1, v2, v3, v4);
+		CGALSphere s(v1, v2, v3, v4);
 		vb = s.center();
 	}	
 
-	else // 4 points are coplanar
+	else
 	{
-		// find common circle
-		// find which 4 points are coplanar
-		// find corresponding circle
-		Circle c;
+		CGALCircle c;
 
 		if (coplanar(v1, v2, v3, v4))	
-			c = Circle(v1, v2, v3); // v4 will also lie on this circle, since these vertices are co-spherical and coplanar.
+			c = CGALCircle(v1, v2, v3);
 
 		if (coplanar(v2, v3, v4, v5))	
-			c = Circle(v2, v3, v4);
+			c = CGALCircle(v2, v3, v4);
 
 		if (coplanar(v3, v4, v5, v1))	
-			c = Circle(v3, v4, v5);
+			c = CGALCircle(v3, v4, v5);
 
 		if (coplanar(v4, v5, v1, v2))	
-			c = Circle(v4, v5, v1);
+			c = CGALCircle(v4, v5, v1);
 
 		if (coplanar(v5, v1, v2, v3))	
-			c = Circle(v5, v1, v2);
+			c = CGALCircle(v5, v1, v2);
 
 		vb = c.center(); 
 	}
 }
 
-bool isVertexEncroachingSegment(Point vb, unsigned int segmentId)
+bool isVertexEncroachingSegment(CGALPoint vb, DartHandle segmentHandle)
 {
-	// compute diametric sphere and check if:
-		// radius < distance of center from vb
-			// if yes, return true
-			// else return false
-	float x = (plcVertices[plcSegments[segmentId].pointIds[0]].first.x() + plcVertices[plcSegments[segmentId].pointIds[1]].first.x()) / 2.0;
-	float y = (plcVertices[plcSegments[segmentId].pointIds[0]].first.y() + plcVertices[plcSegments[segmentId].pointIds[1]].first.y()) / 2.0;
-	float z = (plcVertices[plcSegments[segmentId].pointIds[0]].first.z() + plcVertices[plcSegments[segmentId].pointIds[1]].first.z()) / 2.0;
 
-	Point sphereCenter(x, y, z);
+	CGALPoint endpoint1(plc.point(segmentHandle));
+	CGALPoint endpoint2(plc.point(plc.beta(segmentHandle, 1)));
 
-	float sphereRadius = sqrt(pow(sphereCenter.x() - plcVertices[plcSegments[segmentId].pointIds[0]].first.x(), 2) + pow(sphereCenter.y() - plcVertices[plcSegments[segmentId].pointIds[0]].first.y(), 2) + pow(sphereCenter.z() - plcVertices[plcSegments[segmentId].pointIds[0]].first.z(), 2));
+	float x = (endpoint1.x() + endpoint2.x()) / 2.0;
+	float y = (endpoint1.y() + endpoint2.y()) / 2.0;
+	float z = (endpoint1.z() + endpoint2.z()) / 2.0;
+
+	CGALPoint sphereCenter(x, y, z);
+
+	float sphereRadius = sqrt(pow(sphereCenter.x() - endpoint1.x(), 2) + pow(sphereCenter.y() - endpoint1.y(), 2) + pow(sphereCenter.z() - endpoint1.z(), 2));
 
 	float centerToBreakingPointDistance = sqrt(pow(sphereCenter.x() - vb.x(), 2) + pow(sphereCenter.y() - vb.y(), 2) + pow(sphereCenter.z() - vb.z(), 2));
 
@@ -871,20 +847,16 @@ bool isVertexEncroachingSegment(Point vb, unsigned int segmentId)
 		
 }
 
-bool isVertexEncroachingFace(Point vb, unsigned int faceId)
+bool isVertexEncroachingFace(Point vb, DartHandle facetHandle)
 {
-	// make a diametric sphere of face(or triangle in our case)
-	// check if radius < distance of breaking point from center
 	
-	// radius & center of circle of 3 points = radius & center of their diametric sphere 
-	
-	Point v1(plcVertices[plcFaces[faceId].pointIds[0]].first);
-	Point v2(plcVertices[plcFaces[faceId].pointIds[1]].first);
-	Point v3(plcVertices[plcFaces[faceId].pointIds[2]].first);
+	CGALPoint v1(plc.point(facetHandle));
+	CGALPoint v2(plc.point(plc.beta(facetHandle, 1)));
+	CGALPoint v3(plc.point(plc.beta(facetHandle, 1, 1)));
 
-	Circle c(v1, v2, v3);
-
-	float centerToBreakingPointDistance = sqrt(pow((c.center()).x() - vb.x(), 2) + pow((c.center()).y() - vb.y(), 2) + pow((c.center()).z() - vb.z(), 2));
+	CGALCircle c(v1, v2, v3);
+	CGALPoint circleCenter(c.center());
+	float centerToBreakingPointDistance = sqrt(pow(circleCenter.x() - vb.x(), 2) + pow(circleCenter.y() - vb.y(), 2) + pow(circleCenter.z() - vb.z(), 2));
 
 	if (sqrtf(c.squared_radius()) < centerToBreakingPointDistance)
 		return true;
@@ -893,11 +865,11 @@ bool isVertexEncroachingFace(Point vb, unsigned int faceId)
 }
 
 
-bool isEncroachingPLC(Point vb)
+bool isEncroachingPLC(CGALPoint vb)
 {
 	// encroaches any segment
-	for (unsigned int n = 0; n < plcSegments.size(); n++)
-		if (isVertexEncroachingSegment(vb, n))
+	for (LCC::One_dart_per_cell_range<1>::iterator segmentIter = plc.one_dart_per_cell<1>().begin(), segmentIterEnd = plc.one_dart_per_cell<1>().end(); segIter != segIterEnd; segIter++)
+		if (isVertexEncroachingSegment(vb, segIter))
 			return true;
 
 	// encroaches any face
@@ -908,30 +880,22 @@ bool isEncroachingPLC(Point vb)
 	return false;
 }
 
-void boundaryProtection(Point vb)
+void boundaryProtection(CGALPoint vb)
 {
-	// for each encroached segment:
-		// add its perturbed circumcenter to plcVerices
-		// update PLC & DT 
-	// for each encroached face:
-		// compute circumcenter x
-		// if x encroaches any segment, don't insert, goto to segment spliting using step 1 above
-		// else, add x to PLC & DT 	
-		
-	// call Delaunay segment recovery to recovery all missing segments(new segments might have been created due to new vertex insertions)
-	
-	for (unsigned int n = 0; n < plcSegments.size(); n++)
-	{
-		if (isVertexEncroachingSegment(vb, n))
+
+	for (LCC::One_dart_per_cell_range<1>::iterator segmentIter = plc.one_dart_per_cell<1>().begin(), segmentIterEnd = plc.one_dart_per_cell<1>().end(); segIter != segIterEnd; segIter++)
+		if (isVertexEncroachingSegment(vb, segIter))
 		{
 			// circumcenter of segment 'n':
-			float x = (plcVertices[plcSegments[n].pointIds[0]].first.x() + plcVertices[plcSegments[n].pointIds[1]].first.x()) / 2.0;
-			float y = (plcVertices[plcSegments[n].pointIds[0]].first.y() + plcVertices[plcSegments[n].pointIds[1]].first.y()) / 2.0;
-			float z = (plcVertices[plcSegments[n].pointIds[0]].first.z() + plcVertices[plcSegments[n].pointIds[1]].first.z()) / 2.0;
+			CGALPoint endpoint1(segmentIter);
+		        CGALPoint endpoint2(plc.beta(segmentIter, 1));	
+			float x = (endpoint1.x() + endpoint2.x()) / 2.0;
+			float y = (endpoint1.y() + endpoint2.y()) / 2.0;
+			float z = (endpoint1.z() + endpoint2.z()) / 2.0;
 
 			Point sphereCenter(x, y, z);
 
-			updatePLCAndDT(sphereCenter, n);
+			updatePLCAndDT(sphereCenter, segmentIter);
 		}
 	}
 	
@@ -960,12 +924,16 @@ void removeLocalDegeneracies()
 				perturbRemove(n, localDegeneracySet); 
 			else
 			{
-				Point vb;	
+				CGALPoint vb;	
 				computeBreakPoint(vb, n, localDegeneracySet);
 				if (isEncroachingPLC(vb))
 					boundaryProtection(vb);
 				else
-					plcVertices.push_back(make_pair(vb, plcVertices.size()));		
+					if (insideCircumcircle(vb))
+						plc.insert_point_in_cell<2>(vb, facetHandle);
+					else if (insideCircumsphere(vb))
+						plc.insert_point_in_cell<3>(vb, volumeHandle);
+					// TODO: define facetHandle, volumeHandle
 			}						
 		}
 	}
