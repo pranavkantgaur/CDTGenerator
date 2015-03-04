@@ -1114,7 +1114,7 @@ void formCavity(vector<DartHandle> *cavity, DartHandle missingSubfaceHandle, vec
 
 }
 
-bool isStronglyDelaunay(DartHandle facetHandle, unordered_set<unsigned int> cavityVerticesSet)
+bool isStronglyDelaunay(DartHandle facetHandle, vector<DartHandle> cavityVerticesSet, LCC cavityLCC)
 {
 	// tests whether facet/triangle pointed to by facetHandle is strongly Delaunay wrt. vertices in cavityVerticesSet
 
@@ -1126,10 +1126,10 @@ bool isStronglyDelaunay(DartHandle facetHandle, unordered_set<unsigned int> cavi
 		// If no, then it is not even Delaunay, return false 	
 		
 	Delaunay tempDT;
-	vector<Point> cavityVertices;
+	vector<CGALPoint> cavityVertices;
 
-	for (unordered_set<unsigned int>::iterator vertexIter = cavityVerticesSet.begin(); vertexIter != cavityVerticesSet.end(); vertexIter++)
-		cavityVertices.push_back(plcVertices[*vertexIter].first);
+	for (vector<DartHandle>::iterator vertexIter = cavityVerticesSet.begin(), vertexIter = cavityVerticesSet.end(); vertexIter != vertexIterEnd; vertexIter++)
+		cavityVertices.push_back(cavityLCC.point(vertexIter));
 
 
 	// Compute DT
@@ -1138,15 +1138,15 @@ bool isStronglyDelaunay(DartHandle facetHandle, unordered_set<unsigned int> cavi
 	// test strong Delaunay criteria
 	VertexHandle vh[3];
 	int i, j, k, h = 0;
-	Delaunay::Cell_handle ch;
+	CellHandle ch;
 
-	for (lcc::One_dart_per_incident_cell_range<0, 2>::iterator iter = cdtMesh.one_dart_per_incident_cell<0, 2>(facetHandle).begin(); iter != cdtMesh.one_dart_per_incident_cell<0, 2>(facetHandle).end(); iter++)
-		tempDT.is_vertex(plcVertices[cdtMesh.info<0>(iter)].first, vh[h++]);
+	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator iter = cavityLCC.one_dart_per_incident_cell<0, 2>(facetHandle).begin(), iterEnd != cdtMesh.one_dart_per_incident_cell<0, 2>(facetHandle).end(); iter != iterEnd; iter++)
+		tempDT.is_vertex(cavityLCC.point(iter), vh[h++]);
 
 
 	if (tempDT.is_facet(vh[0], vh[1], vh[2], ch, i, j, k))
 	{
-		Sphere s(vh[0]->point(), vh[1]->point(), vh[2]->point(), ((*ch).vertex(6 - i - j - k))->point());
+		CGALSphere s(vh[0]->point(), vh[1]->point(), vh[2]->point(), ((*ch).vertex(6 - i - j - k))->point());
 
 		for (vector<Point>::iterator vIter = cavityVertices.begin(); vIter != cavityVertices.end(); vIter++)
 		{	
@@ -1258,14 +1258,12 @@ bool isCellOutsideCavity(DartHandle cellHandle, vector<DartHandle> cavity)
 }
 
 
-
-
 void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>& lcc3CellsToBeRemoved)
 {
 
 	// cavity verification/expansion
 		// for all faces 'f' in upper(or lower) cavity, 
-			// Form a queue Q of all non-strongly Delunay faces in cavity C
+			// Form a queue Q of all non-strongly Delaunay faces in cavity C
 			// If f is not strongly Deluanay, 
 				// Remove f from cavity list
 				// For all tetrahedra t sharing f
@@ -1274,139 +1272,115 @@ void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>&
 							// add it to cavity  
 						// Else 
 							// remove it from cavity
-						// Cavity C and set of vertices of cavity V
+						// Modify C and set of vertices V of cavity
 			// repeat untill all faces of cavity are strongly Delaunay
+
+
+	LCC cavityLCC;
+	createLCCRepresentationForCavity(cavity, cavityLCC, cavityLCCTocdtMeshDartMap);
+
+
+
 	vector<DartHandle> nonStronglyDelaunayFacesInCavity;
-	unordered_set<unsigned int> cavityVerticesSet;
+	vector<DartHandle> cavityVerticesSet; // V
 
 	// compute set of non-strongly Delunay faces in cavity
+	do
+	{	
+		for (LCC::One_dart_per_cell_range<0>::iterator vertexIter = cavityLCC.one_dart_per_cell<0>().begin(), vertexIterEnd = cavityLCC.one_dart_per_cell<0>().end(); vertextIter != vertexIterEnd; vertexIter++)
+			cavityVerticesSet.push_back(vertexIter);
 
-	
-		
-		do
-		{	
-			for (unsigned int k = 0; k < cavity.size(); k++) 
-			{	
-				// get set of all vertices of cavity
-					// create set of vertex ids from the vertexAttribute of all vertices of each facet in cavity  					 
-					// add vertex ids to cavityVertices array 	
-				for (lcc::One_dart_per_incident_cell_range<0,2>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0,2>(cavity[k]).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0,2>(cavity[k]).end(); vertexIter++)
-		         		cavityVerticesSet.insert(cdtMesh.info<0>(vertexIter));		
-			
-			}
-
-			for (vector<DartHandle>::iterator iter = cavity.begin(); iter != cavity.end(); iter++)
-			{
-				if (isStronglyDelaunay(*iter, cavityVerticesSet))
-			        	continue;
-				else
-					nonStronglyDelaunayFacesInCavity.push_back(*iter);
-			}
-		
-
-		// For each non strongly Delunay face
-			// remove face from cavity[i]
-			// find tets from cdtMesh sharing it:
-			// for each such tet t:
-				// for all facets F of t, F != f
-				// if F is in cavity[i]
-					// remove F from cavity[i]
-				// else,
-					// add F to cavity[i]
-					
-			for (unsigned int h = 0; h < nonStronglyDelaunayFacesInCavity.size(); h++)
-			{
-				DartHandle tempNonStronglyDelaunayFacet = nonStronglyDelaunayFacesInCavity.back();
-				nonStronglyDelaunayFacesInCavity.pop_back();
-				
-				unsigned int facetPosition1, facetPosition2;
-				if ((facetPosition1 = locateFacetInCavity(tempNonStronglyDelaunayFacet, cavity)) != -1) // found, 
-				{
-			
-					// find tet from cdtMesh sharing it:
-					for (lcc::One_dart_per_incident_cell_range<2, 3>::iterator cellIter = cdtMesh.one_dart_per_incident_cell<2, 3>(tempNonStronglyDelaunayFacet).begin(); cellIter != cdtMesh.one_dart_per_incident_cell<2, 3>(tempNonStronglyDelaunayFacet).end(); cellIter++)
-					{
-						if (isCellOutsideCavity(cellIter, cavity))
-						{
-							
-							lcc3CellsToBeRemoved.push_back(cellIter);
-
-							for (lcc::One_dart_per_incident_cell_range<2, 3>::iterator faceIter = cdtMesh.one_dart_per_incident_cell<2, 3>(cellIter).begin(); faceIter != cdtMesh.one_dart_per_incident_cell<2, 3>(cellIter).end(); faceIter++)
-							{
-								if ((facetPosition2 = locateFacetInCavity(faceIter, cavity)) != -1)
-									cavity.erase(cavity.begin(), cavity.begin() + facetPosition2);
-								else // add facet to the cavity
-									cavity.push_back(faceIter);
-							}
-						}
-
-						else 
-							continue; // skip and check next neighbor cell
-							
-					}
-					// remove facet from cavity
-					cavity.erase(cavity.begin(), cavity.begin() + facetPosition1); 
-					
-				}				
-		
-			}
-		}while(nonStronglyDelaunayFacesInCavity.size() != 0);
-
-
-
-
-		
-		// Remove cells from cdtMesh(creates space for retetrahedralization)
-		for (vector<DartHandle>::iterator cIter = lcc3CellsToBeRemoved.begin(); cIter != lcc3CellsToBeRemoved.end(); cIter++)
-			remove_cell<lcc, 3>(cdtMesh, *cIter);
-		
-
-
-		// Cavity retetrahedralization:
-			// Compute DT of vertices of input cavity
-			// import it to lcc
-				
-				// create an unordered set of vertex info 
-				// insert all vertices of set to DT
-		cavityVerticesSet.clear();
-
-		for (vector<DartHandle>::iterator facetIter = cavity.begin(); facetIter != cavity.end(); facetIter++)
-			for (lcc::One_dart_per_incident_cell_range<0, 2>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 2>(*facetIter).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 2>(*facetIter).end(); vertexIter++)
-				cavityVerticesSet.insert(cdtMesh.info<0>(vertexIter));		
-		
-
-		// create a vector of vertices of cavity
-		vector <pair<Point, unsigned int> > cavityVertices;
-		for (unordered_set<unsigned int>::iterator pointIdIter = cavityVerticesSet.begin(); pointIdIter != cavityVerticesSet.end(); pointIdIter++)
-			cavityVertices.push_back(plcVertices[*pointIdIter]);
-
-		
-		//create cavity vertices
-		Delaunay cavityDT;
-		lcc cavityLCC;
-
-		cavityDT.insert(cavityVertices.begin(), cavityVertices.end());
-
-		map<Delaunay::Cell_handle, lcc::Dart_handle> *dtCellToLCCCellMap;
-		import_from_triangulation_3(cavityLCC, cavityDT, dtCellToLCCCellMap);
-		copyInfoFromDTToLCC(cavityDT, cavityLCC, dtCellToLCCCellMap);
-	
-		// Sew retetrahedralized cavity back to original cdtMesh
-		// Add cavityLCC to cdtMesh
-		Point_3<K> tempPt[4];
-		unsigned int x;
-
-		for (lcc::One_dart_per_cell_range<3>::iterator cIter = cavityLCC.one_dart_per_cell<3>().begin(); cIter != cavityLCC.one_dart_per_cell<3>().end(); cIter++)
+		for (LCC::One_dart_per_cell_range<2>::iterator facetIter = cavityLCC.one_dart_per_cell<2>().begin(), facetIterEnd = cavityLCC.one_dart_per_cell<2>().end(); facetIter != facetIterEnd; facetIter++)
 		{
-			x = 0;
-
-			for (lcc::One_dart_per_incident_cell_range<0, 3>::iterator vIter = cavityLCC.one_dart_per_incident_cell<0, 3>(cIter).begin(); vIter != cavityLCC.one_dart_per_incident_cell<0, 3>(cIter).end(); vIter++)
-				tempPt[x++] = cdtMesh.point(vIter); 			
-				
-			cdtMesh.make_tetrahedron(tempPt[0], tempPt[1], tempPt[2], tempPt[3]);
+			if (isStronglyDelaunay(facetIter, cavityVerticesSet, cavityLCC))
+		        	continue;
+			else
+				nonStronglyDelaunayFacesInCavity.push_back(facetIter);
 		}
+	
+		// For each non strongly Delunay face
+		// remove face from cavity[i]
+		// find tets from cdtMesh sharing it:
+		// for each such tet t:
+			// for all facets F of t, F != f
+			// if F is in cavity[i]
+				// remove F from cavity[i]
+			// else,
+				// add F to cavity[i]
+				
+		for (unsigned int h = 0; h < nonStronglyDelaunayFacesInCavity.size(); h++)
+		{
+			DartHandle tempNonStronglyDelaunayFacet = nonStronglyDelaunayFacesInCavity.back();
+			nonStronglyDelaunayFacesInCavity.pop_back();
+		
+			// find tet from cdtMesh sharing it:
+			DartHandle cellToBeRemovedHandle = cavityLCCTocdtMeshDartMap[tempNonStronglyDelaunayFacet];
+			lcc3CellsToBeRemoved.push_back(cellToBeRemovedHandle);
 
-		cdtMesh.sew3_same_facets();
+			for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator faceIter = cdtMesh.one_dart_per_incident_cell<2, 3>(cellToBeRemovedHandle).begin(), faceIterEnd != cdtMesh.one_dart_per_incident_cell<2, 3>(cellToBeRemovedHandle).end(); facetIter != facetIterEnd; faceIter++)
+			{
+				if ((facetPosition2 = locateFacetInCavity(faceIter, cavity)) != -1)
+					cavityLCC.erase(cavity.begin(), cavity.begin() + facetPosition2);
+				else // add facet to the cavity
+					cavityLCC.push_back(faceIter);
+			}
+			// remove facet from cavity
+			cavityLCC.remove_cell<2>(tempNonStronglyDelaunayFacet); 
+		}
+	}while(nonStronglyDelaunayFacesInCavity.size() != 0);
+
+	
+	// Remove cells from cdtMesh(creates space for retetrahedralization)
+	for (vector<DartHandle>::iterator cIter = lcc3CellsToBeRemoved.begin(); cIter != lcc3CellsToBeRemoved.end(); cIter++)
+		remove_cell<lcc, 3>(cdtMesh, *cIter);
+	
+
+
+	// Cavity retetrahedralization:
+		// Compute DT of vertices of input cavity
+		// import it to lcc
+			
+			// create an unordered set of vertex info 
+			// insert all vertices of set to DT
+	cavityVerticesSet.clear();
+
+	for (vector<DartHandle>::iterator facetIter = cavity.begin(); facetIter != cavity.end(); facetIter++)
+		for (lcc::One_dart_per_incident_cell_range<0, 2>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 2>(*facetIter).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 2>(*facetIter).end(); vertexIter++)
+			cavityVerticesSet.insert(cdtMesh.info<0>(vertexIter));		
+	
+
+	// create a vector of vertices of cavity
+	vector <pair<Point, unsigned int> > cavityVertices;
+	for (unordered_set<unsigned int>::iterator pointIdIter = cavityVerticesSet.begin(); pointIdIter != cavityVerticesSet.end(); pointIdIter++)
+		cavityVertices.push_back(plcVertices[*pointIdIter]);
+
+	
+	//create cavity vertices
+	Delaunay cavityDT;
+	lcc cavityLCC;
+
+	cavityDT.insert(cavityVertices.begin(), cavityVertices.end());
+
+	map<Delaunay::Cell_handle, lcc::Dart_handle> *dtCellToLCCCellMap;
+	import_from_triangulation_3(cavityLCC, cavityDT, dtCellToLCCCellMap);
+	copyInfoFromDTToLCC(cavityDT, cavityLCC, dtCellToLCCCellMap);
+
+	// Sew retetrahedralized cavity back to original cdtMesh
+	// Add cavityLCC to cdtMesh
+	Point_3<K> tempPt[4];
+	unsigned int x;
+
+	for (lcc::One_dart_per_cell_range<3>::iterator cIter = cavityLCC.one_dart_per_cell<3>().begin(); cIter != cavityLCC.one_dart_per_cell<3>().end(); cIter++)
+	{
+		x = 0;
+
+		for (lcc::One_dart_per_incident_cell_range<0, 3>::iterator vIter = cavityLCC.one_dart_per_incident_cell<0, 3>(cIter).begin(); vIter != cavityLCC.one_dart_per_incident_cell<0, 3>(cIter).end(); vIter++)
+			tempPt[x++] = cdtMesh.point(vIter); 			
+			
+		cdtMesh.make_tetrahedron(tempPt[0], tempPt[1], tempPt[2], tempPt[3]);
+	}
+
+	cdtMesh.sew3_same_facets();
 		
 }
 
