@@ -31,12 +31,14 @@ using namespace std;
 using namespace CGAL;
 
 typedef Exact_predicates_inexact_constructions_kernel K;
+typedef Linear_cell_complex_traits<3, K> Traits;
+typedef Linear_cell_complex<3, 3, Traits> LCC;
+typedef LCC::Dart_handle DartHandle;
 typedef Triangulation_vertex_base_with_info_3<DartHandle, K> Vb; 
 typedef Triangulation_data_structure_3<Vb> Tds;
 typedef Delaunay_triangulation_3<K, Tds, Fast_location> Delaunay;
-typedef Delaunay::Vertex_handle Vertex_handle;
-typedef Delaunay::Cell_iterator Cell_iterator;
-
+typedef Delaunay::VertexHandle VertexHandle;
+typedef Delaunay::Cell_handle CellHandle;
 typedef Point_3<K> CGALPoint;
 typedef Circle_3<K> CGALCircle;
 typedef Sphere_3<K> CGALSphere;
@@ -49,9 +51,7 @@ typedef Sphere_3<SK> CGALSphericalSphere;
 typedef Segment_3<SK> CGALSphericalSegment; 
 typedef Point_3<SK> CGALSphericalPoint;
 
-typedef Linear_cell_complex_traits<3, K> Traits;
-typedef Linear_cell_complex<3, 3, Traits> LCC;
-typedef LCC::Dart_handle DartHandle;
+
 
 /*
  * Input  : PLC(represented using CGAL's LCC structure)
@@ -711,7 +711,7 @@ void addLocalDegeneraciesToQueue(vector<DegenerateVertexSetCandidate> &localDege
 
 		for (unsigned int j = 0; j < 4; j++)
 			{
-				Vertex_handle vh = DT.mirror_vertex(cellIter, j);	
+				VertexHandle vh = DT.mirror_vertex(cellIter, j);	
 				degenerateSetCandidate.pointIds[4] = vh->info();		
 						
 				if (areCospherical(degenerateSetCandidate))
@@ -799,7 +799,6 @@ void computeBreakPoint(CGALPoint &vb, unsigned int pointId, vector<DegenerateVer
 		CGALSphere s(v1, v2, v3, v4);
 		vb = s.center();
 	}	
-
 	else
 	{
 		CGALCircle c;
@@ -929,11 +928,7 @@ void removeLocalDegeneracies()
 				if (isEncroachingPLC(vb))
 					boundaryProtection(vb);
 				else
-					if (insideCircumcircle(vb))
-						plc.insert_point_in_cell<2>(vb, facetHandle);
-					else if (insideCircumsphere(vb))
-						plc.insert_point_in_cell<3>(vb, volumeHandle);
-					// TODO: define facetHandle, volumeHandle
+					plc.add_vertex(vb);
 			}						
 		}
 	}
@@ -946,54 +941,48 @@ void removeLocalDegeneracies()
 
 /////////////////////////////////////////////// Facet recovery starts ///////////////////////////////////////////////////////////
 
-void formMissingSubfaceQueue(vector<unsigned int> &missingSubfacesQueue)
+void formMissingSubfaceQueue(vector<DartHandle> &missingSubfacesQueue)
 {
-	// for all plcFaces check if those faces are already in DT 
-	// If not, add them to missingSubfaceQueue
-	// Else, continue
+
 	Delaunay::Cell_handle ch;
 	int i, j, k;
 	
 	Delaunay::Vertex v1, v2, v3;
-	Vertex_handle vh1, vh2, vh3;
+	VertexHandle vh1, vh2, vh3;
 
-	for (unsigned int n = 0; n < plcFaces.size(); n++)
+	for (LCC::One_dart_per_cell_range<2>::iterator facetIter = plc.one_dart_per_cell<2>().begin(), facetIterEnd = plc.one_dart_per_cell<2>().end(); facetIter != facetIterEnd; facetIter++)
 	{
-		DT.is_vertex(plcVertices[plcFaces[n].pointIds[0]].first, vh1);
-		DT.is_vertex(plcVertices[plcFaces[n].pointIds[1]].first, vh2);
-		DT.is_vertex(plcVertices[plcFaces[n].pointIds[2]].first, vh3);
+		DT.is_vertex(plc.point(facetIter), vh1);
+		DT.is_vertex(plc.point(plc.beta(facetIter, 1)), vh2);
+		DT.is_vertex(plc.point(plc.beta(facetIter, 1, 1)), vh3);
 
 		if (DT.is_facet(vh1, vh2, vh3, ch, i, j, k))
 			continue;
 		else
-			missingSubfacesQueue.push_back(n);
+			missingSubfacesQueue.push_back(facetIter);
 	}
 }
 
 
-void copyInfoFromDTToLCC(Delaunay dt, lcc& linearCellComplex, map <Delaunay::Cell_handle, lcc::Dart_handle> *dtCellToLCCCellMap)
+void copyInfoFromDTToLCC(Delaunay dt, LCC& linearCellComplex, map <CellHandle, DartHandle> *dtCellToLCCCellMap)
 {
+
 	for (Delaunay::Finite_cells_iterator delaunayCellIter = dt.finite_cells_begin(); delaunayCellIter != dt.finite_cells_end(); delaunayCellIter++)
 	{
-		lcc::Dart_handle lccCellHandle = (*dtCellToLCCCellMap)[delaunayCellIter];
+		DartHandle lccCellHandle = (*dtCellToLCCCellMap)[delaunayCellIter];
 
 		for (unsigned int n = 0; n < 4; n++)
 		{
-			Point_3<K> delaunayPoint = (delaunayCellIter->vertex(n))->point();
+			CGALPoint delaunayPoint = (delaunayCellIter->vertex(n))->point();
 
-			for (lcc::One_dart_per_incident_cell_range<0, 3>::iterator lccPointIter = linearCellComplex.one_dart_per_incident_cell<0, 3>(lccCellHandle).begin(); lccPointIter != linearCellComplex.one_dart_per_incident_cell<0, 3>(lccCellHandle).end(); lccPointIter++)
+			for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator lccPointIter = linearCellComplex.one_dart_per_incident_cell<0, 3>(lccCellHandle).begin(); lccPointIter != linearCellComplex.one_dart_per_incident_cell<0, 3>(lccCellHandle).end(); lccPointIter++)
 			{
-				float delX = delaunayPoint.x();
-				float delY = delaunayPoint.y();
-				float delZ = delaunayPoint.z();
-
-
-				float lccX = (linearCellComplex.point(lccPointIter)).x();
-				float lccY = (linearCellComplex.point(lccPointIter)).y();
-				float lccZ = (linearCellComplex.point(lccPointIter)).z();
-
-				if (delX == lccX && delY == lccY && delZ == lccZ)			
+				CGALPoint lccPoint = linearCellComplex.point(lccPointIter);
+				if (delaunayPoint == lccPoint)			
+				{
 					linearCellComplex.info<0>(lccPointIter) = (delaunayCellIter->vertex(n))->info();
+					break;
+				}
 			}
 		}
 	}
@@ -1004,47 +993,32 @@ void copyInfoFromDTToLCC(Delaunay dt, lcc& linearCellComplex, map <Delaunay::Cel
 void createEquivalentTetrahedralization()
 {
 	
-	map<Delaunay::Cell_handle, lcc::Dart_handle> *dtVolumeToLccDartMap;
+	map<CellHandle, DartHandle> *dtVolumeToLccDartMap;
 	import_from_triangulation_3(cdtMesh, DT, dtVolumeToLccDartMap);
 
 	copyInfoFromDTToLCC(DT, cdtMesh, dtVolumeToLccDartMap);
 }
 
 
-void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vector<DartHandle>& lcc3CellsToBeRemoved)
+void formCavity(vector<DartHandle> *cavity, DartHandle missingSubfaceHandle, vector<DartHandle>& lcc3CellsToBeRemoved)
 {
-	// compute list of tets intersecting face number: missingSubfaceId
-	// for each intersecting tet:
-		// Remove the tet from DT 
-		// Decrement counter of each facet(of neighboring tets) in contact of the removed tet by 1
-		// For all removed tets, set counter of each of their facet = INVALID_VALUE
-	// for all faces in DT:
-		// Add all faces with counter value = 1 to cavity
-		
-	
-	// Partition cavity into top & bottom cavities:
-		// For each face in global cavity
-			// Determine if it is on upper or lower side of missingSubface
-				// Take any point on the face and test orientation of point wrt. missingSubface
-					// Positive means associated facet belongs to upper cavity
-					// Negative means associated facet belongs to lower cavity	 
-
 	vector<DartHandle> intersectingTets;				
 	Point pTet[4], pTri[3];
 	
-	for (unsigned int n = 0; n < 3; n++)
-		pTri[n] = plcVertices[plcFaces[missingSubfaceId].pointIds[n]].first;
-	
+	pTri[0] = plc.point(missingSubfaceHandle);
+	pTri[1] = plc.point(plc.beta(missingSubfaceHandle, 1));
+	pTri[2] = plc.point(plc.beta(missingSubfaceHandle, 1, 1));
+	 
+	// determine the intersecting 3-cells
 	unsigned int i = 0;
-	for (lcc::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(); cellIter != cdtMesh.one_dart_per_cell<3>().end(); cellIter++)
+	for (LCC::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(), cellIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cellIter != cellIterEnd; cellIter++)
 	{
 			
 		i = 0;
 
-		for (lcc::One_dart_per_incident_cell_range<0, 3>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 3>(cellIter).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 3>(cellIter).end(); vertexIter++)
-		{
-			pTet[i++] = plcVertices[cdtMesh.info<0>(vertexIter)].first;
-		}
+		for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 3>(cellIter).begin(), vertexIterEnd = cdtMesh.one_dart_per_incident_cell<0, 3>(cellIter).end(); vertexIter != vertexIterEnd; vertexIter++)
+			pTet[i++] = cdtMesh.point(vertexIter);
+		
 		
 		CGALTetrahedron CGALTet(pTet[0], pTet[1], pTet[2], pTet[3]);
 		
@@ -1063,8 +1037,8 @@ void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vecto
 	map<DartHandle, unsigned int> facetVisitCounterMap;
 
  	// Initialize facetVisitCounter
-	for (lcc::One_dart_per_cell_range<2>::iterator faceIter = cdtMesh.one_dart_per_cell<2>().begin(); faceIter != cdtMesh.one_dart_per_cell<2>().end(); faceIter++)
-		facetVisitCounterMap.insert(pair<DartHandle, unsigned int>(faceIter, 2));
+	for (LCC::One_dart_per_cell_range<2>::iterator faceIter = cdtMesh.one_dart_per_cell<2>().begin(), faceIterEnd = cdtMesh.one_dart_per_cell<2>().end(); facetIter != facetIterEnd; faceIter++)
+		facetVisitCounterMap.insert(pair<DartHandle, unsigned int>(faceIter, 2)); // TODO: will it have 1 dart for a facet or it will contain pair for darts(in opposite direction for each face) ???
 
 	DartHandle tempTetId;
 	// Compute facetVisitCounter
@@ -1073,15 +1047,14 @@ void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vecto
 		tempTetId  = intersectingTets.back();
 		intersectingTets.pop_back();
 		
-		for (lcc::One_dart_per_incident_cell_range<2 ,3>::iterator fIter = cdtMesh.one_dart_per_incident_cell<2, 3>(tempTetId).begin(); fIter != cdtMesh.one_dart_per_incident_cell<2, 3>(tempTetId).end(); fIter++)
-			facetVisitCounterMap[fIter] = facetVisitCounterMap[fIter] - 1; 
+		for (LCC::One_dart_per_incident_cell_range<2 ,3>::iterator fIter = cdtMesh.one_dart_per_incident_cell<2, 3>(tempTetId).begin(), fIterEnd = cdtMesh.one_dart_per_incident_cell<2, 3>(tempTetId).end(); fIter != fIterEnd; fIter++)
+			facetVisitCounterMap[fIter] = facetVisitCounterMap[fIter] - 1; // TODO: Doubtful
+										   
 	}	
 
-		
-	
 	// Determine globalCavity using faceVisitCounter	
 	vector<DartHandle> globalCavity;	
-	for (map<DartHandle, unsigned int>::iterator iter = facetVisitCounterMap.begin(); iter != facetVisitCounterMap.end(); iter++)
+	for (map<DartHandle, unsigned int>::iterator iter = facetVisitCounterMap.begin(), iterEnd = facetVisitCounterMap.end(); iter != iterEnd; iter++)
 		if (facetVisitCounterMap[iter->first] == 1)
 			globalCavity.push_back(iter->first);
 		else
@@ -1092,43 +1065,43 @@ void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vecto
 		// For each face in global cavity determine position of a point on its surface wrt. missingSubface
 		// If position of this point is above this face put this face in upper cavity otherwise in bottom cavity
 	
-	Point v1 = plcVertices[plcFaces[missingSubfaceId].pointIds[0]].first; 
-	Point v2 = plcVertices[plcFaces[missingSubfaceId].pointIds[1]].first;
-	Point v3 = plcVertices[plcFaces[missingSubfaceId].pointIds[2]].first;	
+	CGALPoint v1 = plc.point(missingSegmentHandle); 
+	CGALPoint v2 = plc.point(plc.beta(missingSegmentHandle, 1));
+	CGALPoint v3 = plc.point(plc.beta(missingSegmentHandle, 1, 1));	
 
+	// generating random points
 	Random rnd1(30.0), rnd2(10.0);
 
 	float s = rnd1.uniform_real<float>(); 
 	float t = rnd2.uniform_real<float>();
-	Point *points[3];
-	unsigned int n = 0;
+	CGALPoint points[3];
+	
 	float xRand, yRand, zRand;
 
 
 	for (unsigned int g = 0; g < globalCavity.size(); g++)
 	{
-		
 		n = 0;		
 		
-		for (lcc::One_dart_per_incident_cell_range<0, 2>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 2>(globalCavity[g]).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 2>(globalCavity[g]).end(); vertexIter++)
-			points[n++] = &plcVertices[cdtMesh.info<0>(vertexIter)].first;
+		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 2>(globalCavity[g]).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 2>(globalCavity[g]).end(); vertexIter++)
+			points[n++] = cdtMesh.point(vertexIter);
 		
-		xRand = (1.0 - s - t) * points[0]->x() + s * points[1]->x() + t * points[2]->x(); // parametric representation of a point on the plane
-		yRand = (1.0 - s - t) * points[0]->y() + s * points[1]->y() + t * points[2]->y();	
-		zRand = (1.0 - s - t) * points[0]->z() + s * points[1]->z() + t * points[2]->z();
+		xRand = (1.0 - s - t) * points[0].x() + s * points[1].x() + t * points[2].x(); // parametric representation of a point on the plane
+		yRand = (1.0 - s - t) * points[0].y() + s * points[1].y() + t * points[2].y();	
+		zRand = (1.0 - s - t) * points[0].z() + s * points[1].z() + t * points[2].z();
 	
-		Point randomPointOnTheFacet(xRand, yRand, zRand); // random point inside triangle 'g' of global cavity
+		CGALPoint randomPointOnTheFacet(xRand, yRand, zRand); // random point inside triangle 'g' of global cavity
 			
-		while(orientation(v1, v2, v3, randomPointOnTheFacet) == COPLANAR)
+		while (orientation(v1, v2, v3, randomPointOnTheFacet) == COPLANAR)
 		{
 			s = rnd1.uniform_real<float>();
 			t = rnd2.uniform_real<float>();
 			
-			xRand = (1.0 - s - t) * points[0]->x() + s * points[1]->x() + t * points[2]->x();
-			yRand = (1.0 - s - t) * points[0]->y() + s * points[1]->y() + t * points[2]->y();	
-			zRand = (1.0 - s - t) * points[0]->z() + s * points[1]->z() + t * points[2]->z();
+			xRand = (1.0 - s - t) * points[0].x() + s * points[1].x() + t * points[2].x();
+			yRand = (1.0 - s - t) * points[0].y() + s * points[1].y() + t * points[2].y();	
+			zRand = (1.0 - s - t) * points[0].z() + s * points[1].z() + t * points[2].z();
 
-			randomPointOnTheFacet = Point(xRand, yRand, zRand); // re-initialize
+			randomPointOnTheFacet = CGALPoint(xRand, yRand, zRand); // re-initialize
 		}
 
 		if (orientation(v1, v2, v3, randomPointOnTheFacet) == CGAL::POSITIVE)
@@ -1163,7 +1136,7 @@ bool isStronglyDelaunay(DartHandle facetHandle, unordered_set<unsigned int> cavi
 	tempDT.insert(cavityVertices.begin(), cavityVertices.end());
 	
 	// test strong Delaunay criteria
-	Vertex_handle vh[3];
+	VertexHandle vh[3];
 	int i, j, k, h = 0;
 	Delaunay::Cell_handle ch;
 
@@ -1441,18 +1414,8 @@ void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>&
 // recovers the constraint faces
 void recoverConstraintFaces()
 {
-
-	// input X2, D2
-	// output CDT of X2
-	
-	// form a queue of missing subfaces
-	// while (Q!=0)
-	// 	remove an uncovered subface f from Q
-	// 	for 2 cavities C1, C2 by formcavity procedure
-	// 	for each cavity Ci:
-	// 	call cavity retetrahedralization subroutine
 	 			
-        vector<unsigned int> missingSubfacesQueue;
+        vector<DartHandle> missingSubfacesQueue;
 	formMissingSubfaceQueue(missingSubfacesQueue);
 	vector<DartHandle> cavity[2];
 	unsigned int missingSubfaceId;
