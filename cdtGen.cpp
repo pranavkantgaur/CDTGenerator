@@ -121,6 +121,19 @@ static int face_cb(p_ply_argument argument)
 	return 1;
 }
 
+
+
+bool areGeometricallySameSegments(DartHandle d1, DartHandle d2, LCC &lcc)
+{
+	if (lcc.point(d1) == lcc.point(lcc.beta(d2, 1))
+			if (lcc.point(lcc.beta(d1, 1)) == lcc.point(d2))
+				return true;
+
+	return false;				
+}
+
+
+
 // reads input PLC
 void readPLCInput()
 {
@@ -186,7 +199,7 @@ void readPLCInput()
 			{
 				if (!plc.is_marked(segIter2, sewedMark) && plc.is_sewable<2>(segIter1, segIter2))
 				{
-					if (areGeometricallySame(segIter1, segIter2)) // checks the geometry of segments
+					if (areGeometricallySameSegments(segIter1, segIter2, plc)) // checks the geometry of segments
 					{
 						plc.mark(segIter1, sewedMark);
 						plc.mark(segIter2, sewedMark);
@@ -1258,9 +1271,79 @@ bool isCellOutsideCavity(DartHandle cellHandle, vector<DartHandle> cavity)
 }
 
 
+bool areSameFacets(LCC lcc1, DartHandle d1, LCC lcc2, DartHandle d2)
+{
+	DartHandle d3 = lcc2.make_triangle(lcc1.point(d1), lcc1.point(lcc1.beta(d1, 1)), lcc1.point(lcc1.beta(d1, 1, 1))); // TODO: Fix this roundabout way of comparing facets from 2 LCCs
+	bool areSameFacets = lcc2.are_facet_same_geometry(d3, d2);
+	lcc2.remove_cell<2>(d3);	
+
+	return areSameFacets;
+}
+
+DartHandle locateFacetInCavity(DartHandle facet, LCC cavityLCC)
+{
+	for (LCC::One_dart_per_cell<2>::iterator facetIter = cavityLCC.one_dart_per_cell<2>().begin(), facetIterEnd = cavityLCC.one_dart_per_cell<2>().end(); facetIter != facetIterEnd; facetIter++)
+	{
+		if (areSameFacets(facet, cdtMesh, facetIter, cavityLCC))
+			return facetIter;
+		else
+			continue;
+	}
+}
+
+
+void addFaceToLCC(CGALPoint p1, CGALPoint p2, CGALPoint p3, LCC &cavityLCC)
+{
+	DartHandle newFace = cavityLCC.make_triangle(p1, p2, p3);
+	vector <pair <DartHandle, DartHandle> > twoCellsToBeSewed;
+	int sewedMark = cavityLCC.get_new_mark();
+
+	if (sewedMark == -1)
+	{
+		cout << "\nNo free mark available!!";
+		exit(0);
+	}
+
+	// sew the triangle with existing faces in cavityLCC
+	for (LCC::One_dart_per_incident_cell_range<1, 2>::iterator segIter1 = cavityLCC.one_dart_per_incident_cell(newFace).begin(), segIterEnd1 = cavityLCC.one_dart_per_incident_cell(newFace).end(); segIter1 != segIterEnd1; segIter1++)
+	{
+		if (!cavityLCC.is_marked(segIter1, sewedMark)) // not sewed till now
+		{
+			for (LCC::Dart_range::iterator segIter2 = cavityLCC.darts().begin(), segIterEnd2 = cavityLCC.darts().end(); segIter2 != segIterEnd2; segIter2++)
+			{
+				if (!cavityLCC.is_marked(segIter2, sewedMark) && cavityLCC.is_sewable<2>(segIter1, segIter2))
+				{
+					if (areGeometricallySameSegments(segIter1, segIter2, cavityLCC)) 
+					{
+						cavityLCC.mark(segIter1, sewedMark);
+						cavityLCC.mark(segIter2, sewedMark);
+						twoCellsToBeSewed.push_back(pair<DartHandle, DartHandle>(segIter1, segIter2));
+						break;
+					}
+				}
+				else
+					continue;
+			}
+		}	
+		else
+			continue;
+	}
+	
+	// sew the faces sharing an edge
+	unsigned int k = 0;
+	for (vector<pair<DartHandle, DartHandle> >::iterator dIter = twoCellsToBeSewed.begin(), dIterEnd = twoCellsToBeSewed.end(); dIter != dIterEnd; dIter++)
+		if (cavityLCC.is_sewable<2>(dIter->first, dIter->second))
+		{
+			cavityLCC.sew<2>(dIter->first, dIter->second);
+			k++;	
+		}
+
+}
+
+
+
 void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>& lcc3CellsToBeRemoved)
 {
-
 	// cavity verification/expansion
 		// for all faces 'f' in upper(or lower) cavity, 
 			// Form a queue Q of all non-strongly Delaunay faces in cavity C
@@ -1317,12 +1400,23 @@ void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>&
 			DartHandle cellToBeRemovedHandle = cavityLCCTocdtMeshDartMap[tempNonStronglyDelaunayFacet];
 			lcc3CellsToBeRemoved.push_back(cellToBeRemovedHandle);
 
-			for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator faceIter = cdtMesh.one_dart_per_incident_cell<2, 3>(cellToBeRemovedHandle).begin(), faceIterEnd != cdtMesh.one_dart_per_incident_cell<2, 3>(cellToBeRemovedHandle).end(); facetIter != facetIterEnd; faceIter++)
+			for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator faceIter = cdtMesh.one_dart_per_incident_cell<2, 3>(cellToBeRemovedHandle).begin(), faceIterEnd != cdtMesh.one_dart_per_incident_cell<2, 3>(cellToBeRemovedHandle).end(); facetIter != facetIterEnd; faceIter++) // for all faces of the removed cell
 			{
-				if ((facetPosition2 = locateFacetInCavity(faceIter, cavity)) != -1)
-					cavityLCC.erase(cavity.begin(), cavity.begin() + facetPosition2);
-				else // add facet to the cavity
-					cavityLCC.push_back(faceIter);
+				if (!areSameFacet(faceIter, tempNonStronglyDelaunayFacet))
+				{
+					if ((facetHandle = locateFacetInCavity(faceIter, cavityLCC)) != -1)
+						cavityLCC.remove_cell<2>(facetHandle);
+					else // add facet to the cavity
+						//cavityLCC.push_back(faceIter);
+					{
+						CGALPoint p1 = plc.point(faceIter);
+						CGALPoint p2 = plc.point(plc.beta(faceIter, 1));
+						CGALPoint p3 = plc.point(plc.beta(faceIter, 1, 1));
+						
+						addFaceToLCC(p1, p2, p3, cavityLCC); 
+						
+					}
+				}
 			}
 			// remove facet from cavity
 			cavityLCC.remove_cell<2>(tempNonStronglyDelaunayFacet); 
@@ -1332,8 +1426,9 @@ void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>&
 	
 	// Remove cells from cdtMesh(creates space for retetrahedralization)
 	for (vector<DartHandle>::iterator cIter = lcc3CellsToBeRemoved.begin(); cIter != lcc3CellsToBeRemoved.end(); cIter++)
-		remove_cell<lcc, 3>(cdtMesh, *cIter);
+		cdtMesh.remove_cell<3>(*cIter);
 	
+
 
 
 	// Cavity retetrahedralization:
