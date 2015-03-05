@@ -1320,6 +1320,12 @@ void addFaceToLCC(CGALPoint p1, CGALPoint p2, CGALPoint p3, LCC &cavityLCC)
 }
 
 
+bool isTetOutside(DartHandle tetHandle, LCC lcc)
+{
+	
+}
+
+
 
 void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>& lcc3CellsToBeRemoved)
 {
@@ -1386,7 +1392,6 @@ void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>&
 					if ((facetHandle = locateFacetInCavity(faceIter, cavityLCC)) != -1)
 						cavityLCC.remove_cell<2>(facetHandle);
 					else // add facet to the cavity
-						//cavityLCC.push_back(faceIter);
 					{
 						CGALPoint p1 = plc.point(faceIter);
 						CGALPoint p2 = plc.point(plc.beta(faceIter, 1));
@@ -1503,8 +1508,8 @@ int main()
 	readPLCInput();
 	computeDelaunayTetrahedralization();
 	recoverConstraintSegments();
-	//removeLocalDegeneracies();
-	//recoverConstraintFaces();
+	removeLocalDegeneracies();
+	recoverConstraintFaces();
 
 	return 0;
 }
