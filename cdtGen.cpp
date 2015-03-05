@@ -121,22 +121,22 @@ static int face_cb(p_ply_argument argument)
 	return 1;
 }
 
-
-
-bool areGeometricallySameSegments(DartHandle d1, DartHandle d2, LCC &lcc)
-{
-	if (lcc.point(d1) == lcc.point(lcc.beta(d2, 1))
-			if (lcc.point(lcc.beta(d1, 1)) == lcc.point(d2))
-				return true;
-
-	return false;				
-}
-
-
-
 // reads input PLC
 void readPLCInput()
 {
+	// read PLY file(assumed to contain the PLC)
+	string fileName;
+
+	cout << "\nPlease enter input filename:\t";
+	cin >> fileName;
+	
+	p_ply inputPLY = ply_open(fileName.c_str(), NULL, 0, NULL);
+    	
+	if (!inputPLY) exit(0);
+
+        if (!ply_read_header(inputPLY)) exit(0);
+
+	// Initialize plcVertex and plcFaces
 	// read PLY file(assumed to contain the PLC)
 	string fileName;
 
@@ -1149,19 +1149,6 @@ bool isStronglyDelaunay(DartHandle facetHandle, vector<DartHandle> cavityVertice
 	tempDT.insert(cavityVertices.begin(), cavityVertices.end());
 	
 	// test strong Delaunay criteria
-	VertexHandle vh[3];
-	int i, j, k, h = 0;
-	CellHandle ch;
-
-	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator iter = cavityLCC.one_dart_per_incident_cell<0, 2>(facetHandle).begin(), iterEnd != cdtMesh.one_dart_per_incident_cell<0, 2>(facetHandle).end(); iter != iterEnd; iter++)
-		tempDT.is_vertex(cavityLCC.point(iter), vh[h++]);
-
-
-	if (tempDT.is_facet(vh[0], vh[1], vh[2], ch, i, j, k))
-	{
-		CGALSphere s(vh[0]->point(), vh[1]->point(), vh[2]->point(), ((*ch).vertex(6 - i - j - k))->point());
-
-		for (vector<Point>::iterator vIter = cavityVertices.begin(); vIter != cavityVertices.end(); vIter++)
 		{	
 			if (s.has_on_boundary(*vIter))
 				return false;	
@@ -1295,28 +1282,20 @@ DartHandle locateFacetInCavity(DartHandle facet, LCC cavityLCC)
 void addFaceToLCC(CGALPoint p1, CGALPoint p2, CGALPoint p3, LCC &cavityLCC)
 {
 	DartHandle newFace = cavityLCC.make_triangle(p1, p2, p3);
-	vector <pair <DartHandle, DartHandle> > twoCellsToBeSewed;
-	int sewedMark = cavityLCC.get_new_mark();
-
-	if (sewedMark == -1)
-	{
-		cout << "\nNo free mark available!!";
-		exit(0);
-	}
-
+	
 	// sew the triangle with existing faces in cavityLCC
 	for (LCC::One_dart_per_incident_cell_range<1, 2>::iterator segIter1 = cavityLCC.one_dart_per_incident_cell(newFace).begin(), segIterEnd1 = cavityLCC.one_dart_per_incident_cell(newFace).end(); segIter1 != segIterEnd1; segIter1++)
 	{
 		if (!cavityLCC.is_marked(segIter1, sewedMark)) // not sewed till now
 		{
-			for (LCC::Dart_range::iterator segIter2 = cavityLCC.darts().begin(), segIterEnd2 = cavityLCC.darts().end(); segIter2 != segIterEnd2; segIter2++)
+			for (LCC::Dart_range::iterator segIter2 = rts().begin(), segIterEnd2 = plc.darts().end(); segIter2 != segIterEnd2; segIter2++)
 			{
-				if (!cavityLCC.is_marked(segIter2, sewedMark) && cavityLCC.is_sewable<2>(segIter1, segIter2))
+				if (!plc.is_marked(segIter2, sewedMark) && plc.is_sewable<2>(segIter1, segIter2))
 				{
-					if (areGeometricallySameSegments(segIter1, segIter2, cavityLCC)) 
+					if (areGeometricallySame(segIter1, segIter2)) // checks the geometry of segments
 					{
-						cavityLCC.mark(segIter1, sewedMark);
-						cavityLCC.mark(segIter2, sewedMark);
+						plc.mark(segIter1, sewedMark);
+						plc.mark(segIter2, sewedMark);
 						twoCellsToBeSewed.push_back(pair<DartHandle, DartHandle>(segIter1, segIter2));
 						break;
 					}
@@ -1332,9 +1311,9 @@ void addFaceToLCC(CGALPoint p1, CGALPoint p2, CGALPoint p3, LCC &cavityLCC)
 	// sew the faces sharing an edge
 	unsigned int k = 0;
 	for (vector<pair<DartHandle, DartHandle> >::iterator dIter = twoCellsToBeSewed.begin(), dIterEnd = twoCellsToBeSewed.end(); dIter != dIterEnd; dIter++)
-		if (cavityLCC.is_sewable<2>(dIter->first, dIter->second))
+		if (plc.is_sewable<2>(dIter->first, dIter->second))
 		{
-			cavityLCC.sew<2>(dIter->first, dIter->second);
+			plc.sew<2>(dIter->first, dIter->second);
 			k++;	
 		}
 
@@ -1429,40 +1408,27 @@ void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>&
 		cdtMesh.remove_cell<3>(*cIter);
 	
 
-
-
 	// Cavity retetrahedralization:
 		// Compute DT of vertices of input cavity
 		// import it to lcc
 			
-			// create an unordered set of vertex info 
-			// insert all vertices of set to DT
-	cavityVerticesSet.clear();
-
-	for (vector<DartHandle>::iterator facetIter = cavity.begin(); facetIter != cavity.end(); facetIter++)
-		for (lcc::One_dart_per_incident_cell_range<0, 2>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 2>(*facetIter).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 2>(*facetIter).end(); vertexIter++)
-			cavityVerticesSet.insert(cdtMesh.info<0>(vertexIter));		
-	
-
 	// create a vector of vertices of cavity
-	vector <pair<Point, unsigned int> > cavityVertices;
-	for (unordered_set<unsigned int>::iterator pointIdIter = cavityVerticesSet.begin(); pointIdIter != cavityVerticesSet.end(); pointIdIter++)
-		cavityVertices.push_back(plcVertices[*pointIdIter]);
+	vector <CGALPoint> cavityVertices; // TODO: Attach info?
+	for (LCC::One_dart_per_cell<0>::iterator vertexIter = cavityLCC.one_dart_per_cell<0>().begin(), vertexIterEnd = cavityLCC.one_dart_per_cell<0>().end(); vertexIter != vertexIterEnd; vertexIter++)
+		cavityVertices.push_back(cavityLCC.point(vertexIter));
 
-	
-	//create cavity vertices
 	Delaunay cavityDT;
-	lcc cavityLCC;
 
 	cavityDT.insert(cavityVertices.begin(), cavityVertices.end());
-
-	map<Delaunay::Cell_handle, lcc::Dart_handle> *dtCellToLCCCellMap;
-	import_from_triangulation_3(cavityLCC, cavityDT, dtCellToLCCCellMap);
-	copyInfoFromDTToLCC(cavityDT, cavityLCC, dtCellToLCCCellMap);
+	
+	LCC filledCavityLCC;
+	map<CellHandle, DartHandle> *dtCellToLCCCellMap;
+	import_from_triangulation_3(filledCavityLCC, cavityDT, dtCellToLCCCellMap);
+	copyInfoFromDTToLCC(cavityDT, filledCavityLCC, dtCellToLCCCellMap);
 
 	// Sew retetrahedralized cavity back to original cdtMesh
 	// Add cavityLCC to cdtMesh
-	Point_3<K> tempPt[4];
+	CGALPoint tempPt[4];
 	unsigned int x;
 
 	for (lcc::One_dart_per_cell_range<3>::iterator cIter = cavityLCC.one_dart_per_cell<3>().begin(); cIter != cavityLCC.one_dart_per_cell<3>().end(); cIter++)
