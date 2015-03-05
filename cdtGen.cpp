@@ -1006,10 +1006,10 @@ void copyInfoFromDTToLCC(Delaunay dt, LCC& linearCellComplex, map <CellHandle, D
 void createEquivalentTetrahedralization()
 {
 	
-	map<CellHandle, DartHandle> *dtVolumeToLccDartMap;
-	import_from_triangulation_3(cdtMesh, DT, dtVolumeToLccDartMap);
+	//map<CellHandle, DartHandle> *dtVolumeToLccDartMap;
+	import_from_triangulation_3(cdtMesh, DT);//, dtVolumeToLccDartMap);
 
-	copyInfoFromDTToLCC(DT, cdtMesh, dtVolumeToLccDartMap);
+//	copyInfoFromDTToLCC(DT, cdtMesh, dtVolumeToLccDartMap);
 }
 
 
@@ -1413,34 +1413,49 @@ void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>&
 		// import it to lcc
 			
 	// create a vector of vertices of cavity
-	vector <CGALPoint> cavityVertices; // TODO: Attach info?
+	vector <CGALPoint> cavityVertices; 
 	for (LCC::One_dart_per_cell<0>::iterator vertexIter = cavityLCC.one_dart_per_cell<0>().begin(), vertexIterEnd = cavityLCC.one_dart_per_cell<0>().end(); vertexIter != vertexIterEnd; vertexIter++)
 		cavityVertices.push_back(cavityLCC.point(vertexIter));
 
 	Delaunay cavityDT;
 
-	cavityDT.insert(cavityVertices.begin(), cavityVertices.end());
-	
+	cavityDT.insert(cavityVertices.begin(), cavityVertices.end()); 
+
 	LCC filledCavityLCC;
-	map<CellHandle, DartHandle> *dtCellToLCCCellMap;
-	import_from_triangulation_3(filledCavityLCC, cavityDT, dtCellToLCCCellMap);
-	copyInfoFromDTToLCC(cavityDT, filledCavityLCC, dtCellToLCCCellMap);
 
-	// Sew retetrahedralized cavity back to original cdtMesh
-	// Add cavityLCC to cdtMesh
-	CGALPoint tempPt[4];
-	unsigned int x;
+	import_from_triangulation_3(cavityDT, filledCavityLCC);	
+	
+	// Mark tetrahedrons as 'inside/outside' wrt. cavity boundary	
+	
+	// Remove outside tetrahedrons
+	// Sew the remaining 3-cells 
+	int insideOutsideMark = filledCavityLCC.get_new_mark();
 
-	for (lcc::One_dart_per_cell_range<3>::iterator cIter = cavityLCC.one_dart_per_cell<3>().begin(); cIter != cavityLCC.one_dart_per_cell<3>().end(); cIter++)
+	for (LCC::One_dart_per_cell_range<3>::iterator tetIter = filledCavityLCC.one_dart_per_cell<3>().begin(), tetIterEnd = filledCavityLCC.one_dart_per_cell<3>().end(); tetIter != tetIterEnd; tetIter++)
 	{
-		x = 0;
-
-		for (lcc::One_dart_per_incident_cell_range<0, 3>::iterator vIter = cavityLCC.one_dart_per_incident_cell<0, 3>(cIter).begin(); vIter != cavityLCC.one_dart_per_incident_cell<0, 3>(cIter).end(); vIter++)
-			tempPt[x++] = cdtMesh.point(vIter); 			
-			
-		cdtMesh.make_tetrahedron(tempPt[0], tempPt[1], tempPt[2], tempPt[3]);
+		if (isTetOutside(tetIter, filledCavityLCC))
+			filledCavityLCC.mark(tetIter, insideOutsideMark);
+		else
+			continue;
 	}
-
+	
+	// remove the marked 3-cells & add remaining ones to cdtMesh
+	for (LCC::One_dart_per_cell_range<3>::iterator removeTetIter = filledCavityLCC.one_dart_per_cell<3>().begin(), removeTetIterEnd = filledCavityLCC.one_dart_per_cell<3>().end(); removeTetIter != removeTetIterEnd; removeTetIter++)
+	{
+		if(filledCavityLCC.is_marked(removeTetIter))
+			filledCavityLCC.remove_cell<3>(removeTetIter);
+		else
+		{
+			CGALPoint p[4];
+			unsigned int i = 0;
+			for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator vIter = filledCavityLCC.one_dart_per_incident_cell<0, 3>(removeTetIter).begin(), vIterEnd = filledCavityLCC.one_dart_per_incident_cell<0, 3>(removeTetIter).end(); vIter != vIterEnd; vIter++)
+				p[i++] = filledCavityLCC.point(vIter);
+			
+			cdtMesh.make_tetrahedron(p[0], p[1], p[2], p[3]);
+		}
+	}
+	
+	// sew the new cavity filled LCC with existing cdtMesh
 	cdtMesh.sew3_same_facets();
 		
 }
