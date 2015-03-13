@@ -1,4 +1,4 @@
-# CDTGenerator[![Build Status](https://travis-ci.org/pranavkantgaur/CodedPhaseShift3DScanner.svg)](https://travis-ci.org/pranavkantgaur/CodedPhaseShift3DScanner)
+# CDTGenerator [![Build Status](https://travis-ci.org/pranavkantgaur/CodedPhaseShift3DScanner.svg)](https://travis-ci.org/pranavkantgaur/CodedPhaseShift3DScanner)
 Implementation of the paper "Meshing piecewise linear complex using CDT" by Hang Si et. al.
 
 # Building
