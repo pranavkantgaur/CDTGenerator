@@ -44,14 +44,13 @@ typedef Circle_3<K> CGALCircle;
 typedef Sphere_3<K> CGALSphere;
 typedef Tetrahedron_3<K> CGALTetrahedron;
 typedef Triangle_3<K> CGALTriangle;
+typedef Ray_3<K> CGALRay;
 
 typedef Exact_spherical_kernel_3 SK;
 typedef Line_arc_3<SK> CGALSphericalSegment;
 typedef Sphere_3<SK> CGALSphericalSphere;
 typedef Segment_3<SK> CGALSphericalSegment; 
 typedef Point_3<SK> CGALSphericalPoint;
-
-
 
 /*
  * Input  : PLC(represented using CGAL's LCC structure)
@@ -1179,84 +1178,6 @@ int locateFacetInCavity(DartHandle nonStronglyDelaunayFacet, vector<DartHandle> 
 }
 
 
-bool isCellOutsideCavity(DartHandle cellHandle, vector<DartHandle> cavity)
-{
-
-
-	// Approach 1:
-		// Convert tet & cavity to Nef_polyhedra
-		// Determine intersection
-			// If intersection is tet itself
-				// return false
-			// else, 
-				// return true	   
-				
-	// Approach 2:
-		// Take a random ray out of barycenter of tetrahedron
-		// Count number of intersections of the ray with polyhedron
-		// If number of intersections:
-			// Even:
-				// return true
-			// Odd:
-				// return false 		
-				
-		Point p[4];
-
-		unsigned int i = 0;
-		for (lcc::One_dart_per_incident_cell_range<0, 3>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 3>(cellHandle).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 3>(cellHandle).end(); vertexIter++)
-			p[i++] = plcVertices[cdtMesh.info<0>(vertexIter)].first;
-		
-		float x = 0.0, y = 0.0, z = 0.0;
-
-		for (unsigned int n = 0; n < 4; n++)
-		{
-			x += p[n].x();
-			y += p[n].y();
-			z += p[n].z();
-		}
-
-			x /= 4.0;
-			y /= 4.0;
-			z /= 4.0;
-
-		Point tetBarycenter(x, y, z);
-	
-		// generate a random ray
-		
-		Random rndGenerator1(50.0); // some numbers given as seed
-		Random rndGenerator2(60.0);
-		Random rndGenerator3(70.0);
-
-		Point randomPoint(rndGenerator1.uniform_real<float>(), rndGenerator2.uniform_real<float>(), rndGenerator3.uniform_real<float>());
-
-		Ray_3<K> randomRay(tetBarycenter, randomPoint);
-		unsigned int intersectionCount = 0;
-
-		for (vector<DartHandle>::iterator facetIter = cavity.begin(); facetIter != cavity.end(); facetIter++)
-		{
-			// compute its intersection with all faces of cavity
-			// count number of intersections
-			Point facetVertices[3];
-			
-			unsigned int k = 0;	
-			for (lcc::One_dart_per_incident_cell_range<0, 2>::iterator pointIter = cdtMesh.one_dart_per_incident_cell<0, 2>(*facetIter).begin(); pointIter != cdtMesh.one_dart_per_incident_cell<0, 2>(*facetIter).end(); pointIter++)
-				facetVertices[k++] = plcVertices[cdtMesh.info<0>(pointIter)].first;
-		
-
-			Triangle_3<K> cavityFacet(facetVertices[0], facetVertices[1], facetVertices[2]); 
-		
-			if (do_intersect(randomRay, cavityFacet))
-				intersectionCount++;
-			else
-				continue;
-		}
-		
-		if (intersectionCount % 2 == 0)
-			return true;
-		else
-			return false;
-}
-
 
 bool areSameFacets(LCC lcc1, DartHandle d1, LCC lcc2, DartHandle d2)
 {
@@ -1266,6 +1187,7 @@ bool areSameFacets(LCC lcc1, DartHandle d1, LCC lcc2, DartHandle d2)
 
 	return areSameFacets;
 }
+
 
 DartHandle locateFacetInCavity(DartHandle facet, LCC cavityLCC)
 {
@@ -1320,11 +1242,103 @@ void addFaceToLCC(CGALPoint p1, CGALPoint p2, CGALPoint p3, LCC &cavityLCC)
 }
 
 
-bool isTetOutside(DartHandle tetHandle, LCC lcc)
+
+// TODO: Define pointHash
+
+size_t pointHash
 {
-	
 }
 
+
+
+
+bool isTetOutsideCavity(DartHandle cellHandle, LCC filledCavityLCC)
+{
+
+
+	// Approach 1:
+		// Convert tet & cavity to Nef_polyhedra
+		// Determine intersection
+			// If intersection is tet itself
+				// return false
+			// else, 
+				// return true	   
+				
+	// Approach 2:
+		// Take a random ray out of barycenter of tetrahedron
+		// Count number of intersections of the ray with polyhedron
+		// If number of intersections:
+			// Even:
+				// return true
+			// Odd:
+				// return false 		
+				
+		CGALPoint p[4];
+
+		unsigned int i = 0;
+		for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator vertexIter = filledCavityLCC.one_dart_per_incident_cell<0, 3>(cellHandle).begin(), vertexIterEnd != filledCavityLCC.one_dart_per_incident_cell<0, 3>(cellHandle).end(); vertexIter != vertexIterEnd; vertexIter++)
+			p[i++] = filledCavityLCC.point(vertexIter);
+		
+		float x = 0.0, y = 0.0, z = 0.0;
+
+		for (unsigned int n = 0; n < 4; n++)
+		{
+			x += p[n].x();
+			y += p[n].y();
+			z += p[n].z();
+		}
+
+			x /= 4.0;
+			y /= 4.0;
+			z /= 4.0;
+
+		CGALPoint tetBarycenter(x, y, z);
+	
+		// generate a random ray
+		
+		Random rndGenerator1(50.0); // some numbers given as seed
+		Random rndGenerator2(60.0);
+		Random rndGenerator3(70.0);
+
+		CGALPoint randomPoint(rndGenerator1.uniform_real<float>(), rndGenerator2.uniform_real<float>(), rndGenerator3.uniform_real<float>());
+
+		CGALRay randomRay(tetBarycenter, randomPoint); // ray starting at tetBarycenter and passing through randomPoint
+		unsigned int intersectionCount = 0;
+		
+		bool isUniqueIntersectionPoint = false;
+		unordered_set<CGALPoint, pointHash> uniqueIntersectionPoints;
+		for (LCC::One_dart_per_cell_range<2>::iterator facetIter = filledCavityLCC.one_dart_per_cell<2>().begin(), facetIterEnd = filledCavityLCC.one_dart_per_cell<2>().end(); facetIter != facetIterEnd; facetIter++)
+		{
+			// compute its intersection with all faces of cavity
+			// count number of intersections
+			CGALPoint facetVertices[3];
+			
+			unsigned int k = 0;	
+			for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pointIter = filledCavityLCC.one_dart_per_incident_cell<0, 2>(facetIter).begin(), pointIterEnd != filledCavityLCC.one_dart_per_incident_cell<0, 2>(facetIter).end(); pointIter != pointIterEnd; pointIter++)
+				facetVertices[k++] = filledCavityLCC;
+		
+
+			CGALTriangle cavityFacet(facetVertices[0], facetVertices[1], facetVertices[2]); 
+			CGALPoint intersectionPoint;
+
+			if ((intersectionPoint = intersection(randomRay, cavityFacet)) != NULL)
+			{
+				isUniqueIntersectionPoint = uniqueIntersectionPoints.insert(intersectionPoint);	
+				if (isUniqueIntersectionPoint)
+					intersectionCount++;
+				else
+					continue;
+			}
+			else
+				continue;
+		
+		
+		if (intersectionCount % 2 == 0)
+			return true;
+		else
+			return false;	
+               
+}
 
 
 void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>& lcc3CellsToBeRemoved)
@@ -1438,7 +1452,7 @@ void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>&
 
 	for (LCC::One_dart_per_cell_range<3>::iterator tetIter = filledCavityLCC.one_dart_per_cell<3>().begin(), tetIterEnd = filledCavityLCC.one_dart_per_cell<3>().end(); tetIter != tetIterEnd; tetIter++)
 	{
-		if (isTetOutside(tetIter, filledCavityLCC))
+		if (isTetOutsideCavity(tetIter, filledCavityLCC))
 			filledCavityLCC.mark(tetIter, insideOutsideMark);
 		else
 			continue;
