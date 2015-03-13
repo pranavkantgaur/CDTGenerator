@@ -1242,14 +1242,16 @@ void addFaceToLCC(CGALPoint p1, CGALPoint p2, CGALPoint p3, LCC &cavityLCC)
 }
 
 
-
-// TODO: Define pointHash
-
-size_t pointHash
+namespace std
 {
+	template<> struct pointHash<CGALPoint>
+	{
+		size_t operator () (const CGALPoint& p) const
+		{
+			return sqrt(pow(p.x(), 2) + pow(p.y(), 2) + pow(p.z(), 2)); // TODO: effective hash
+		}
+	};
 }
-
-
 
 
 bool isTetOutsideCavity(DartHandle cellHandle, LCC filledCavityLCC)
