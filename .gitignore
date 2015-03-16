@@ -1,12 +1,6 @@
-original.cpp*
-data/*
 output
 cdtGen.cpp~
-cube.ply
-sampleProgs/lccOutputPLY.ply*
-sampleProgs/testLCCAutoConstruction.cpp~
-sampleProgs/testLCCConstruction.cpp~
-sampleProgs/testPLYTOLCCConstruction.cpp~
-sampleProgs/testPLYTOLCCTOPLYConversion.cpp~
 .travis.yml~
 README.md~
+CMakeLists.txt~
+build/*
