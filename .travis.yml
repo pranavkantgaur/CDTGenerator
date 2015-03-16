@@ -2,4 +2,6 @@ language: cpp
 compiler:
   - gcc
 # Change this to your needs
-script: ./build.sh 
+script: 
+       - cmake .
+       - make  
