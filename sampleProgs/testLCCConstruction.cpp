@@ -16,40 +16,6 @@ typedef Point_3<K> Point;
 typedef LCC::Dart_handle DartHandle;
 
 
-/*
-bool operator == (DartHandle a, DartHandle b)
-{
-	// Vertex
-	Point pA = cubeLCC.getPoint(a);
-	Point pB = cubeLCC.getPoint(b);
-	vector<vector<Point> > duplicatePoint;
-	if (pA == pB)
-	{
-		duplicatePoint[cubeLCC.info<0>(a)].push_back(pB); // pA is already present in set		
-		return true;
-	}
-	else
-		return false;
-}
-
-
-void removeDuplicateVertices(LCC &inputLCC)
-{
-	// Find duplicate n-cells
-	// Put handles to each duplicate element in a vector
-	unordered_set<DartHandle> cubeVertices;
-	for (LCC::One_dart_per_cell_range<0>::iterator vIter = inputLCC.one_dart_per_cell<0>().begin(); vIter != inputLCC.one_dart_per_cell<0>().end(); vIter++)
-		cubeVertices.insert(vIter);
-
-	// Modify beta links of neighbors of duplicate n-cells	
-}
-
-void removeDuplicateSegments(LCC &inputLCC)
-{
-}
-
-*/
-
 int main()
 {
 	vector<Point> cubePoints;

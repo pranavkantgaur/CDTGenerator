@@ -23,9 +23,6 @@
 #include <CGAL/enum.h>
 
 #include "rply/rply.h"
-#include "pcl/PolygonMesh.h"
-#include "pcl/visualization/pcl_visualizer.h"
-
 
 
 #define Pi 22.0/7.0
@@ -33,129 +30,48 @@
 using namespace std;
 using namespace CGAL;
 
-struct MyItem
-{
-	template<class Refs>
-	struct Dart_wrapper
-	{
-		typedef CGAL::Dart<3, Refs> Dart;
-		typedef CGAL::Cell_attribute_with_point<Refs, unsigned int, Tag_true> Vertex_attribute;
-		typedef CGAL::cpp11::tuple<Vertex_attribute> Attributes;
-	};
- 
-};
-
 typedef Exact_predicates_inexact_constructions_kernel K;
-typedef Triangulation_vertex_base_with_info_3<unsigned, K> Vb;
+typedef Linear_cell_complex_traits<3, K> Traits;
+typedef Linear_cell_complex<3, 3, Traits> LCC;
+typedef LCC::Dart_handle DartHandle;
+typedef Triangulation_vertex_base_with_info_3<DartHandle, K> Vb; 
 typedef Triangulation_data_structure_3<Vb> Tds;
 typedef Delaunay_triangulation_3<K, Tds, Fast_location> Delaunay;
-typedef Delaunay::Point Point;
-typedef Sphere_3<K> Sphere;
-typedef Circle_3<K> Circle;
-
-typedef Exact_spherical_kernel_3 SK;
-typedef Line_arc_3<SK> SphericalSegment;
-typedef Sphere_3<SK> SphericalSphere;
-typedef Segment_3<SK> CGALSegment; 
-typedef Point_3<SK> SphericalPoint;
-typedef Delaunay::Vertex_handle Vertex_handle;
+typedef Delaunay::VertexHandle VertexHandle;
+typedef Delaunay::Cell_handle CellHandle;
+typedef Point_3<K> CGALPoint;
+typedef Circle_3<K> CGALCircle;
+typedef Sphere_3<K> CGALSphere;
 typedef Tetrahedron_3<K> CGALTetrahedron;
 typedef Triangle_3<K> CGALTriangle;
-typedef Delaunay::Cell_iterator Cell_iterator;
+typedef Ray_3<K> CGALRay;
 
-typedef Linear_cell_complex_traits<3, K> Traits;
-typedef Linear_cell_complex<3, 3, Traits, MyItem> lcc;
-typedef lcc::Dart_handle DartHandle;
+typedef Exact_spherical_kernel_3 SK;
+typedef Line_arc_3<SK> CGALSphericalSegment;
+typedef Sphere_3<SK> CGALSphericalSphere;
+typedef Segment_3<SK> CGALSphericalSegment; 
+typedef Point_3<SK> CGALSphericalPoint;
 
 /*
- * Input  : plcVertices, plcSegments, plcFaces(triangles only)
- * Output : cdtMesh(linear cell complex containing output tetrahedra)
+ * Input  : PLC(represented using CGAL's LCC structure)
+ * Output : cdtMesh(again, LCC)
  */
 
+// Input
+LCC plc;
 
-
-class Segment
-{
-	public:
-		unsigned int pointIds[2]; // index into the plcVertices vector
-};
-
+// Intermidiate global structures
+Delaunay DT;
+vector <Point> plcVertexVector;
 class Triangle
 {
-	public:
-		unsigned int pointIds[3];
-		
+	size_t pointIds[3];
 };
 
-class Tetrahedron
-{
-	public:
-		unsigned int pointIds[4];
-};
+vector <Triangle> plcFaceVector;
 
-/*
-vector<pair<Point, unsigned int> > plcVertices;
-vector<Segment> plcSegments;
-vector<Triangle> plcFaces;
-*/
-
-// hash class for Point
-class pointHash
-{
-	void operator = (Point a, Point b)
-	{
-		return	(a.x() == b.x()) && (a.y() == b.y()) && (a.z() == b.z());
-	}
-};
-
-
-
-class segmentHash
-{
-	void operator = (Segment a, Segment b)
-	{
-		unordered_set<unsigned int> pointIdSet;
-
-		for (unsigned int k = 0; k < 2; k++)
-			pointIdSet.insert(b.pointIds[k]);
-
-		if (a.pointIds[0] != a.pointIds[1])
-			if (pointIdSet.find(a.pointIds[0]) != pointIdSet.end())
-				if (pointIdSet.find(a.pointIds[1]) ! = pointIdSet.end())
-					return true;		
-		else
-			return false;
-	}
-};
-
-class triangleHash
-{
-	void operator = (Triangle a, Triangle b)
-	{
-		unordered_set<unsigned int> pointIdSet;
-
-		for (unsigned int k = 0; k < 3; k++)
-			pointIdSet.insert(b.pointIds[k]);
-
-		if (a.pointIds[0] != a.pointIds[1] && a.pointIds[0] != a.pointIds[2] && a.pointIds[1] != a.pointIds[2])
-			if (pointIdSet.find(a.pointIds[0]) != pointIdSet.end())
-				if (pointIdSet.find(a.pointIds[1]) ! = pointIdSet.end())
-					if (pointIdSet.find(a.pointIds[2]) != pointIdSet.end())
-						return true;		
-		else
-			return false;
-	}
-};
-
-
-unordered_set<Point, pointHash> plcVertices;
-unordered_set<Segment, segmentHash> plcSegments;
-unordered_set<Triangle, triangleHash> plcFaces;
-
-lcc cdtMesh;
-
-Delaunay DT;
-
+// Output
+LCC cdtMesh;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -169,12 +85,10 @@ static int vertex_cb(p_ply_argument argument)
 	long eol;
 	ply_get_argument_user_data(argument, NULL, &eol);
 	tempPoint[dimensionId++] = ply_get_argument_value(argument);
-	
-
 	// insert the vertex into plcVertex
 	if (eol)
 	{
-		plcVertices.push_back(pair<Point, unsigned int>(Point(tempPoint[0],tempPoint[1],tempPoint[2]), pointCount++));
+		plcVertexVector.push_back(Point(tempPoint[0],tempPoint[1],tempPoint[2]));
 		dimensionId = 0;
 	}
 	
@@ -197,26 +111,9 @@ static int face_cb(p_ply_argument argument)
         	case 2:	
 			tempFace.pointIds[pointId] = ply_get_argument_value(argument);
 			pointId = 0;				
-			plcFaces.push_back(tempFace);
-	                
-			// extract corresponding segments as well
-			Segment tempSegments[3]; // each face will give 3 segments
-			
-			tempSegments[0].pointIds[0] = tempFace.pointIds[0];
-			tempSegments[0].pointIds[1] = tempFace.pointIds[1];
-			
-			tempSegments[1].pointIds[0] = tempFace.pointIds[1];
-			tempSegments[1].pointIds[1] = tempFace.pointIds[2];
-		
-			tempSegments[2].pointIds[0] = tempFace.pointIds[2];
-			tempSegments[2].pointIds[1] = tempFace.pointIds[3];
-
-			plcSegments.push_back(tempSegments[0]);
-			plcSegments.push_back(tempSegments[1]);		
-			plcSegments.push_back(tempSegments[2]);
+			plcFaceVector.push_back(tempFace);
 			break;
-        
-		default: 
+       		default: 
                 	break;
         } 
     
@@ -226,6 +123,19 @@ static int face_cb(p_ply_argument argument)
 // reads input PLC
 void readPLCInput()
 {
+	// read PLY file(assumed to contain the PLC)
+	string fileName;
+
+	cout << "\nPlease enter input filename:\t";
+	cin >> fileName;
+	
+	p_ply inputPLY = ply_open(fileName.c_str(), NULL, 0, NULL);
+    	
+	if (!inputPLY) exit(0);
+
+        if (!ply_read_header(inputPLY)) exit(0);
+
+	// Initialize plcVertex and plcFaces
 	// read PLY file(assumed to contain the PLC)
 	string fileName;
 
@@ -253,148 +163,142 @@ void readPLCInput()
 
 	ply_close(inputPLY);
 
-	cout << "Number of vertices:" << plcVertices.size() << "\n";
-	cout << "Number of faces:" << plcFaces.size() << "\n";
-	cout << "Number of segments:" << plcSegments.size();
-}
+	cout << "Number of vertices:" << plcVertexVector.size() << "\n";
+	cout << "Number of faces:" << plcFaceVector.size() << "\n";
 
+	// Initialize PLC
+	vector<pair<DartHandle, DartHandle> > twoCellsToBeSewed;
+	size_t vertexIds[3];
+ 
+	int sewedMark = lcc.get_new_mark();
 
-
-class MyVertex 
-{
-
-	public:
-		Point point;
-		unsigned int vertexId;
-	
-		MyVertex(Point aPoint, unsigned int aVertexId) 
-		{
-			point = aPoint;
-			vertexId = aVertexId;
-		}	
-
-		bool operator < (const MyVertex& anotherVertex) const
-		{
-			return (vertexId < anotherVertex.vertexId);
-		}
-};
-
-
-
-
-void writePLYOutput()
-{
-	// use rPLY for writing DT to PLY file
-	p_ply delaunayMeshPLY;
-
-	if((delaunayMeshPLY = ply_create("delaunay.ply", PLY_ASCII, NULL, 0, NULL)) == NULL)
+	if (sewedMark == -1)
 	{
-		cout << "\nCannot write Mesh output!!";
+		cout << "\nNo free mark available!!";
 		exit(0);
 	}
-	 
-	else
+
+	for (unsigned int n = 0, m = faceVector.size(); n < m; n++)
 	{
-		ply_add_element(delaunayMeshPLY, "vertex", DT.number_of_vertices()); 
-	      	ply_add_scalar_property(delaunayMeshPLY, "x", PLY_FLOAT);
-		ply_add_scalar_property(delaunayMeshPLY, "y", PLY_FLOAT);
-		ply_add_scalar_property(delaunayMeshPLY, "z", PLY_FLOAT);
-		ply_add_element(delaunayMeshPLY, "face", DT.number_of_finite_facets());
-		ply_add_list_property(delaunayMeshPLY, "vertex_indices", PLY_UCHAR, PLY_INT32);	
-
-		if(!ply_write_header(delaunayMeshPLY))
-			cout << "\nHeader not writen" << flush;
-
-
-		vector<MyVertex> orderedPLCVertices;
-		
-		//Lets sort the vertices before writing them to file
-		for (Delaunay::Finite_vertices_iterator vit = DT.finite_vertices_begin(); vit != DT.finite_vertices_end(); vit++)
-			orderedPLCVertices.push_back(MyVertex(vit->point(), vit->info()));
-
-		sort(orderedPLCVertices.begin(), orderedPLCVertices.end());
-
-		float x, y, z;
-		Point p;
+		for (unsigned int k = 0; k < 3; k++)
+			vertexIds[k] = plcFaceVector[n].pointIds[k];
 	
-		for (vector<MyVertex>::iterator orderedVit = orderedPLCVertices.begin(); orderedVit != orderedPLCVertices.end(); orderedVit++)
-		{
-			p = orderedVit->point;
-			x = p.x();			
-			y = p.y();
-			z = p.z();
-			ply_write(delaunayMeshPLY, x);
-			ply_write(delaunayMeshPLY, y);
-			ply_write(delaunayMeshPLY, z);
-		}
-	
-	
-		for (Delaunay::Finite_facets_iterator fIter = DT.finite_facets_begin(); fIter != DT.finite_facets_end(); fIter++)
-		{
-			ply_write(delaunayMeshPLY, 3);
+		for (unsigned int i = 0; i < 3; i++)
+			trianglePoints[i] = CGALPoint(plcVertexVector[vertexIds[i]].x(), plcVertexVector[vertexIds[i]].y(), plcVertexVector[vertexIds[i]].z());
 			
-			for (unsigned int i = 0; i < 4; i++)
-				if (fIter->second != i)
-					ply_write(delaunayMeshPLY, (fIter->first)->vertex(i)->info());
-		}
-
-			ply_close(delaunayMeshPLY);
+		plc.make_triangle(trianglePoints[0], trianglePoints[1], trianglePoints[2]);
 	}
 
+	// sew facets sharing edge
+	for (LCC::Dart_range::iterator segIter1 = plc.darts().begin(), segIterEnd1 = plc.darts().end(); segIter1 != segIterEnd1; segIter1++)
+	{
+		if (!plc.is_marked(segIter1, sewedMark)) // not sewed till now
+		{
+			for (LCC::Dart_range::iterator segIter2 = plc.darts().begin(), segIterEnd2 = plc.darts().end(); segIter2 != segIterEnd2; segIter2++)
+			{
+				if (!plc.is_marked(segIter2, sewedMark) && plc.is_sewable<2>(segIter1, segIter2))
+				{
+					if (areGeometricallySameSegments(segIter1, segIter2, plc)) // checks the geometry of segments
+					{
+						plc.mark(segIter1, sewedMark);
+						plc.mark(segIter2, sewedMark);
+						twoCellsToBeSewed.push_back(pair<DartHandle, DartHandle>(segIter1, segIter2));
+						break;
+					}
+				}
+				else
+					continue;
+			}
+		}	
+		else
+			continue;
+	}
 	
+	// sew the faces sharing an edge
+	unsigned int k = 0;
+	for (vector<pair<DartHandle, DartHandle> >::iterator dIter = twoCellsToBeSewed.begin(), dIterEnd = twoCellsToBeSewed.end(); dIter != dIterEnd; dIter++)
+		if (plc.is_sewable<2>(dIter->first, dIter->second))
+		{
+			plc.sew<2>(dIter->first, dIter->second);
+			k++;	
+		}
+
+	cout << "\nNumber of sewable facets: " << k;
+	cout << "\nNumber of pairs to be sewed: " << twoCellsToBeSewed.size() << "\n";
 }
 
 
 
+void writePLYOutput(LCC &lcc, string fileName)
+{
+	p_ply lccOutputPLY;
 
-//////////////////////////////////////////////////// Done with reading input PLC ////////////////////////////////////////////////
+	if ((lccOutputPLY = ply_create(filename.c_str(), PLY_ASCII, NULL, 0, NULL)) == NULL)
+	{
+		cout << "\nCannot open file for writing!!";
+		exit(0);
+	}
+
+	// count number of vertices and faces in LCC
+	size_t nVertices = 0, nFaces = 0;
+	for (LCC::One_dart_per_cell_range<0>::iterator pointCountIter = lcc.one_dart_per_cell<0>().begin(), pointCountIterEnd = lcc.one_dart_per_cell<0>().end(); pointCountIter != pointCountIterEnd; pointCountIter++)
+		nVertices++;
+
+	for (LCC::One_dart_per_cell_range<2>::iterator faceCountIter = lcc.one_dart_per_cell<2>().begin(), faceCountIterEnd = lcc.one_dart_per_cell<2>().end(); faceCountIter != faceCountIterEnd; faceCountIter++)
+		nFaces++;
+
+	ply_add_element(lccOutputPLY, "vertex", nVertices);
+	ply_add_scalar_property(lccOutputPLY, "x", PLY_FLOAT);
+	ply_add_scalar_property(lccOutputPLY, "y", PLY_FLOAT);
+	ply_add_scalar_property(lccOutputPLY, "z", PLY_FLOAT);
+
+	ply_add_element(lccOutputPLY, "face", nFaces);
+	ply_add_list_property(lccOutputPLY, "vertex_indices", PLY_UCHAR, PLY_INT32);
+
+	if (!ply_write_header(lccOutputPLY))
+	{
+		cout << "Header cannot be writen!!";
+		exit(0);
+	}
+
+	// write vertices
+	size_t pointId = 0;
+	for (LCC::One_dart_per_cell_range<0>::iterator pointIter = lcc.one_dart_per_cell<0>().begin(), pointIterEnd = lcc.one_dart_per_cell<0>().end(); pointIter != pointIterEnd; pointIter++)
+	{
+		CGALPoint pt = lcc.point(pointIter); 
+		
+		ply_write(lccOutputPLY, pt.x());
+		ply_write(lccOutputPLY, pt.y());
+		ply_write(lccOutputPLY, pt.z());
+
+		lcc.info<0>(pointIter) = pointId++;
+	}
+	
+        // write polygons	
+	for (LCC::One_dart_per_cell_range<2>::iterator faceIter = lcc.one_dart_per_cell<2>().begin(), faceIterEnd = lcc.one_dart_per_cell<2>().end(); faceIter != faceIterEnd; faceIter++)
+	{
+		ply_write(lccOutputPLY, 3);
+		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pointInFaceIter = lcc.one_dart_per_incident_cell<0, 2>(faceIter).begin(), pointInFaceIterEnd = lcc.one_dart_per_incident_cell<0, 2>(faceIter).end(); pointInFaceIter != pointInFaceIterEnd; pointInFaceIter++)
+			ply_write(lccOutputPLY, lcc.info<0>(pointInFaceIter)); 
+	}
+
+	ply_close(lccOutputPLY);			
+}
+
+
 // computes delaunay tetrahedralization
 void computeDelaunayTetrahedralization()
 {	
-	// Add vertex id with each vertex which will be used for relating these vertices with plcSegments, plcFaces 
-	DT.insert(plcVertices.begin(), plcVertices.end());
+	vector <pair <CGALPoint, DartHandle> > lccVertexVector;
 
-	cout << "\nDelaunay tetrahedralization computed!!\n";
+	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
+		lccVertexVector.push_back(plc.point(pIter), pIter);
 
-	cout << "Number of vertices in Delaunay tetrahedralization:" << DT.number_of_vertices() << "\n";
-	cout << "Number of tetrahedrons in Delaunay tetrahedralization:" << DT.number_of_cells() << "\n";
+	DT.insert(lccVertexVector.begin(), lccVertexVector.end());
 
-	writePLYOutput();
-
-	// Update the view in the viewer since points and Delaunay triangulation has changed
-	/*pcl::PolygonMesh mesh;
-
-	mesh.cloud.width = DT.number_of_vertices();
-	mesh.cloud.height = 1;
-	mesh.cloud.is_dense = 1;
-
-	for (Delaunay::Finite_vertices_iterator vIter = DT.finite_vertices_begin(); vIter != DT.finite_vertices_end(); vIter++)
-	{
-		mesh.cloud.data.push_back((vIter->point()).x());
-		mesh.cloud.data.push_back((vIter->point()).y());
-	       	mesh.cloud.data.push_back((vIter->point()).z());
-	}
-
-	pcl::Vertices v;
-
-	for (Delaunay::Finite_facets_iterator fIter = DT.finite_facets_begin(); fIter != DT.finite_facets_end(); fIter++)
-	{
-		for (unsigned int i = 0; i < 4; i++)
-			if (i != fIter->second)
-				v.vertices.push_back((fIter->first)->vertex(i)->info());				
-		mesh.polygons.push_back(v);
-
-		v.vertices.clear();
-	}
-
-	pcl::visualization::PCLVisualizer viewer("Execution status");
-	viewer.addPolygonMesh(mesh);
-	
-	while(!viewer.wasStopped())
-	{
-		viewer.spinOnce();
-	}	
-*/
+	cout << "\nDelaunay tetrahedralization computed!!";
+	cout << "\nNumber of vertices in Delaunay tetrahedralization:" << DT.number_of_vertices();
+	cout << "\nNumber of tetrahedrons in Delaunay tetrahedralization:" << DT.number_of_cells();
 }
 
 
@@ -402,18 +306,14 @@ void computeDelaunayTetrahedralization()
 ///////////////////////////////////////////// Segment recovery //////////////////////////////////////////////////////////////
 
 
-void formMissingSegmentsQueue(vector<unsigned int> &missingSegmentQueue)
+void formMissingSegmentsQueue(vector<DartHandle> &missingSegmentQueue)
 {
-	// collect pointers to all segments in plcSegments which are not in DT	
-	// while inserting points in DT set a id for each point
-
 	missingSegmentQueue.clear();
 
-	for (unsigned int m = 0; m < plcSegments.size(); m++)
+	for (LCC::One_dart_per_cell_range<1>::iterator segmentIter = plc.one_dart_per_cell<1>().begin(), segmentIterEnd = plc.one_dart_per_cell<1>().end(); segmentIter != segmentIterEnd; segmentIter++)
 	{
-		Delaunay::Vertex_handle vh1, vh2;
-		Point p1 = plcVertices[plcSegments[m].pointIds[0]].first;
-		Point p2 = plcVertices[plcSegments[m].pointIds[1]].first;
+		CGALPoint p1 = plc.point(segmentIter);
+		CGALPoint p2 = plc.point(plc.beta(segmentIter, 1));
 
 		Delaunay::Cell_handle c;
 		int i, j;
@@ -421,7 +321,7 @@ void formMissingSegmentsQueue(vector<unsigned int> &missingSegmentQueue)
 		if (DT.is_vertex(p1, vh1))
 			if (DT.is_vertex(p2, vh2))
 				if (!DT.is_edge(vh1, vh2, c, i, j))
-					missingSegmentQueue.push_back(m);
+					missingSegmentQueue.push_back(segmentIter);
 	}
 
 	cout << "\nTotal number of missing constraint segments:" << missingSegmentQueue.size() << "\n";
@@ -429,7 +329,6 @@ void formMissingSegmentsQueue(vector<unsigned int> &missingSegmentQueue)
 
 	return;
 }
-
 
 unsigned int computeCircumradius(Point &A, Point &B, Point &encroachingCandidate)
 {
@@ -444,44 +343,31 @@ unsigned int computeCircumradius(Point &A, Point &B, Point &encroachingCandidate
 	return circumradius = (a * b * c) / sqrt((a + b + c) * (b + c - a) * (c + a - b) * (a + b - c));
 }
 
-void computeReferencePoint(Point *refPoint, unsigned int missingSegmentId)
+void computeReferencePoint(Point *refPoint, DartHandle missingSegmentHandle)
 {
-	// compute a reference point p such that:
-	// p encroaches missingSegment	
-	// p has the largest circumradius of smallest circumsphere out of all encroaching vertices
-	
-	
-	Point &A = plcVertices[plcSegments[missingSegmentId].pointIds[0]].first;
 
-	Point &B = plcVertices[plcSegments[missingSegmentId].pointIds[1]].first;
-
-
-	//cout << "\nA = (" << A.x() << ", " << A.y() << ", " << A.z() << ")";
-	//cout << "\nB = (" << B.x() << ", " << B.y() << ", " << B.z() << ")\n"; 
-
+	Point &A = plc.point(missingSegmentHandle);
+	Point &B = plc.point(plc.beta(missingSegmentHandle, 1));
 
 	float missingSegmentLength = sqrt(pow((A.x() - B.x()), 2) + pow((A.y() - B.y()), 2) + pow((A.z() - B.z()), 2));
-	
-	//cout << "\nSegment length: " << missingSegmentLength;
-
 	float sphereRadius = (missingSegmentLength / 2.0);
-	Point sphereCenter = Point((A.x() + B.x()) / 2.0,  (A.y() + B.y()) / 2.0, (A.z() + B.z()) / 2.0);
+	CGALPoint sphereCenter = Point((A.x() + B.x()) / 2.0,  (A.y() + B.y()) / 2.0, (A.z() + B.z()) / 2.0);
 
 	Sphere smallestCircumsphere(sphereCenter, pow(sphereRadius, 2));
-
-
+	
 	float encroachingCandidateDistance;
 	vector<float> circumradiusMap; // value is computed only for those points which are encroaching
 	
-	for (unsigned int n = 0; n < plcVertices.size(); n++)
+	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>.end(); pIter != pIterEnd; pIter++)
 	{
-		if (n != plcSegments[missingSegmentId].pointIds[0] && n != plcSegments[missingSegmentId].pointIds[1])
+		CGALPoint candidatePoint = plc.point(pIter);
+		
+		if (candidatePoint != A && candidatePoint != B)
 		{
-			
-			encroachingCandidateDistance = sqrt(pow(sphereCenter.x() - (plcVertices[n].first).x(), 2) + pow(sphereCenter.y() - (plcVertices[n].first).y(), 2) + pow(sphereCenter.z() - (plcVertices[n].first).z(), 2));
+			encroachingCandidateDistance = sqrt(pow(sphereCenter.x() - candidatePoint.x(), 2) + pow(sphereCenter.y() - candidatePoint.y(), 2) + pow(sphereCenter.z() - candidatePoint.z(), 2));
 	
 			if (encroachingCandidateDistance <= sqrt(smallestCircumsphere.squared_radius())) // encroaching vertex
-				circumradiusMap.push_back(computeCircumradius(A, B, plcVertices[n].first));
+				circumradiusMap.push_back(computeCircumradius(A, B, candidatePoint));
 			else // not encroaching
 				circumradiusMap.push_back(INVALID_VALUE);
 		
@@ -492,31 +378,32 @@ void computeReferencePoint(Point *refPoint, unsigned int missingSegmentId)
 
 	// select the one with maximum circumradius.
 	float maxCircumradius = INVALID_VALUE;
-	
-	for (unsigned int i = 0; i < plcVertices.size(); i++)
-		if (circumradiusMap[i] != INVALID_VALUE)
-			if (maxCircumradius < circumradiusMap[i])
+	size_t vertexId = 0;
+
+	for (LCC::One_dart_per_cell_range<0>::iterator pointIter = plc.one_dart_per_cell<0>().begin(), pointIterEnd = plc.one_dart_per_cell<0>.end(); pointIter != pointIterEnd; pointIter++, vertexId++)
+		if (circumradiusMap[vertexId] != INVALID_VALUE)
+			if (maxCircumradius < circumradiusMap[vertexId])
 			{
-				maxCircumradius = circumradiusMap[i];
-				refPoint = &(plcVertices[i].first);
+				maxCircumradius = circumradiusMap[vertexId];
+				refPoint = &(plc.point(pointIter));
 			}	
 
 	return;
 }
 
-float dotProduct (unsigned segment1Id, unsigned int segment2Id)
+float dotProduct (DartHandle segment1Handle, DartHandle segment2Handle)
 {
-	Point segment1Vertex[2];
-	Point segment2Vertex[2];
+	CGALPoint segment1Vertex[2];
+	CGALPoint segment2Vertex[2];
 
-	for (unsigned int i = 0; i < 2; i++)
-	{
-		segment1Vertex[i] = plcVertices[plcSegments[segment1Id].pointIds[i]].first;
-		segment2Vertex[i] = plcVertices[plcSegments[segment2Id].pointIds[i]].first;
-	}
+	segment1Vertex[0] = plc.point(segment1Handle);
+	segment1Vertex[1] = plc.point(plc.beta(segment1Handle, 1));
 
-	Point vector1 = Point(segment1Vertex[0].x() - segment1Vertex[1].x(), segment1Vertex[0].y() - segment1Vertex[1].y(), segment1Vertex[0].z() - segment1Vertex[1].z());
-	Point vector2 = Point(segment2Vertex[0].x() - segment2Vertex[1].x(), segment2Vertex[0].y() - segment2Vertex[1].y(), segment2Vertex[0].z() - segment2Vertex[1].z());
+	segment2Vertex[0] = plc.point(segment2Handle);
+	segment2Vertex[1] = plc.point(plc.beta(segment2Handle, 1));
+
+	CGALPoint vector1 = CGALPoint(segment1Vertex[0].x() - segment1Vertex[1].x(), segment1Vertex[0].y() - segment1Vertex[1].y(), segment1Vertex[0].z() - segment1Vertex[1].z());
+	CGALPoint vector2 = CGALPoint(segment2Vertex[0].x() - segment2Vertex[1].x(), segment2Vertex[0].y() - segment2Vertex[1].y(), segment2Vertex[0].z() - segment2Vertex[1].z());
 
 
 	float v1Dotv2 = vector1.x() * vector2.x() + vector1.y() * vector2.y() + vector1.z() * vector2.z();
@@ -525,14 +412,14 @@ float dotProduct (unsigned segment1Id, unsigned int segment2Id)
 
 }
 
-float vectorMagnitude(unsigned int inputSegmentId)
+float vectorMagnitude(DartHandle inputSegmentHandle)
 {
-	Point segmentVertices[2];
+	CGALPoint segmentVertices[2];
 
-	for (unsigned int i = 0; i < 2; i++)
-		segmentVertices[i] = plcVertices[plcSegments[inputSegmentId].pointIds[i]].first;
+	segmentVertices[0] = plc.point(inputSegmentHandle);
+	segmentVertices[1] = plc.point(plc.beta(inputSegmentHandle, 1));	
 
-	Point vector = Point(segmentVertices[0].x() - segmentVertices[1].x(), segmentVertices[0].y() - segmentVertices[1].y(), segmentVertices[0].z() - segmentVertices[1].z());
+	CGALPoint vector = Point(segmentVertices[0].x() - segmentVertices[1].x(), segmentVertices[0].y() - segmentVertices[1].y(), segmentVertices[0].z() - segmentVertices[1].z());
 
 	float vectorMagnitude = sqrtf(powf(vector.x(), 2.0) + powf(vector.y(), 2.0) + powf(vector.z(), 2.0));
 
@@ -540,44 +427,41 @@ float vectorMagnitude(unsigned int inputSegmentId)
 }
 
 
-float computeAngleBetweenSegments(unsigned int segment1Id, unsigned int segment2Id)
+float computeAngleBetweenSegments(DartHandle segment1Handle, DartHandle segment2Handle)
 {
-	float angle = acosf(dotProduct(segment1Id, segment2Id) / (vectorMagnitude(segment1Id) * vectorMagnitude(segment2Id)));
+
+	float angle = acosf(dotProduct(segment1Handle, segment2Handle) / (vectorMagnitude(segment1Handle) * vectorMagnitude(segment2Handle)));
 
 	return (angle * 180.0f / Pi); // conversion to degrees
 }
 
-bool isVertexAcute(unsigned int inputPointId)
+bool isVertexAcute(DartHandle inputPointHandle)
 {
 	// Determine segment-pair(involving A) 
-	vector<unsigned int> incidentOnInputPoint;
+	vector<DartHandle> incidentOnInputPoint;
 
-	for (unsigned int n = 0; n < plcSegments.size(); n++) 
-	{
-		if (plcSegments[n].pointIds[0] == inputPointId || plcSegments[n].pointIds[1] == inputPointId)
-			incidentOnInputPoint.push_back(n);
-	}
+	 
+	for (LCC::One_dart_per_incident_cell_range<1, 0>::iterator incidentSegmentIter = plc.one_dart_per_incident_cell<1, 0>(inputPointHandle).begin(), incidentSegmentIterEnd = plc.one_dart_per_incident_cell<1, 0>(inputPointHandle).end(); incidentSegmentIter++)
+		incidentOnInputPoint.push_back(incidentSegmentIter);
 
 	// Compute angle between all possible pairs(NAIVE SOLUTION)
-	for (vector<unsigned int>::iterator segIter1 = incidentOnInputPoint.begin(); segIter1 != incidentOnInputPoint.end(); segIter1++) 
-		for (vector<unsigned int>::iterator segIter2 = incidentOnInputPoint.begin(); *segIter1 != *segIter2 && segIter2 != incidentOnInputPoint.end(); segIter2++)
-			if (computeAngleBetweenSegments(*segIter1, *segIter2) < 90.0f)
+	for (vector<DartHandle>::iterator segIter1 = incidentOnInputPoint.begin(); segIter1 != incidentOnInputPoint.end(); segIter1++) 
+		for (vector<DartHandle>::iterator segIter2 = incidentOnInputPoint.begin(); *segIter1 != *segIter2 && segIter2 != incidentOnInputPoint.end(); segIter2++)
+			if (computeAngleBetweenSegments(segIter1, segIter2) < 90.0f)
 				return true;
 
 	return false; 
 }
 
 
-unsigned int determineSegmentType(unsigned int missingSegmentId)
+unsigned int determineSegmentType(DartHandle missingSegmentHandle)
 {
 
-	// if both endpoints of the segment are acute, type 1
-	// if only one endpoint acute, type 2	
-	Point &A = plcVertices[plcSegments[missingSegmentId].pointIds[0]].first;
-	Point &B = plcVertices[plcSegments[missingSegmentId].pointIds[1]].first;
+	Point &A = plc.point(missingSegmentHandle);
+	Point &B = plc.point(plc.beta(missingSegmentHandle, 1));
 
-	bool vertexAIsAcute = isVertexAcute(plcSegments[missingSegmentId].pointIds[0]);
-	bool vertexBIsAcute = isVertexAcute(plcSegments[missingSegmentId].pointIds[1]);
+	bool vertexAIsAcute = isVertexAcute(missingSegmentHandle);
+	bool vertexBIsAcute = isVertexAcute(plc.beta(missingSegmentHandle, 1));
 
 	if (!vertexAIsAcute && !vertexBIsAcute)	
 		return 1;
@@ -595,140 +479,71 @@ float computeSegmentLength(Point &A, Point &B)
 	return sLength;
 }
 
-
-
-bool containsSegment(unsigned int faceId, unsigned int segmentId)
+void updatePLCAndDT(Point &v, DartHandle missingSegmentHandle)
 {
-	for (unsigned int i = 0; i < 3; i++)
-		if (plcSegments[segmentId].pointIds[0] == plcFaces[faceId].pointIds[i])
-			for (unsigned int n = 0; i !=n && n < 3; n++)
-				if (plcSegments[segmentId].pointIds[2] == plcFaces[faceId].pointIds[n])
-					return true;
-	return false;
+
+	// update PLC
+	insert_point_in_cell<1>(missingSegmentHandle, v);
+	// update DT
+	computeDelaunayTetrahedralization(); 
 }
 
 
-void updatePLCAndDT(Point &v, unsigned int missingSegmentId)
-{
-	// vertex
-	
-	plcVertices.push_back(make_pair(v, plcVertices.size()));
-	
-	// segments
-	Segment AN, NB;
-
-	
-	AN.pointIds[0] = plcSegments[missingSegmentId].pointIds[0];
-	AN.pointIds[1] = plcVertices.size() - 1; // since new vertex has been inserted at the end
-	NB.pointIds[0] = plcVertices.size() - 1;
-	NB.pointIds[1] = plcSegments[missingSegmentId].pointIds[1];
-	
-	plcSegments.push_back(AN);
-	plcSegments.push_back(NB);
-
-	plcSegments.erase(plcSegments.begin() + missingSegmentId);
-
-	// faces
-	// Find out the faces sharing that segment
-	
-	 	//For each face sharing this segment edge,
-			// Partition the face into 2 triangles
-	unsigned int v1, v2, v3;
-	Triangle newFace1, newFace2;
-
-	unsigned int k = plcFaces.size();
-
-	for (unsigned int d = 0; d < k; d++)
-	{
-		if (containsSegment(d, missingSegmentId))
-		{
-			//newFace1 = new Triangle;
-		       	//newFace2 = new Triangle;
-
-			newFace1.pointIds[0] = plcFaces[d].pointIds[0];
-			newFace1.pointIds[1] = plcFaces[d].pointIds[1];
-			newFace1.pointIds[2] = plcVertices.size() - 1;
-			
-			newFace2.pointIds[0] = plcFaces[d].pointIds[0];
-			newFace2.pointIds[1] = plcFaces[d].pointIds[2];
-			newFace2.pointIds[2] = plcVertices.size() - 1;
-	
-			plcFaces.push_back(newFace1);
-			plcFaces.push_back(newFace2);
-			plcFaces.erase(plcFaces.begin() + d);		
-			
-			d -= 1;
-			k -= 1;
-		}
-	}
-
-	
-	// DT
-	computeDelaunayTetrahedralization();
-
-
-}
-
-
-void splitMissingSegment(unsigned int missingSegmentId)
+void splitMissingSegment(DartHandle missingSegmentHandle)
 {
 
-	// Apply rules to split the segments into strongly Delaunay subsegments
-	Point vb, refPoint;
-	Point sphereCenter;
+	CGALPoint vb, refPoint;
+	CGALPoint sphereCenter;
 	float sphereRadius;
-
 	unsigned int segmentType;
-	segmentType = determineSegmentType(missingSegmentId);
+	segmentType = determineSegmentType(missingSegmentHandle);
 
 	computeReferencePoint(&refPoint, missingSegmentId);
 	
-	unsigned int A = plcSegments[missingSegmentId].pointIds[0];
-	unsigned int B = plcSegments[missingSegmentId].pointIds[1];
+	CGALPoint A = plc.point(missingSegmentHandle);
+	CGALPoint B = plc.point(plc.beta(missingSegmentHandle, 1));
 	
 	float AP, PB, AB;
 
-	Point v;
+	CGALPoint v;
 
 	if (segmentType == 1)
 	{
-		Point &Areference = plcVertices[A].first;
-		Point &Breference = plcVertices[B].first;
-		AP = computeSegmentLength(Areference, refPoint);
-		AB = computeSegmentLength(Areference, Breference);
+		AP = computeSegmentLength(A, refPoint);
+		AB = computeSegmentLength(A, B);
 		
 		if (AP < 0.5f * AB)
 		{
-			sphereCenter = Areference;
+			sphereCenter = A;
 			sphereRadius = AP;
 		}
 
 		else if (PB < 0.5 * AB)
 		{
-			sphereCenter = Breference;
+			sphereCenter = B;
 			sphereRadius = PB;
 		}
 
 		else
 		{
-			sphereCenter = Areference;
+			sphereCenter = A;
 			sphereRadius = 0.5 * AB; 
 		}	
 
-		SphericalPoint sphericalSphereCenter = SphericalPoint(sphereCenter.x(), sphereCenter.y(), sphereCenter.z());
+		CGALSphericalPoint sphericalSphereCenter = CGALSphericalPoint(sphereCenter.x(), sphereCenter.y(), sphereCenter.z());
+		CGALSphericalSphere s = CGALSphericalSphere(sphericalSphereCenter, pow(sphereRadius, 2));
 
-		SphericalSphere s = SphericalSphere(sphericalSphereCenter, pow(sphereRadius, 2));
-
-		SphericalPoint p1 = SphericalPoint(plcVertices[plcSegments[missingSegmentId].pointIds[0]].first.x(), plcVertices[plcSegments[missingSegmentId].pointIds[0]].first.y(), plcVertices[plcSegments[missingSegmentId].pointIds[0]].first.z());
-
-		SphericalPoint p2 = SphericalPoint(plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.x(), plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.y(), plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.z());
+		CGALSphericalPoint p1 = CGALSphericalPoint(A.x(), A.y(), A.z());
+		CGALSphericalPoint p2 = CGALSphericalPoint(B.x(), B.y(), B.z());
 
 		CGALSegment seg(p1, p2);
-		SphericalSegment lineArc(seg);
+		CGALSphericalSegment lineArc(seg);
 		vector<Object> intersections;
+		
 		CGAL::intersection(lineArc, s, back_inserter(intersections));
+		
 		if (intersections.size() > 0)
-		{	v = object_cast<Point>(intersections.back());
+		{	v = object_cast<CGALPoint>(intersections.back());
 			intersections.pop_back();
 		}
 
@@ -741,17 +556,17 @@ void splitMissingSegment(unsigned int missingSegmentId)
 
 	else if (segmentType == 2)
 	{
-		unsigned int acuteParentId; 
-		Segment ApB; 
+		DartHandle acuteParentHandle; 
+		DartHandle ApB[1]; 
 		float vbLength;
-		A = plcSegments[missingSegmentId].pointIds[0];
-		B = plcSegments[missingSegmentId].pointIds[1];
+		DartHandle AHandle = missingSegmentHandle;
+		DartHandle BHandle = plc.beta(missingSegmentHandle, 1);
 
-		if (isVertexAcute(A) && !isVertexAcute(B))
-			acuteParentId = plcSegments[missingSegmentId].pointIds[0];
-	        else if (isVertexAcute(B) && !isVertexAcute(A))
+		if (isVertexAcute(AHandle) && !isVertexAcute(BHandle))
+			acuteParentHandle = AHandle;
+	        else if (isVertexAcute(BHandle) && !isVertexAcute(AHandle))
 		{
-			acuteParentId = plcSegments[missingSegmentId].pointIds[1];
+			acuteParentHandle = BHandle;
 			// swap A <-> B 
 			unsigned int t;
 			t = A;
@@ -762,24 +577,24 @@ void splitMissingSegment(unsigned int missingSegmentId)
 		
 		// Segment calculations
 		
-		ApB.pointIds[0] = acuteParentId;
-		ApB.pointIds[1] = B;
+		ApB[0] = acuteParentHandle;
+		ApB[1] = BHandle;
 		
 	
-		SphericalPoint p1(plcVertices[acuteParentId].first.x(), plcVertices[acuteParentId].first.y(), plcVertices[acuteParentId].first.z());
-		SphericalPoint p2(plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.x(), plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.y(), plcVertices[plcSegments[missingSegmentId].pointIds[1]].first.z());
+		CGALSphericalPoint p1(plc.point(acuteParentHandle).x(), plc.point(acuteParentHandle).y(), plc.point(acuteParentHandle).z());
+		CGALSphericalPoint p2(plc.Point(BHandle).x(), plc.point(BHandle).y(), plc.point(BHandle).z());
 		
 		CGALSegment seg(p1, p2);
-		SphericalSegment lineArc(seg);
+		CGALSphericalSegment lineArc(seg);
 		
 		/// Sphere calculations
-		SphericalPoint acuteParent = SphericalPoint(plcVertices[acuteParentId].first.x(), plcVertices[acuteParentId].first.y(), plcVertices[acuteParentId].first.z());
+		CGALSphericalPoint acuteParent(plc.point(acuteParentHandle).x(), plc.point(acuteParentHandle).y(), plc.point(acuteParentHandle).z());
 		
-		Point acuteParentLinearField(plcVertices[acuteParentId].first.x(), plcVertices[acuteParentId].first.y(), plcVertices[acuteParentId].first.z());
+		CGALPoint acuteParentLinearField(plc.point(acuteParentHandle).x(), plc.point(acuteParentHandle).y(), plc.point(acuteParentHandle).z());
 	
 		float ApRefPointLength = computeSegmentLength(acuteParentLinearField, refPoint);
 
-		SphericalSphere s(acuteParent, pow(ApRefPointLength, 2));
+		CGALSphericalSphere s(acuteParent, pow(ApRefPointLength, 2));
 
 		vector<Object> intersections;
 
@@ -833,21 +648,18 @@ void splitMissingSegment(unsigned int missingSegmentId)
 
 	else if (segmentType == 3) // meaning both A & B are acute
 	{
-		static vector<unsigned int> acuteParentMap; // will store acute parent ID for each vertex
-		unsigned int acuteParentId;
-		// split the segment to create 2 type-2 segments:
-		// Lets insert the new point at the mid of the segment
-		Point newPoint;
-		float x = (plcVertices[A].first.x() + plcVertices[B].first.x()) / 2.0;
-		float y = (plcVertices[A].first.y() + plcVertices[B].first.y()) / 2.0;
-		float z = (plcVertices[A].first.z() + plcVertices[B].first.z()) / 2.0;
-		newPoint = Point(x, y, z); // must be collinear with A and B, we now have AX, XB
+		CGALPoint newPoint;
+		
+		float x = (A.x() + B.x()) / 2.0;
+		float y = (A.y() + B.y()) / 2.0;
+		float z = (A.z() + B.z()) / 2.0;
+		newPoint = CGALPoint(x, y, z); 
 		
 		v = newPoint;
 	}
 
 	// update plc and DT
-	updatePLCAndDT(v, missingSegmentId);
+	updatePLCAndDT(v, missingSegmentHandle);
 	
 	return;
 }
@@ -858,8 +670,8 @@ void recoverConstraintSegments()
 	// I/P: plc1, DT1
 	// O/P: plc2, DT2
 	
-	vector<unsigned int> missingSegmentQueue;// stores index of missing segments into plcSegments	
-	unsigned int missingSegment;
+	vector<DartHandle> missingSegmentQueue;
+	DartHandle missingSegment;
 
 	formMissingSegmentsQueue(missingSegmentQueue);
 	int i = 0;
@@ -877,24 +689,24 @@ void recoverConstraintSegments()
 	return;
 }
 
-/////////////////////////////////////////////// Local Degeneracy Removal begin ///////////////////////////////////////////////////
+////////////////////////////////////////////// Local Degeneracy Removal begin ///////////////////////////////////////////////////
 
 class DegenerateVertexSetCandidate
 {
 	public:
-		unsigned int pointIds[5];
+		DartHandle pointHandles[5];
 };
 
 
 // returns true if  given vertices are co-spherical
 bool areCospherical(DegenerateVertexSetCandidate degenSet)
 {	
-	Point p[5];
+	CGALPoint p[5];
 	
 	for (unsigned int i = 0; i < 5; i++)	
-		p[i] = plcVertices[degenSet.pointIds[i]].first;
+		p[i] = plc.point(degenSet[i]);
 
-	if (CGAL::side_of_bounded_sphere(p[0],p[1],p[2],p[3],p[4]) == CGAL::ON_BOUNDARY)
+	if (side_of_bounded_sphere(p[0], p[1], p[2], p[3], p[4]) == ON_BOUNDARY)
 		return true;
 	else
 		return false;
@@ -911,7 +723,7 @@ void addLocalDegeneraciesToQueue(vector<DegenerateVertexSetCandidate> &localDege
 
 		for (unsigned int j = 0; j < 4; j++)
 			{
-				Vertex_handle vh = DT.mirror_vertex(cellIter, j);	
+				VertexHandle vh = DT.mirror_vertex(cellIter, j);	
 				degenerateSetCandidate.pointIds[4] = vh->info();		
 						
 				if (areCospherical(degenerateSetCandidate))
@@ -973,82 +785,68 @@ void perturbRemove(unsigned int pointId, vector<DegenerateVertexSetCandidate>& l
 bool areAffinelyIndependent(DegenerateVertexSetCandidate degenSet)
 {
 
-	// test each 4-tuple for coplanarity
-	// If they are coplanar then return false
-	// else return true
-	Point v1 = plcVertices[degenSet.pointIds[0]].first;
-	Point v2 = plcVertices[degenSet.pointIds[1]].first;
-	Point v3 = plcVertices[degenSet.pointIds[2]].first;
-	Point v4 = plcVertices[degenSet.pointIds[3]].first;
-	Point v5 = plcVertices[degenSet.pointIds[4]].first;
+	CGALPoint v1 = plc.point(degenSet[pointId].pointHandles[0]);
+	CGALPoint v2 = plc.point(degenSet[pointId].pointHandles[1]);
+	CGALPoint v3 = plc.point(degenSet[pointId].pointHandles[2]);
+	CGALPoint v4 = plc.point(degenSet[pointId].pointHandles[3]);
+	CGALPoint v5 = plc.point(degenSet[pointId].pointHandles[4]);
 
 	if (coplanar(v1, v2, v3, v4) || coplanar(v2, v3, v4, v5) || coplanar(v3, v4, v5, v1) || coplanar(v4, v5, v1, v2) || coplanar(v5, v1, v2, v3))
 		return false;
 
-	return true; // because no 4-tuple of points are coplanar
+	return true; 
 }
 
-void computeBreakPoint(Point &vb, unsigned int pointId, vector<DegenerateVertexSetCandidate> &localDegeneracySet)
+void computeBreakPoint(CGALPoint &vb, unsigned int pointId, vector<DegenerateVertexSetCandidate> &localDegeneracySet)
 {
-	// if vertices of localDeneracySet[n] are affinely independent
-		// Let S be there common sphere, then vb is inside s
-	// if vertices of localDegeneracySet[n] aren't affinely independent(4 of them are coplanar)
-		// Let C be the common circle of those coplanar vertices, then vb lines inside C
-	
-	Point v1 = plcVertices[localDegeneracySet[pointId].pointIds[0]].first;
-	Point v2 = plcVertices[localDegeneracySet[pointId].pointIds[1]].first;
-	Point v3 = plcVertices[localDegeneracySet[pointId].pointIds[2]].first;
-	Point v4 = plcVertices[localDegeneracySet[pointId].pointIds[3]].first;
-	Point v5 = plcVertices[localDegeneracySet[pointId].pointIds[4]].first;
+
+	CGALPoint v1 = plc.point(localDegeneracySet[pointId].pointHandles[0]);
+	CGALPoint v2 = plc.point(localDegeneracySet[pointId].pointHandles[1]);
+	CGALPoint v3 = plc.point(localDegeneracySet[pointId].pointHandles[2]);
+	CGALPoint v4 = plc.point(localDegeneracySet[pointId].pointHandles[3]);
+	CGALPoint v5 = plc.point(localDegeneracySet[pointId].pointHandles[4]);
 
 	if (areAffinelyIndependent(localDegeneracySet[pointId]))
 	{
-		// find common sphere
-		// if I define a sphere using only 4 of these vertices then that will be shared by 5 as well:
-	
-		Sphere s(v1, v2, v3, v4);
+		CGALSphere s(v1, v2, v3, v4);
 		vb = s.center();
 	}	
-
-	else // 4 points are coplanar
+	else
 	{
-		// find common circle
-		// find which 4 points are coplanar
-		// find corresponding circle
-		Circle c;
+		CGALCircle c;
 
 		if (coplanar(v1, v2, v3, v4))	
-			c = Circle(v1, v2, v3); // v4 will also lie on this circle, since these vertices are co-spherical and coplanar.
+			c = CGALCircle(v1, v2, v3);
 
 		if (coplanar(v2, v3, v4, v5))	
-			c = Circle(v2, v3, v4);
+			c = CGALCircle(v2, v3, v4);
 
 		if (coplanar(v3, v4, v5, v1))	
-			c = Circle(v3, v4, v5);
+			c = CGALCircle(v3, v4, v5);
 
 		if (coplanar(v4, v5, v1, v2))	
-			c = Circle(v4, v5, v1);
+			c = CGALCircle(v4, v5, v1);
 
 		if (coplanar(v5, v1, v2, v3))	
-			c = Circle(v5, v1, v2);
+			c = CGALCircle(v5, v1, v2);
 
 		vb = c.center(); 
 	}
 }
 
-bool isVertexEncroachingSegment(Point vb, unsigned int segmentId)
+bool isVertexEncroachingSegment(CGALPoint vb, DartHandle segmentHandle)
 {
-	// compute diametric sphere and check if:
-		// radius < distance of center from vb
-			// if yes, return true
-			// else return false
-	float x = (plcVertices[plcSegments[segmentId].pointIds[0]].first.x() + plcVertices[plcSegments[segmentId].pointIds[1]].first.x()) / 2.0;
-	float y = (plcVertices[plcSegments[segmentId].pointIds[0]].first.y() + plcVertices[plcSegments[segmentId].pointIds[1]].first.y()) / 2.0;
-	float z = (plcVertices[plcSegments[segmentId].pointIds[0]].first.z() + plcVertices[plcSegments[segmentId].pointIds[1]].first.z()) / 2.0;
 
-	Point sphereCenter(x, y, z);
+	CGALPoint endpoint1(plc.point(segmentHandle));
+	CGALPoint endpoint2(plc.point(plc.beta(segmentHandle, 1)));
 
-	float sphereRadius = sqrt(pow(sphereCenter.x() - plcVertices[plcSegments[segmentId].pointIds[0]].first.x(), 2) + pow(sphereCenter.y() - plcVertices[plcSegments[segmentId].pointIds[0]].first.y(), 2) + pow(sphereCenter.z() - plcVertices[plcSegments[segmentId].pointIds[0]].first.z(), 2));
+	float x = (endpoint1.x() + endpoint2.x()) / 2.0;
+	float y = (endpoint1.y() + endpoint2.y()) / 2.0;
+	float z = (endpoint1.z() + endpoint2.z()) / 2.0;
+
+	CGALPoint sphereCenter(x, y, z);
+
+	float sphereRadius = sqrt(pow(sphereCenter.x() - endpoint1.x(), 2) + pow(sphereCenter.y() - endpoint1.y(), 2) + pow(sphereCenter.z() - endpoint1.z(), 2));
 
 	float centerToBreakingPointDistance = sqrt(pow(sphereCenter.x() - vb.x(), 2) + pow(sphereCenter.y() - vb.y(), 2) + pow(sphereCenter.z() - vb.z(), 2));
 
@@ -1060,20 +858,16 @@ bool isVertexEncroachingSegment(Point vb, unsigned int segmentId)
 		
 }
 
-bool isVertexEncroachingFace(Point vb, unsigned int faceId)
+bool isVertexEncroachingFace(Point vb, DartHandle facetHandle)
 {
-	// make a diametric sphere of face(or triangle in our case)
-	// check if radius < distance of breaking point from center
 	
-	// radius & center of circle of 3 points = radius & center of their diametric sphere 
-	
-	Point v1(plcVertices[plcFaces[faceId].pointIds[0]].first);
-	Point v2(plcVertices[plcFaces[faceId].pointIds[1]].first);
-	Point v3(plcVertices[plcFaces[faceId].pointIds[2]].first);
+	CGALPoint v1(plc.point(facetHandle));
+	CGALPoint v2(plc.point(plc.beta(facetHandle, 1)));
+	CGALPoint v3(plc.point(plc.beta(facetHandle, 1, 1)));
 
-	Circle c(v1, v2, v3);
-
-	float centerToBreakingPointDistance = sqrt(pow((c.center()).x() - vb.x(), 2) + pow((c.center()).y() - vb.y(), 2) + pow((c.center()).z() - vb.z(), 2));
+	CGALCircle c(v1, v2, v3);
+	CGALPoint circleCenter(c.center());
+	float centerToBreakingPointDistance = sqrt(pow(circleCenter.x() - vb.x(), 2) + pow(circleCenter.y() - vb.y(), 2) + pow(circleCenter.z() - vb.z(), 2));
 
 	if (sqrtf(c.squared_radius()) < centerToBreakingPointDistance)
 		return true;
@@ -1082,11 +876,11 @@ bool isVertexEncroachingFace(Point vb, unsigned int faceId)
 }
 
 
-bool isEncroachingPLC(Point vb)
+bool isEncroachingPLC(CGALPoint vb)
 {
 	// encroaches any segment
-	for (unsigned int n = 0; n < plcSegments.size(); n++)
-		if (isVertexEncroachingSegment(vb, n))
+	for (LCC::One_dart_per_cell_range<1>::iterator segmentIter = plc.one_dart_per_cell<1>().begin(), segmentIterEnd = plc.one_dart_per_cell<1>().end(); segIter != segIterEnd; segIter++)
+		if (isVertexEncroachingSegment(vb, segIter))
 			return true;
 
 	// encroaches any face
@@ -1097,30 +891,22 @@ bool isEncroachingPLC(Point vb)
 	return false;
 }
 
-void boundaryProtection(Point vb)
+void boundaryProtection(CGALPoint vb)
 {
-	// for each encroached segment:
-		// add its perturbed circumcenter to plcVerices
-		// update PLC & DT 
-	// for each encroached face:
-		// compute circumcenter x
-		// if x encroaches any segment, don't insert, goto to segment spliting using step 1 above
-		// else, add x to PLC & DT 	
-		
-	// call Delaunay segment recovery to recovery all missing segments(new segments might have been created due to new vertex insertions)
-	
-	for (unsigned int n = 0; n < plcSegments.size(); n++)
-	{
-		if (isVertexEncroachingSegment(vb, n))
+
+	for (LCC::One_dart_per_cell_range<1>::iterator segmentIter = plc.one_dart_per_cell<1>().begin(), segmentIterEnd = plc.one_dart_per_cell<1>().end(); segIter != segIterEnd; segIter++)
+		if (isVertexEncroachingSegment(vb, segIter))
 		{
 			// circumcenter of segment 'n':
-			float x = (plcVertices[plcSegments[n].pointIds[0]].first.x() + plcVertices[plcSegments[n].pointIds[1]].first.x()) / 2.0;
-			float y = (plcVertices[plcSegments[n].pointIds[0]].first.y() + plcVertices[plcSegments[n].pointIds[1]].first.y()) / 2.0;
-			float z = (plcVertices[plcSegments[n].pointIds[0]].first.z() + plcVertices[plcSegments[n].pointIds[1]].first.z()) / 2.0;
+			CGALPoint endpoint1(segmentIter);
+		        CGALPoint endpoint2(plc.beta(segmentIter, 1));	
+			float x = (endpoint1.x() + endpoint2.x()) / 2.0;
+			float y = (endpoint1.y() + endpoint2.y()) / 2.0;
+			float z = (endpoint1.z() + endpoint2.z()) / 2.0;
 
 			Point sphereCenter(x, y, z);
 
-			updatePLCAndDT(sphereCenter, n);
+			updatePLCAndDT(sphereCenter, segmentIter);
 		}
 	}
 	
@@ -1149,12 +935,12 @@ void removeLocalDegeneracies()
 				perturbRemove(n, localDegeneracySet); 
 			else
 			{
-				Point vb;	
+				CGALPoint vb;	
 				computeBreakPoint(vb, n, localDegeneracySet);
 				if (isEncroachingPLC(vb))
 					boundaryProtection(vb);
 				else
-					plcVertices.push_back(make_pair(vb, plcVertices.size()));		
+					plc.add_vertex(vb);
 			}						
 		}
 	}
@@ -1167,54 +953,48 @@ void removeLocalDegeneracies()
 
 /////////////////////////////////////////////// Facet recovery starts ///////////////////////////////////////////////////////////
 
-void formMissingSubfaceQueue(vector<unsigned int> &missingSubfacesQueue)
+void formMissingSubfaceQueue(vector<DartHandle> &missingSubfacesQueue)
 {
-	// for all plcFaces check if those faces are already in DT 
-	// If not, add them to missingSubfaceQueue
-	// Else, continue
+
 	Delaunay::Cell_handle ch;
 	int i, j, k;
 	
 	Delaunay::Vertex v1, v2, v3;
-	Vertex_handle vh1, vh2, vh3;
+	VertexHandle vh1, vh2, vh3;
 
-	for (unsigned int n = 0; n < plcFaces.size(); n++)
+	for (LCC::One_dart_per_cell_range<2>::iterator facetIter = plc.one_dart_per_cell<2>().begin(), facetIterEnd = plc.one_dart_per_cell<2>().end(); facetIter != facetIterEnd; facetIter++)
 	{
-		DT.is_vertex(plcVertices[plcFaces[n].pointIds[0]].first, vh1);
-		DT.is_vertex(plcVertices[plcFaces[n].pointIds[1]].first, vh2);
-		DT.is_vertex(plcVertices[plcFaces[n].pointIds[2]].first, vh3);
+		DT.is_vertex(plc.point(facetIter), vh1);
+		DT.is_vertex(plc.point(plc.beta(facetIter, 1)), vh2);
+		DT.is_vertex(plc.point(plc.beta(facetIter, 1, 1)), vh3);
 
 		if (DT.is_facet(vh1, vh2, vh3, ch, i, j, k))
 			continue;
 		else
-			missingSubfacesQueue.push_back(n);
+			missingSubfacesQueue.push_back(facetIter);
 	}
 }
 
 
-void copyInfoFromDTToLCC(Delaunay dt, lcc& linearCellComplex, map <Delaunay::Cell_handle, lcc::Dart_handle> *dtCellToLCCCellMap)
+void copyInfoFromDTToLCC(Delaunay dt, LCC& linearCellComplex, map <CellHandle, DartHandle> *dtCellToLCCCellMap)
 {
+
 	for (Delaunay::Finite_cells_iterator delaunayCellIter = dt.finite_cells_begin(); delaunayCellIter != dt.finite_cells_end(); delaunayCellIter++)
 	{
-		lcc::Dart_handle lccCellHandle = (*dtCellToLCCCellMap)[delaunayCellIter];
+		DartHandle lccCellHandle = (*dtCellToLCCCellMap)[delaunayCellIter];
 
 		for (unsigned int n = 0; n < 4; n++)
 		{
-			Point_3<K> delaunayPoint = (delaunayCellIter->vertex(n))->point();
+			CGALPoint delaunayPoint = (delaunayCellIter->vertex(n))->point();
 
-			for (lcc::One_dart_per_incident_cell_range<0, 3>::iterator lccPointIter = linearCellComplex.one_dart_per_incident_cell<0, 3>(lccCellHandle).begin(); lccPointIter != linearCellComplex.one_dart_per_incident_cell<0, 3>(lccCellHandle).end(); lccPointIter++)
+			for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator lccPointIter = linearCellComplex.one_dart_per_incident_cell<0, 3>(lccCellHandle).begin(); lccPointIter != linearCellComplex.one_dart_per_incident_cell<0, 3>(lccCellHandle).end(); lccPointIter++)
 			{
-				float delX = delaunayPoint.x();
-				float delY = delaunayPoint.y();
-				float delZ = delaunayPoint.z();
-
-
-				float lccX = (linearCellComplex.point(lccPointIter)).x();
-				float lccY = (linearCellComplex.point(lccPointIter)).y();
-				float lccZ = (linearCellComplex.point(lccPointIter)).z();
-
-				if (delX == lccX && delY == lccY && delZ == lccZ)			
+				CGALPoint lccPoint = linearCellComplex.point(lccPointIter);
+				if (delaunayPoint == lccPoint)			
+				{
 					linearCellComplex.info<0>(lccPointIter) = (delaunayCellIter->vertex(n))->info();
+					break;
+				}
 			}
 		}
 	}
@@ -1225,47 +1005,32 @@ void copyInfoFromDTToLCC(Delaunay dt, lcc& linearCellComplex, map <Delaunay::Cel
 void createEquivalentTetrahedralization()
 {
 	
-	map<Delaunay::Cell_handle, lcc::Dart_handle> *dtVolumeToLccDartMap;
-	import_from_triangulation_3(cdtMesh, DT, dtVolumeToLccDartMap);
+	//map<CellHandle, DartHandle> *dtVolumeToLccDartMap;
+	import_from_triangulation_3(cdtMesh, DT);//, dtVolumeToLccDartMap);
 
-	copyInfoFromDTToLCC(DT, cdtMesh, dtVolumeToLccDartMap);
+//	copyInfoFromDTToLCC(DT, cdtMesh, dtVolumeToLccDartMap);
 }
 
 
-void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vector<DartHandle>& lcc3CellsToBeRemoved)
+void formCavity(vector<DartHandle> *cavity, DartHandle missingSubfaceHandle, vector<DartHandle>& lcc3CellsToBeRemoved)
 {
-	// compute list of tets intersecting face number: missingSubfaceId
-	// for each intersecting tet:
-		// Remove the tet from DT 
-		// Decrement counter of each facet(of neighboring tets) in contact of the removed tet by 1
-		// For all removed tets, set counter of each of their facet = INVALID_VALUE
-	// for all faces in DT:
-		// Add all faces with counter value = 1 to cavity
-		
-	
-	// Partition cavity into top & bottom cavities:
-		// For each face in global cavity
-			// Determine if it is on upper or lower side of missingSubface
-				// Take any point on the face and test orientation of point wrt. missingSubface
-					// Positive means associated facet belongs to upper cavity
-					// Negative means associated facet belongs to lower cavity	 
-
 	vector<DartHandle> intersectingTets;				
 	Point pTet[4], pTri[3];
 	
-	for (unsigned int n = 0; n < 3; n++)
-		pTri[n] = plcVertices[plcFaces[missingSubfaceId].pointIds[n]].first;
-	
+	pTri[0] = plc.point(missingSubfaceHandle);
+	pTri[1] = plc.point(plc.beta(missingSubfaceHandle, 1));
+	pTri[2] = plc.point(plc.beta(missingSubfaceHandle, 1, 1));
+	 
+	// determine the intersecting 3-cells
 	unsigned int i = 0;
-	for (lcc::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(); cellIter != cdtMesh.one_dart_per_cell<3>().end(); cellIter++)
+	for (LCC::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(), cellIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cellIter != cellIterEnd; cellIter++)
 	{
 			
 		i = 0;
 
-		for (lcc::One_dart_per_incident_cell_range<0, 3>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 3>(cellIter).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 3>(cellIter).end(); vertexIter++)
-		{
-			pTet[i++] = plcVertices[cdtMesh.info<0>(vertexIter)].first;
-		}
+		for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 3>(cellIter).begin(), vertexIterEnd = cdtMesh.one_dart_per_incident_cell<0, 3>(cellIter).end(); vertexIter != vertexIterEnd; vertexIter++)
+			pTet[i++] = cdtMesh.point(vertexIter);
+		
 		
 		CGALTetrahedron CGALTet(pTet[0], pTet[1], pTet[2], pTet[3]);
 		
@@ -1284,8 +1049,8 @@ void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vecto
 	map<DartHandle, unsigned int> facetVisitCounterMap;
 
  	// Initialize facetVisitCounter
-	for (lcc::One_dart_per_cell_range<2>::iterator faceIter = cdtMesh.one_dart_per_cell<2>().begin(); faceIter != cdtMesh.one_dart_per_cell<2>().end(); faceIter++)
-		facetVisitCounterMap.insert(pair<DartHandle, unsigned int>(faceIter, 2));
+	for (LCC::One_dart_per_cell_range<2>::iterator faceIter = cdtMesh.one_dart_per_cell<2>().begin(), faceIterEnd = cdtMesh.one_dart_per_cell<2>().end(); facetIter != facetIterEnd; faceIter++)
+		facetVisitCounterMap.insert(pair<DartHandle, unsigned int>(faceIter, 2)); // TODO: will it have 1 dart for a facet or it will contain pair for darts(in opposite direction for each face) ???
 
 	DartHandle tempTetId;
 	// Compute facetVisitCounter
@@ -1294,15 +1059,14 @@ void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vecto
 		tempTetId  = intersectingTets.back();
 		intersectingTets.pop_back();
 		
-		for (lcc::One_dart_per_incident_cell_range<2 ,3>::iterator fIter = cdtMesh.one_dart_per_incident_cell<2, 3>(tempTetId).begin(); fIter != cdtMesh.one_dart_per_incident_cell<2, 3>(tempTetId).end(); fIter++)
-			facetVisitCounterMap[fIter] = facetVisitCounterMap[fIter] - 1; 
+		for (LCC::One_dart_per_incident_cell_range<2 ,3>::iterator fIter = cdtMesh.one_dart_per_incident_cell<2, 3>(tempTetId).begin(), fIterEnd = cdtMesh.one_dart_per_incident_cell<2, 3>(tempTetId).end(); fIter != fIterEnd; fIter++)
+			facetVisitCounterMap[fIter] = facetVisitCounterMap[fIter] - 1; // TODO: Doubtful
+										   
 	}	
 
-		
-	
 	// Determine globalCavity using faceVisitCounter	
 	vector<DartHandle> globalCavity;	
-	for (map<DartHandle, unsigned int>::iterator iter = facetVisitCounterMap.begin(); iter != facetVisitCounterMap.end(); iter++)
+	for (map<DartHandle, unsigned int>::iterator iter = facetVisitCounterMap.begin(), iterEnd = facetVisitCounterMap.end(); iter != iterEnd; iter++)
 		if (facetVisitCounterMap[iter->first] == 1)
 			globalCavity.push_back(iter->first);
 		else
@@ -1313,43 +1077,43 @@ void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vecto
 		// For each face in global cavity determine position of a point on its surface wrt. missingSubface
 		// If position of this point is above this face put this face in upper cavity otherwise in bottom cavity
 	
-	Point v1 = plcVertices[plcFaces[missingSubfaceId].pointIds[0]].first; 
-	Point v2 = plcVertices[plcFaces[missingSubfaceId].pointIds[1]].first;
-	Point v3 = plcVertices[plcFaces[missingSubfaceId].pointIds[2]].first;	
+	CGALPoint v1 = plc.point(missingSegmentHandle); 
+	CGALPoint v2 = plc.point(plc.beta(missingSegmentHandle, 1));
+	CGALPoint v3 = plc.point(plc.beta(missingSegmentHandle, 1, 1));	
 
+	// generating random points
 	Random rnd1(30.0), rnd2(10.0);
 
 	float s = rnd1.uniform_real<float>(); 
 	float t = rnd2.uniform_real<float>();
-	Point *points[3];
-	unsigned int n = 0;
+	CGALPoint points[3];
+	
 	float xRand, yRand, zRand;
 
 
 	for (unsigned int g = 0; g < globalCavity.size(); g++)
 	{
-		
 		n = 0;		
 		
-		for (lcc::One_dart_per_incident_cell_range<0, 2>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 2>(globalCavity[g]).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 2>(globalCavity[g]).end(); vertexIter++)
-			points[n++] = &plcVertices[cdtMesh.info<0>(vertexIter)].first;
+		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 2>(globalCavity[g]).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 2>(globalCavity[g]).end(); vertexIter++)
+			points[n++] = cdtMesh.point(vertexIter);
 		
-		xRand = (1.0 - s - t) * points[0]->x() + s * points[1]->x() + t * points[2]->x(); // parametric representation of a point on the plane
-		yRand = (1.0 - s - t) * points[0]->y() + s * points[1]->y() + t * points[2]->y();	
-		zRand = (1.0 - s - t) * points[0]->z() + s * points[1]->z() + t * points[2]->z();
+		xRand = (1.0 - s - t) * points[0].x() + s * points[1].x() + t * points[2].x(); // parametric representation of a point on the plane
+		yRand = (1.0 - s - t) * points[0].y() + s * points[1].y() + t * points[2].y();	
+		zRand = (1.0 - s - t) * points[0].z() + s * points[1].z() + t * points[2].z();
 	
-		Point randomPointOnTheFacet(xRand, yRand, zRand); // random point inside triangle 'g' of global cavity
+		CGALPoint randomPointOnTheFacet(xRand, yRand, zRand); // random point inside triangle 'g' of global cavity
 			
-		while(orientation(v1, v2, v3, randomPointOnTheFacet) == COPLANAR)
+		while (orientation(v1, v2, v3, randomPointOnTheFacet) == COPLANAR)
 		{
 			s = rnd1.uniform_real<float>();
 			t = rnd2.uniform_real<float>();
 			
-			xRand = (1.0 - s - t) * points[0]->x() + s * points[1]->x() + t * points[2]->x();
-			yRand = (1.0 - s - t) * points[0]->y() + s * points[1]->y() + t * points[2]->y();	
-			zRand = (1.0 - s - t) * points[0]->z() + s * points[1]->z() + t * points[2]->z();
+			xRand = (1.0 - s - t) * points[0].x() + s * points[1].x() + t * points[2].x();
+			yRand = (1.0 - s - t) * points[0].y() + s * points[1].y() + t * points[2].y();	
+			zRand = (1.0 - s - t) * points[0].z() + s * points[1].z() + t * points[2].z();
 
-			randomPointOnTheFacet = Point(xRand, yRand, zRand); // re-initialize
+			randomPointOnTheFacet = CGALPoint(xRand, yRand, zRand); // re-initialize
 		}
 
 		if (orientation(v1, v2, v3, randomPointOnTheFacet) == CGAL::POSITIVE)
@@ -1362,7 +1126,7 @@ void formCavity(vector<DartHandle> *cavity, unsigned int missingSubfaceId, vecto
 
 }
 
-bool isStronglyDelaunay(DartHandle facetHandle, unordered_set<unsigned int> cavityVerticesSet)
+bool isStronglyDelaunay(DartHandle facetHandle, vector<DartHandle> cavityVerticesSet, LCC cavityLCC)
 {
 	// tests whether facet/triangle pointed to by facetHandle is strongly Delaunay wrt. vertices in cavityVerticesSet
 
@@ -1374,29 +1138,16 @@ bool isStronglyDelaunay(DartHandle facetHandle, unordered_set<unsigned int> cavi
 		// If no, then it is not even Delaunay, return false 	
 		
 	Delaunay tempDT;
-	vector<Point> cavityVertices;
+	vector<CGALPoint> cavityVertices;
 
-	for (unordered_set<unsigned int>::iterator vertexIter = cavityVerticesSet.begin(); vertexIter != cavityVerticesSet.end(); vertexIter++)
-		cavityVertices.push_back(plcVertices[*vertexIter].first);
+	for (vector<DartHandle>::iterator vertexIter = cavityVerticesSet.begin(), vertexIter = cavityVerticesSet.end(); vertexIter != vertexIterEnd; vertexIter++)
+		cavityVertices.push_back(cavityLCC.point(vertexIter));
 
 
 	// Compute DT
 	tempDT.insert(cavityVertices.begin(), cavityVertices.end());
 	
 	// test strong Delaunay criteria
-	Vertex_handle vh[3];
-	int i, j, k, h = 0;
-	Delaunay::Cell_handle ch;
-
-	for (lcc::One_dart_per_incident_cell_range<0, 2>::iterator iter = cdtMesh.one_dart_per_incident_cell<0, 2>(facetHandle).begin(); iter != cdtMesh.one_dart_per_incident_cell<0, 2>(facetHandle).end(); iter++)
-		tempDT.is_vertex(plcVertices[cdtMesh.info<0>(iter)].first, vh[h++]);
-
-
-	if (tempDT.is_facet(vh[0], vh[1], vh[2], ch, i, j, k))
-	{
-		Sphere s(vh[0]->point(), vh[1]->point(), vh[2]->point(), ((*ch).vertex(6 - i - j - k))->point());
-
-		for (vector<Point>::iterator vIter = cavityVertices.begin(); vIter != cavityVertices.end(); vIter++)
 		{	
 			if (s.has_on_boundary(*vIter))
 				return false;	
@@ -1427,7 +1178,83 @@ int locateFacetInCavity(DartHandle nonStronglyDelaunayFacet, vector<DartHandle> 
 }
 
 
-bool isCellOutsideCavity(DartHandle cellHandle, vector<DartHandle> cavity)
+
+bool areSameFacets(LCC lcc1, DartHandle d1, LCC lcc2, DartHandle d2)
+{
+	DartHandle d3 = lcc2.make_triangle(lcc1.point(d1), lcc1.point(lcc1.beta(d1, 1)), lcc1.point(lcc1.beta(d1, 1, 1))); // TODO: Fix this roundabout way of comparing facets from 2 LCCs
+	bool areSameFacets = lcc2.are_facet_same_geometry(d3, d2);
+	lcc2.remove_cell<2>(d3);	
+
+	return areSameFacets;
+}
+
+
+DartHandle locateFacetInCavity(DartHandle facet, LCC cavityLCC)
+{
+	for (LCC::One_dart_per_cell<2>::iterator facetIter = cavityLCC.one_dart_per_cell<2>().begin(), facetIterEnd = cavityLCC.one_dart_per_cell<2>().end(); facetIter != facetIterEnd; facetIter++)
+	{
+		if (areSameFacets(facet, cdtMesh, facetIter, cavityLCC))
+			return facetIter;
+		else
+			continue;
+	}
+}
+
+
+void addFaceToLCC(CGALPoint p1, CGALPoint p2, CGALPoint p3, LCC &cavityLCC)
+{
+	DartHandle newFace = cavityLCC.make_triangle(p1, p2, p3);
+	
+	// sew the triangle with existing faces in cavityLCC
+	for (LCC::One_dart_per_incident_cell_range<1, 2>::iterator segIter1 = cavityLCC.one_dart_per_incident_cell(newFace).begin(), segIterEnd1 = cavityLCC.one_dart_per_incident_cell(newFace).end(); segIter1 != segIterEnd1; segIter1++)
+	{
+		if (!cavityLCC.is_marked(segIter1, sewedMark)) // not sewed till now
+		{
+			for (LCC::Dart_range::iterator segIter2 = rts().begin(), segIterEnd2 = plc.darts().end(); segIter2 != segIterEnd2; segIter2++)
+			{
+				if (!plc.is_marked(segIter2, sewedMark) && plc.is_sewable<2>(segIter1, segIter2))
+				{
+					if (areGeometricallySame(segIter1, segIter2)) // checks the geometry of segments
+					{
+						plc.mark(segIter1, sewedMark);
+						plc.mark(segIter2, sewedMark);
+						twoCellsToBeSewed.push_back(pair<DartHandle, DartHandle>(segIter1, segIter2));
+						break;
+					}
+				}
+				else
+					continue;
+			}
+		}	
+		else
+			continue;
+	}
+	
+	// sew the faces sharing an edge
+	unsigned int k = 0;
+	for (vector<pair<DartHandle, DartHandle> >::iterator dIter = twoCellsToBeSewed.begin(), dIterEnd = twoCellsToBeSewed.end(); dIter != dIterEnd; dIter++)
+		if (plc.is_sewable<2>(dIter->first, dIter->second))
+		{
+			plc.sew<2>(dIter->first, dIter->second);
+			k++;	
+		}
+
+}
+
+
+namespace std
+{
+	template<> struct pointHash<CGALPoint>
+	{
+		size_t operator () (const CGALPoint& p) const
+		{
+			return sqrt(pow(p.x(), 2) + pow(p.y(), 2) + pow(p.z(), 2)); // TODO: effective hash
+		}
+	};
+}
+
+
+bool isTetOutsideCavity(DartHandle cellHandle, LCC filledCavityLCC)
 {
 
 
@@ -1448,11 +1275,11 @@ bool isCellOutsideCavity(DartHandle cellHandle, vector<DartHandle> cavity)
 			// Odd:
 				// return false 		
 				
-		Point p[4];
+		CGALPoint p[4];
 
 		unsigned int i = 0;
-		for (lcc::One_dart_per_incident_cell_range<0, 3>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 3>(cellHandle).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 3>(cellHandle).end(); vertexIter++)
-			p[i++] = plcVertices[cdtMesh.info<0>(vertexIter)].first;
+		for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator vertexIter = filledCavityLCC.one_dart_per_incident_cell<0, 3>(cellHandle).begin(), vertexIterEnd != filledCavityLCC.one_dart_per_incident_cell<0, 3>(cellHandle).end(); vertexIter != vertexIterEnd; vertexIter++)
+			p[i++] = filledCavityLCC.point(vertexIter);
 		
 		float x = 0.0, y = 0.0, z = 0.0;
 
@@ -1467,7 +1294,7 @@ bool isCellOutsideCavity(DartHandle cellHandle, vector<DartHandle> cavity)
 			y /= 4.0;
 			z /= 4.0;
 
-		Point tetBarycenter(x, y, z);
+		CGALPoint tetBarycenter(x, y, z);
 	
 		// generate a random ray
 		
@@ -1475,45 +1302,52 @@ bool isCellOutsideCavity(DartHandle cellHandle, vector<DartHandle> cavity)
 		Random rndGenerator2(60.0);
 		Random rndGenerator3(70.0);
 
-		Point randomPoint(rndGenerator1.uniform_real<float>(), rndGenerator2.uniform_real<float>(), rndGenerator3.uniform_real<float>());
+		CGALPoint randomPoint(rndGenerator1.uniform_real<float>(), rndGenerator2.uniform_real<float>(), rndGenerator3.uniform_real<float>());
 
-		Ray_3<K> randomRay(tetBarycenter, randomPoint);
+		CGALRay randomRay(tetBarycenter, randomPoint); // ray starting at tetBarycenter and passing through randomPoint
 		unsigned int intersectionCount = 0;
-
-		for (vector<DartHandle>::iterator facetIter = cavity.begin(); facetIter != cavity.end(); facetIter++)
+		
+		bool isUniqueIntersectionPoint = false;
+		unordered_set<CGALPoint, pointHash> uniqueIntersectionPoints;
+		for (LCC::One_dart_per_cell_range<2>::iterator facetIter = filledCavityLCC.one_dart_per_cell<2>().begin(), facetIterEnd = filledCavityLCC.one_dart_per_cell<2>().end(); facetIter != facetIterEnd; facetIter++)
 		{
 			// compute its intersection with all faces of cavity
 			// count number of intersections
-			Point facetVertices[3];
+			CGALPoint facetVertices[3];
 			
 			unsigned int k = 0;	
-			for (lcc::One_dart_per_incident_cell_range<0, 2>::iterator pointIter = cdtMesh.one_dart_per_incident_cell<0, 2>(*facetIter).begin(); pointIter != cdtMesh.one_dart_per_incident_cell<0, 2>(*facetIter).end(); pointIter++)
-				facetVertices[k++] = plcVertices[cdtMesh.info<0>(pointIter)].first;
+			for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pointIter = filledCavityLCC.one_dart_per_incident_cell<0, 2>(facetIter).begin(), pointIterEnd != filledCavityLCC.one_dart_per_incident_cell<0, 2>(facetIter).end(); pointIter != pointIterEnd; pointIter++)
+				facetVertices[k++] = filledCavityLCC;
 		
 
-			Triangle_3<K> cavityFacet(facetVertices[0], facetVertices[1], facetVertices[2]); 
-		
-			if (do_intersect(randomRay, cavityFacet))
-				intersectionCount++;
+			CGALTriangle cavityFacet(facetVertices[0], facetVertices[1], facetVertices[2]); 
+			CGALPoint intersectionPoint;
+
+			if ((intersectionPoint = intersection(randomRay, cavityFacet)) != NULL)
+			{
+				isUniqueIntersectionPoint = uniqueIntersectionPoints.insert(intersectionPoint);	
+				if (isUniqueIntersectionPoint)
+					intersectionCount++;
+				else
+					continue;
+			}
 			else
 				continue;
-		}
+		
 		
 		if (intersectionCount % 2 == 0)
 			return true;
 		else
-			return false;
+			return false;	
+               
 }
-
-
 
 
 void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>& lcc3CellsToBeRemoved)
 {
-
 	// cavity verification/expansion
 		// for all faces 'f' in upper(or lower) cavity, 
-			// Form a queue Q of all non-strongly Delunay faces in cavity C
+			// Form a queue Q of all non-strongly Delaunay faces in cavity C
 			// If f is not strongly Deluanay, 
 				// Remove f from cavity list
 				// For all tetrahedra t sharing f
@@ -1522,139 +1356,128 @@ void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>&
 							// add it to cavity  
 						// Else 
 							// remove it from cavity
-						// Cavity C and set of vertices of cavity V
+						// Modify C and set of vertices V of cavity
 			// repeat untill all faces of cavity are strongly Delaunay
+
+
+	LCC cavityLCC;
+	createLCCRepresentationForCavity(cavity, cavityLCC, cavityLCCTocdtMeshDartMap);
+
+
+
 	vector<DartHandle> nonStronglyDelaunayFacesInCavity;
-	unordered_set<unsigned int> cavityVerticesSet;
+	vector<DartHandle> cavityVerticesSet; // V
 
 	// compute set of non-strongly Delunay faces in cavity
+	do
+	{	
+		for (LCC::One_dart_per_cell_range<0>::iterator vertexIter = cavityLCC.one_dart_per_cell<0>().begin(), vertexIterEnd = cavityLCC.one_dart_per_cell<0>().end(); vertextIter != vertexIterEnd; vertexIter++)
+			cavityVerticesSet.push_back(vertexIter);
 
-	
-		
-		do
-		{	
-			for (unsigned int k = 0; k < cavity.size(); k++) 
-			{	
-				// get set of all vertices of cavity
-					// create set of vertex ids from the vertexAttribute of all vertices of each facet in cavity  					 
-					// add vertex ids to cavityVertices array 	
-				for (lcc::One_dart_per_incident_cell_range<0,2>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0,2>(cavity[k]).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0,2>(cavity[k]).end(); vertexIter++)
-		         		cavityVerticesSet.insert(cdtMesh.info<0>(vertexIter));		
-			
-			}
-
-			for (vector<DartHandle>::iterator iter = cavity.begin(); iter != cavity.end(); iter++)
-			{
-				if (isStronglyDelaunay(*iter, cavityVerticesSet))
-			        	continue;
-				else
-					nonStronglyDelaunayFacesInCavity.push_back(*iter);
-			}
-		
-
-		// For each non strongly Delunay face
-			// remove face from cavity[i]
-			// find tets from cdtMesh sharing it:
-			// for each such tet t:
-				// for all facets F of t, F != f
-				// if F is in cavity[i]
-					// remove F from cavity[i]
-				// else,
-					// add F to cavity[i]
-					
-			for (unsigned int h = 0; h < nonStronglyDelaunayFacesInCavity.size(); h++)
-			{
-				DartHandle tempNonStronglyDelaunayFacet = nonStronglyDelaunayFacesInCavity.back();
-				nonStronglyDelaunayFacesInCavity.pop_back();
-				
-				unsigned int facetPosition1, facetPosition2;
-				if ((facetPosition1 = locateFacetInCavity(tempNonStronglyDelaunayFacet, cavity)) != -1) // found, 
-				{
-			
-					// find tet from cdtMesh sharing it:
-					for (lcc::One_dart_per_incident_cell_range<2, 3>::iterator cellIter = cdtMesh.one_dart_per_incident_cell<2, 3>(tempNonStronglyDelaunayFacet).begin(); cellIter != cdtMesh.one_dart_per_incident_cell<2, 3>(tempNonStronglyDelaunayFacet).end(); cellIter++)
-					{
-						if (isCellOutsideCavity(cellIter, cavity))
-						{
-							
-							lcc3CellsToBeRemoved.push_back(cellIter);
-
-							for (lcc::One_dart_per_incident_cell_range<2, 3>::iterator faceIter = cdtMesh.one_dart_per_incident_cell<2, 3>(cellIter).begin(); faceIter != cdtMesh.one_dart_per_incident_cell<2, 3>(cellIter).end(); faceIter++)
-							{
-								if ((facetPosition2 = locateFacetInCavity(faceIter, cavity)) != -1)
-									cavity.erase(cavity.begin(), cavity.begin() + facetPosition2);
-								else // add facet to the cavity
-									cavity.push_back(faceIter);
-							}
-						}
-
-						else 
-							continue; // skip and check next neighbor cell
-							
-					}
-					// remove facet from cavity
-					cavity.erase(cavity.begin(), cavity.begin() + facetPosition1); 
-					
-				}				
-		
-			}
-		}while(nonStronglyDelaunayFacesInCavity.size() != 0);
-
-
-
-
-		
-		// Remove cells from cdtMesh(creates space for retetrahedralization)
-		for (vector<DartHandle>::iterator cIter = lcc3CellsToBeRemoved.begin(); cIter != lcc3CellsToBeRemoved.end(); cIter++)
-			remove_cell<lcc, 3>(cdtMesh, *cIter);
-		
-
-
-		// Cavity retetrahedralization:
-			// Compute DT of vertices of input cavity
-			// import it to lcc
-				
-				// create an unordered set of vertex info 
-				// insert all vertices of set to DT
-		cavityVerticesSet.clear();
-
-		for (vector<DartHandle>::iterator facetIter = cavity.begin(); facetIter != cavity.end(); facetIter++)
-			for (lcc::One_dart_per_incident_cell_range<0, 2>::iterator vertexIter = cdtMesh.one_dart_per_incident_cell<0, 2>(*facetIter).begin(); vertexIter != cdtMesh.one_dart_per_incident_cell<0, 2>(*facetIter).end(); vertexIter++)
-				cavityVerticesSet.insert(cdtMesh.info<0>(vertexIter));		
-		
-
-		// create a vector of vertices of cavity
-		vector <pair<Point, unsigned int> > cavityVertices;
-		for (unordered_set<unsigned int>::iterator pointIdIter = cavityVerticesSet.begin(); pointIdIter != cavityVerticesSet.end(); pointIdIter++)
-			cavityVertices.push_back(plcVertices[*pointIdIter]);
-
-		
-		//create cavity vertices
-		Delaunay cavityDT;
-		lcc cavityLCC;
-
-		cavityDT.insert(cavityVertices.begin(), cavityVertices.end());
-
-		map<Delaunay::Cell_handle, lcc::Dart_handle> *dtCellToLCCCellMap;
-		import_from_triangulation_3(cavityLCC, cavityDT, dtCellToLCCCellMap);
-		copyInfoFromDTToLCC(cavityDT, cavityLCC, dtCellToLCCCellMap);
-	
-		// Sew retetrahedralized cavity back to original cdtMesh
-		// Add cavityLCC to cdtMesh
-		Point_3<K> tempPt[4];
-		unsigned int x;
-
-		for (lcc::One_dart_per_cell_range<3>::iterator cIter = cavityLCC.one_dart_per_cell<3>().begin(); cIter != cavityLCC.one_dart_per_cell<3>().end(); cIter++)
+		for (LCC::One_dart_per_cell_range<2>::iterator facetIter = cavityLCC.one_dart_per_cell<2>().begin(), facetIterEnd = cavityLCC.one_dart_per_cell<2>().end(); facetIter != facetIterEnd; facetIter++)
 		{
-			x = 0;
-
-			for (lcc::One_dart_per_incident_cell_range<0, 3>::iterator vIter = cavityLCC.one_dart_per_incident_cell<0, 3>(cIter).begin(); vIter != cavityLCC.one_dart_per_incident_cell<0, 3>(cIter).end(); vIter++)
-				tempPt[x++] = cdtMesh.point(vIter); 			
-				
-			cdtMesh.make_tetrahedron(tempPt[0], tempPt[1], tempPt[2], tempPt[3]);
+			if (isStronglyDelaunay(facetIter, cavityVerticesSet, cavityLCC))
+		        	continue;
+			else
+				nonStronglyDelaunayFacesInCavity.push_back(facetIter);
 		}
+	
+		// For each non strongly Delunay face
+		// remove face from cavity[i]
+		// find tets from cdtMesh sharing it:
+		// for each such tet t:
+			// for all facets F of t, F != f
+			// if F is in cavity[i]
+				// remove F from cavity[i]
+			// else,
+				// add F to cavity[i]
+				
+		for (unsigned int h = 0; h < nonStronglyDelaunayFacesInCavity.size(); h++)
+		{
+			DartHandle tempNonStronglyDelaunayFacet = nonStronglyDelaunayFacesInCavity.back();
+			nonStronglyDelaunayFacesInCavity.pop_back();
+		
+			// find tet from cdtMesh sharing it:
+			DartHandle cellToBeRemovedHandle = cavityLCCTocdtMeshDartMap[tempNonStronglyDelaunayFacet];
+			lcc3CellsToBeRemoved.push_back(cellToBeRemovedHandle);
 
-		cdtMesh.sew3_same_facets();
+			for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator faceIter = cdtMesh.one_dart_per_incident_cell<2, 3>(cellToBeRemovedHandle).begin(), faceIterEnd != cdtMesh.one_dart_per_incident_cell<2, 3>(cellToBeRemovedHandle).end(); facetIter != facetIterEnd; faceIter++) // for all faces of the removed cell
+			{
+				if (!areSameFacet(faceIter, tempNonStronglyDelaunayFacet))
+				{
+					if ((facetHandle = locateFacetInCavity(faceIter, cavityLCC)) != -1)
+						cavityLCC.remove_cell<2>(facetHandle);
+					else // add facet to the cavity
+					{
+						CGALPoint p1 = plc.point(faceIter);
+						CGALPoint p2 = plc.point(plc.beta(faceIter, 1));
+						CGALPoint p3 = plc.point(plc.beta(faceIter, 1, 1));
+						
+						addFaceToLCC(p1, p2, p3, cavityLCC); 
+						
+					}
+				}
+			}
+			// remove facet from cavity
+			cavityLCC.remove_cell<2>(tempNonStronglyDelaunayFacet); 
+		}
+	}while(nonStronglyDelaunayFacesInCavity.size() != 0);
+
+	
+	// Remove cells from cdtMesh(creates space for retetrahedralization)
+	for (vector<DartHandle>::iterator cIter = lcc3CellsToBeRemoved.begin(); cIter != lcc3CellsToBeRemoved.end(); cIter++)
+		cdtMesh.remove_cell<3>(*cIter);
+	
+
+	// Cavity retetrahedralization:
+		// Compute DT of vertices of input cavity
+		// import it to lcc
+			
+	// create a vector of vertices of cavity
+	vector <CGALPoint> cavityVertices; 
+	for (LCC::One_dart_per_cell<0>::iterator vertexIter = cavityLCC.one_dart_per_cell<0>().begin(), vertexIterEnd = cavityLCC.one_dart_per_cell<0>().end(); vertexIter != vertexIterEnd; vertexIter++)
+		cavityVertices.push_back(cavityLCC.point(vertexIter));
+
+	Delaunay cavityDT;
+
+	cavityDT.insert(cavityVertices.begin(), cavityVertices.end()); 
+
+	LCC filledCavityLCC;
+
+	import_from_triangulation_3(cavityDT, filledCavityLCC);	
+	
+	// Mark tetrahedrons as 'inside/outside' wrt. cavity boundary	
+	
+	// Remove outside tetrahedrons
+	// Sew the remaining 3-cells 
+	int insideOutsideMark = filledCavityLCC.get_new_mark();
+
+	for (LCC::One_dart_per_cell_range<3>::iterator tetIter = filledCavityLCC.one_dart_per_cell<3>().begin(), tetIterEnd = filledCavityLCC.one_dart_per_cell<3>().end(); tetIter != tetIterEnd; tetIter++)
+	{
+		if (isTetOutsideCavity(tetIter, filledCavityLCC))
+			filledCavityLCC.mark(tetIter, insideOutsideMark);
+		else
+			continue;
+	}
+	
+	// remove the marked 3-cells & add remaining ones to cdtMesh
+	for (LCC::One_dart_per_cell_range<3>::iterator removeTetIter = filledCavityLCC.one_dart_per_cell<3>().begin(), removeTetIterEnd = filledCavityLCC.one_dart_per_cell<3>().end(); removeTetIter != removeTetIterEnd; removeTetIter++)
+	{
+		if(filledCavityLCC.is_marked(removeTetIter))
+			filledCavityLCC.remove_cell<3>(removeTetIter);
+		else
+		{
+			CGALPoint p[4];
+			unsigned int i = 0;
+			for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator vIter = filledCavityLCC.one_dart_per_incident_cell<0, 3>(removeTetIter).begin(), vIterEnd = filledCavityLCC.one_dart_per_incident_cell<0, 3>(removeTetIter).end(); vIter != vIterEnd; vIter++)
+				p[i++] = filledCavityLCC.point(vIter);
+			
+			cdtMesh.make_tetrahedron(p[0], p[1], p[2], p[3]);
+		}
+	}
+	
+	// sew the new cavity filled LCC with existing cdtMesh
+	cdtMesh.sew3_same_facets();
 		
 }
 
@@ -1662,18 +1485,8 @@ void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>&
 // recovers the constraint faces
 void recoverConstraintFaces()
 {
-
-	// input X2, D2
-	// output CDT of X2
-	
-	// form a queue of missing subfaces
-	// while (Q!=0)
-	// 	remove an uncovered subface f from Q
-	// 	for 2 cavities C1, C2 by formcavity procedure
-	// 	for each cavity Ci:
-	// 	call cavity retetrahedralization subroutine
 	 			
-        vector<unsigned int> missingSubfacesQueue;
+        vector<DartHandle> missingSubfacesQueue;
 	formMissingSubfaceQueue(missingSubfacesQueue);
 	vector<DartHandle> cavity[2];
 	unsigned int missingSubfaceId;
@@ -1711,8 +1524,8 @@ int main()
 	readPLCInput();
 	computeDelaunayTetrahedralization();
 	recoverConstraintSegments();
-	//removeLocalDegeneracies();
-	//recoverConstraintFaces();
+	removeLocalDegeneracies();
+	recoverConstraintFaces();
 
 	return 0;
 }
