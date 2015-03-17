@@ -1,25 +1,16 @@
-/*
- * Input  : PLC(represented using CGAL's LCC structure)
- * Output : cdtMesh(again, LCC)
- */
-
 #include "cdtGen.h"
 
-// Input
-LCC plc;
-
-// Intermidiate global structures
-Delaunay DT;
-vector <Point> plcVertexVector;
+LCC plc; /*!< Input picewise linear cell complex representing the input*/
+Delaunay DT; /*< Intermidiate structure used for storing Delaunay tetrahedralization*/
+vector <Point> plcVertexVector; /*> Used for initializing plc*/
 class Triangle
 {
 	size_t pointIds[3];
 };
 
-vector <Triangle> plcFaceVector;
+vector <Triangle> plcFaceVector; /*> Used for initializing plc*/
 
-// Output
-LCC cdtMesh;
+LCC cdtMesh; /*!< Output mesh */
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
