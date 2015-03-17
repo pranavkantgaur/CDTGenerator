@@ -1,12 +1,20 @@
 #include "cdtGen.h"
 
-LCC plc; /*!< Input picewise linear cell complex representing the input*/
+LCC plc; /*!< Input piecewise linear cell complex representing the input*/
 Delaunay DT; /*< Intermidiate structure used for storing Delaunay tetrahedralization*/
 vector <Point> plcVertexVector; /*> Used for initializing plc*/
+
+/*! \class Triangle
+    \brief Represents triangle 
+  
+    Triangle class stores indices of vertices. 
+*/
 class Triangle
 {
-	size_t pointIds[3];
+	public:
+		size_t pointIds[3]; /*< Indices of points */
 };
+
 
 vector <Triangle> plcFaceVector; /*> Used for initializing plc*/
 
@@ -14,17 +22,22 @@ LCC cdtMesh; /*!< Output mesh */
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-static float tempPoint[3];
-static int pointCount = 0;
-unsigned int dimensionId = 0;
-static unsigned pointId = 0;
+static float tempPoint[3]; /*< scratchpad for storing point */
+static int pointCount = 0; /*< count for number of points */
+unsigned int dimensionId = 0; /*< index into x, y, z component of a point */
+static unsigned pointId = 0; /*< unique index of a point */
 
+/*! \fn static int vertex_cb(p_ply_argument argument)
+    \brief Callback for reading vertex from PLY file	
+    
+    \param argument represents PLY file
+ */
 static int vertex_cb(p_ply_argument argument) 
 {	
 	long eol;
 	ply_get_argument_user_data(argument, NULL, &eol);
 	tempPoint[dimensionId++] = ply_get_argument_value(argument);
-	// insert the vertex into plcVertex
+	
 	if (eol)
 	{
 		plcVertexVector.push_back(Point(tempPoint[0],tempPoint[1],tempPoint[2]));
@@ -33,6 +46,12 @@ static int vertex_cb(p_ply_argument argument)
 	
 	return 1;
 }
+
+/*! \fn static int face_cb(p_ply_argument argument)
+    \brief Reads face information from PLY file
+
+   \param argument Represents PLY file 
+*/
 
 static int face_cb(p_ply_argument argument) 
 {
@@ -59,7 +78,11 @@ static int face_cb(p_ply_argument argument)
 	return 1;
 }
 
-// reads input PLC
+/*! \fn void readPLCInput()
+    \brief Reads PLC from input(only PLY supported currently) file
+
+    Reads vertex and face information and initializes corresponding linear cell complex _plc_
+ */
 void readPLCInput()
 {
 	// read PLY file(assumed to contain the PLC)
@@ -166,7 +189,14 @@ void readPLCInput()
 	cout << "\nNumber of pairs to be sewed: " << twoCellsToBeSewed.size() << "\n";
 }
 
+/*! \fn void writePLYOutput(LCC &lcc, string fileName)
+    \brief Writes LCC to a PLY file
 
+     Initializes PLY file header, vertices, faces from LCC and writes it to the location pointed to by _filename_
+
+    \param [in] lcc Input linear cell complex
+    \param [in] fileName Name of the putput file
+ */
 
 void writePLYOutput(LCC &lcc, string fileName)
 {
@@ -224,8 +254,9 @@ void writePLYOutput(LCC &lcc, string fileName)
 	ply_close(lccOutputPLY);			
 }
 
-
-// computes delaunay tetrahedralization
+/*! \fn void computeDelaunayTetrahedralization()
+    \brief Computes Delaunay tetrahedralization
+ */
 void computeDelaunayTetrahedralization()
 {	
 	vector <pair <CGALPoint, DartHandle> > lccVertexVector;
@@ -242,8 +273,13 @@ void computeDelaunayTetrahedralization()
 
 
 
-///////////////////////////////////////////// Segment recovery //////////////////////////////////////////////////////////////
+/*! \fn void formMissingSegmentsQueue(vector<DartHandle> &missingSegmentQueue)
+    \brief Collects missing constraint segments in a queue
 
+    Determines which constraint segments are missing from Delaunay tetrahedralization of vertices of PLC
+
+    \param missingSegmentQueue [Out] Contains the _DartHandle_ to the missing constraint segments after execution.
+*/
 
 void formMissingSegmentsQueue(vector<DartHandle> &missingSegmentQueue)
 {
@@ -269,7 +305,14 @@ void formMissingSegmentsQueue(vector<DartHandle> &missingSegmentQueue)
 	return;
 }
 
-unsigned int computeCircumradius(Point &A, Point &B, Point &encroachingCandidate)
+/*! \fn unsigned int computeCircumradius(CGALPoint &A, CGALPoint &B, CGALPoint &encroachingCandidate)
+    \brief Computes circumradius of circle defined by input points
+
+    \param [in] A Endpoint 1 of constraint segment
+    \param [in] B Endpoint 2 of constraint segment
+    \param [in] encroachingCandidate Candidate for reference point
+*/
+unsigned int computeCircumradius(CGALPoint &A, CGALPoint &B, CGALPoint &encroachingCandidate)
 {
 	// computing circumradius of a triangle:
 	
@@ -282,7 +325,15 @@ unsigned int computeCircumradius(Point &A, Point &B, Point &encroachingCandidate
 	return circumradius = (a * b * c) / sqrt((a + b + c) * (b + c - a) * (c + a - b) * (a + b - c));
 }
 
-void computeReferencePoint(Point *refPoint, DartHandle missingSegmentHandle)
+
+/*! \fn void computeReferencePoint(CGALPoint *refPoint, DartHandle missingSegmentHandle)
+    \brief Computes the reference point for segment splitting
+
+    Computes reference point which will be used for determing the location of _steiner point_ for the input missing constraint segment.
+    \param [out] refPoint Pointer to the computed reference point.
+    \param [in] missingSegmentHandle Dart handle of missing constraint segment.
+*/
+void computeReferencePoint(CGALPoint *refPoint, DartHandle missingSegmentHandle)
 {
 
 	Point &A = plc.point(missingSegmentHandle);
@@ -330,7 +381,14 @@ void computeReferencePoint(Point *refPoint, DartHandle missingSegmentHandle)
 	return;
 }
 
-float dotProduct (DartHandle segment1Handle, DartHandle segment2Handle)
+
+/*! \fn float dotProduct(DartHandle segment1Handle, DartHandle segment2Handle)
+    \brief Computes dot product of vectors represented by input segments.
+
+    \param [in] segment1Handle DartHandle for the first segment
+    \param [in] segment2Handle DartHandle for the second segment
+ */
+float dotProduct(DartHandle segment1Handle, DartHandle segment2Handle)
 {
 	CGALPoint segment1Vertex[2];
 	CGALPoint segment2Vertex[2];
@@ -351,6 +409,11 @@ float dotProduct (DartHandle segment1Handle, DartHandle segment2Handle)
 
 }
 
+/*! \fn float vectorMagnitude(DartHandle inputSegmentHandle)
+    \brief Computes magnitue of input vector
+
+    \param [in] inputSegmentHandle DartHandle of input segment
+ */
 float vectorMagnitude(DartHandle inputSegmentHandle)
 {
 	CGALPoint segmentVertices[2];
@@ -366,6 +429,12 @@ float vectorMagnitude(DartHandle inputSegmentHandle)
 }
 
 
+/*! \fn float computeAngleBetweenSegments(DartHandle segment1Handle, DartHandle segment2Handle)
+    \brief Computes angle between vectors represented by input segments.
+
+    \param [in] segment1Handle DartHandle for first input segment
+    \param [in] segment2Handle DartHandle for second input segment
+ */
 float computeAngleBetweenSegments(DartHandle segment1Handle, DartHandle segment2Handle)
 {
 
@@ -374,6 +443,12 @@ float computeAngleBetweenSegments(DartHandle segment1Handle, DartHandle segment2
 	return (angle * 180.0f / Pi); // conversion to degrees
 }
 
+/*! \fn bool isVertexAcute(DartHandle inputPointHandle)
+    \brief Tests whether input vertex is acute
+
+    A vertex is _not_ acute if there exists _atleast_ one pair of _incident_ segments which have angle _greater_ than 90 degrees.    
+   \param [in] inputPointHandle DartHandle of input vertex
+ */
 bool isVertexAcute(DartHandle inputPointHandle)
 {
 	// Determine segment-pair(involving A) 
@@ -393,11 +468,18 @@ bool isVertexAcute(DartHandle inputPointHandle)
 }
 
 
+/*! \fn unsigned int determineSegmentType(DartHandle missingSegmentHandle)
+    \brief Determines the input segment type
+
+    A segment is of _type-1_ if _none_ of its endpoints are _acute_. If _exactly_ one endpoint is acute than segment is of _type-2_.
+    \param [in] DartHandle for input constraint segment
+
+ */
 unsigned int determineSegmentType(DartHandle missingSegmentHandle)
 {
 
-	Point &A = plc.point(missingSegmentHandle);
-	Point &B = plc.point(plc.beta(missingSegmentHandle, 1));
+	CGALPoint &A = plc.point(missingSegmentHandle);
+	CGALPoint &B = plc.point(plc.beta(missingSegmentHandle, 1));
 
 	bool vertexAIsAcute = isVertexAcute(missingSegmentHandle);
 	bool vertexBIsAcute = isVertexAcute(plc.beta(missingSegmentHandle, 1));
@@ -411,14 +493,26 @@ unsigned int determineSegmentType(DartHandle missingSegmentHandle)
 		return 3;
 }
 
-float computeSegmentLength(Point &A, Point &B)
+/*! \fn float computeSegmentLangth(CGALPoint &A, CGALPoint &B)
+    \brief Computes Euler length of the segment represented by _A_ and _B_
+
+    \param [in] A First endpoint of the segment
+    \param [in] B Second endpoint of the segment
+ */
+float computeSegmentLength(CGALPoint &A, CGALPoint &B)
 {
 	float sLength;
 	sLength = sqrt(pow(A.x() - B.x(), 2) + pow(A.y() - B.y(), 2) + pow(A.z() - B.z(), 2));
 	return sLength;
 }
 
-void updatePLCAndDT(Point &v, DartHandle missingSegmentHandle)
+/*! void updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
+   /brief Updates PLC and Delaunay triangulation after insertion of a new vertex into a constraint segment.
+    
+   /param [in] v New vertex to be inserted into a constraint segment of PLC
+   /param p[ih] missignSegmentHandle DartHandle of constraint segment which will be split after inserting new vertex  
+ */
+void updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
 {
 
 	// update PLC
@@ -427,7 +521,12 @@ void updatePLCAndDT(Point &v, DartHandle missingSegmentHandle)
 	computeDelaunayTetrahedralization(); 
 }
 
-
+/*! \fn void splitMissingSegment(DartHandle missingSegmentHandle)
+    \brief Splits the missing constraint segment
+    
+    A constraint segment is split(by insertion of a new vertex) by applying segment splitting rules. Purpose of splitting is to make resulting subsegments _strongly Delaunay_.
+    \param [in] missingSegmentHandle DartHandle of missing constraint segment
+ */
 void splitMissingSegment(DartHandle missingSegmentHandle)
 {
 
@@ -603,12 +702,13 @@ void splitMissingSegment(DartHandle missingSegmentHandle)
 	return;
 }
 
-
+/*! void recoverConstraintSegments()
+    \brief Top-level routine for recovering constraint segments.
+	
+    Missing constriant segments of PLC are recovered by spliting the segments in such a way so that resulting sub-segments become _strongly Delaunay_.
+*/
 void recoverConstraintSegments()
 {
-	// I/P: plc1, DT1
-	// O/P: plc2, DT2
-	
 	vector<DartHandle> missingSegmentQueue;
 	DartHandle missingSegment;
 
@@ -628,16 +728,21 @@ void recoverConstraintSegments()
 	return;
 }
 
-////////////////////////////////////////////// Local Degeneracy Removal begin ///////////////////////////////////////////////////
-
+/* \class DegenerateVertexSetCandidate
+   \brief Models a set of 5 _cospherical_ vertices   
+ */
 class DegenerateVertexSetCandidate
 {
 	public:
-		DartHandle pointHandles[5];
+		DartHandle pointHandles[5]; /*< Array of DartHandles of _cospherical_ vertices*/
 };
 
 
-// returns true if  given vertices are co-spherical
+/*! bool areCospherical(DegenerateVertexSetCandidate degenSet)
+    \brief Tests whether input 5-vertex set is _cospherical_
+
+    \param [in] degenSet A set of 5 vertices
+*/
 bool areCospherical(DegenerateVertexSetCandidate degenSet)
 {	
 	CGALPoint p[5];
@@ -651,6 +756,12 @@ bool areCospherical(DegenerateVertexSetCandidate degenSet)
 		return false;
 }
 
+
+/*! \fn void addLocalDegeneraciesToQueue(vector<DegenerateVertexSetCandiate> &localDegeneracySet)
+    \brief Collects all local degneracies from PLC into a queue.
+    
+     \param [out] Write local degeneracy sets in this queue    
+ */
 void addLocalDegeneraciesToQueue(vector<DegenerateVertexSetCandidate> &localDegeneracySet)
 {	
 	DegenerateVertexSetCandidate degenerateSetCandidate;
@@ -674,8 +785,12 @@ void addLocalDegeneraciesToQueue(vector<DegenerateVertexSetCandidate> &localDege
 }
 
 			
-// perturbation should be such that it does not make PLC inconsistent
-bool isVertexPerturbable(unsigned pointId)
+/* \fn bool isVertexPerturbable(unsigned int pointId)
+   \brief Tests whether input vertex is _perturbable_
+
+   \param [in] pointHandle DartHandle for the input point
+ */
+bool isVertexPerturbable(DartHandle pointHandle)
 {
 	bool perturbable = false;
 	
@@ -699,28 +814,49 @@ bool isVertexPerturbable(unsigned pointId)
 	return perturbable;
 }
 
-bool isVertexSegmentSafePertubable(unsigned int pointId)
+/*! \fn bool isVertexSegmentSafePerturbable(DartHandle pointHandle)
+
+    \brief Tests whether input vertex is _segment safe_ perturbable  	
+    
+    A vertex is _segment-safe_ perturbable if there exists a perturbation of vertex which does not make PLC _inconsistent_.
+    
+    \param [in] pointHandle DartHandle of input point
+*/
+bool isVertexSegmentSafePertubable(DartHandle pointHandle)
 {
 	bool segmentSafePerturbable = false;
 
 	return segmentSafePerturbable;
 }
 
+/*! \fn bool isDegeneracyRemovable(DegeneracteVertexSetCandidate degenCandidate)
+    \brief Tests whether input degeneracy is _removable_
+    
+    A degeneracy is _removable_ if it has atleast _one_ vertex with a possibility of _segment-safe_ perburbation.    
+
+    \param [in] degenCandidate A degenerate vertex set candidate to be tested for _removability_.
+ */
 bool isDegeneracyRemovable(DegenerateVertexSetCandidate degenCandidate)
 {
 	bool removable = false;
-	
-
-
 	return removable;
 }
 
-void perturbRemove(unsigned int pointId, vector<DegenerateVertexSetCandidate>& localDegeneracySet)
+/* /fn void perturbRemove(DartHandle pointHandle, vector<DegenerateVertexSetCandidate>& localDegeneracySet)
+   /brief Removes vertex using _perturbation_ for breaking local degeneracy.   
+ 
+*/
+void perturbRemove(DartHandle pointHandle, vector<DegenerateVertexSetCandidate>& localDegeneracySet)
 {
 	// DO NOTHING FOR NOW
 }
 
+/*! \fn bool areAffinelyIndependent(DegenerateVertexSetCandidate degenSet)
 
+    \brief Tests whether vertices in the input local deheneracy set have _affine_ independence.
+
+    \param [in] degenSet A set of 5 _cospherical_ vertices
+ */
 bool areAffinelyIndependent(DegenerateVertexSetCandidate degenSet)
 {
 
@@ -736,6 +872,17 @@ bool areAffinelyIndependent(DegenerateVertexSetCandidate degenSet)
 	return true; 
 }
 
+
+/*! \fn void computeBreakPoint(CGALPoint &vb, unsigned int pointId, vector<DegenerateVertexSetCandidate> &localDegeneracySet)
+    
+    \brief Computes _breaking point_ used for which is used for resolving local degeneracy.
+
+    \param vb [out] The computed breaking point
+
+    \param pointId [in] Index into the input local degeneracy set
+
+    \param localDegeneracySet [in] The local degeneracy set containing all local degeneracies of PLC
+ */
 void computeBreakPoint(CGALPoint &vb, unsigned int pointId, vector<DegenerateVertexSetCandidate> &localDegeneracySet)
 {
 
@@ -773,6 +920,17 @@ void computeBreakPoint(CGALPoint &vb, unsigned int pointId, vector<DegenerateVer
 	}
 }
 
+
+/*! \fn bool isVertexEncroachingSegment(CGALPoint vb, DartHandle segmentHandle)
+ 
+    \brief Tests whether input vertex _encroaches_ the segment.
+    
+    A vertex _encroaches_ a segment if it lies _on_ or _inside_ its diameter sphere.
+
+    \param [in] vb Input vertex
+
+    \param [in] DartHandle to the segment to be tested for _encroachment_
+*/
 bool isVertexEncroachingSegment(CGALPoint vb, DartHandle segmentHandle)
 {
 
@@ -797,7 +955,17 @@ bool isVertexEncroachingSegment(CGALPoint vb, DartHandle segmentHandle)
 		
 }
 
-bool isVertexEncroachingFace(Point vb, DartHandle facetHandle)
+/*! \fn bool isVertexEncroachingFace(CGALPoint vb, DartHandle facetHandle)
+ 
+    \brief Tests whether input vertex _encroaches_ the facet.
+    
+    A vertex _encroaches_ a facets if it lies _on_ or _inside_ its diameter circumsphere.
+
+    \param [in] vb Input vertex
+
+    \param [in] DartHandle to the facet to be tested for _encroachment_
+*/
+bool isVertexEncroachingFace(CGALPoint vb, DartHandle facetHandle)
 {
 	
 	CGALPoint v1(plc.point(facetHandle));
@@ -815,6 +983,12 @@ bool isVertexEncroachingFace(Point vb, DartHandle facetHandle)
 }
 
 
+/*! \fn bool isEncroachingPLC(CGALPoint vb)
+    
+    \brief Tests whether input point encroaches any segment or a facet of PLC.  
+    
+    \param [in] vb Input point
+ */
 bool isEncroachingPLC(CGALPoint vb)
 {
 	// encroaches any segment
@@ -830,6 +1004,13 @@ bool isEncroachingPLC(CGALPoint vb)
 	return false;
 }
 
+
+/*! \fn void boundaryProtection(CGALPoint vb)
+
+  \brief Boundary protection procedure
+
+  \param [in] vb Input point
+ */
 void boundaryProtection(CGALPoint vb)
 {
 
@@ -843,7 +1024,7 @@ void boundaryProtection(CGALPoint vb)
 			float y = (endpoint1.y() + endpoint2.y()) / 2.0;
 			float z = (endpoint1.z() + endpoint2.z()) / 2.0;
 
-			Point sphereCenter(x, y, z);
+			CGALPoint sphereCenter(x, y, z);
 
 			updatePLCAndDT(sphereCenter, segmentIter);
 		}
@@ -852,12 +1033,11 @@ void boundaryProtection(CGALPoint vb)
 }
 
 
-// removes local degeneracies from Delaunay tetrahedralization
+/*! \fn void removeLocalDegeneracies()
+    \brief Top-level function for dealing with removal of local degeneracies from PLC.
+ */
 void removeLocalDegeneracies()
 {
-
-// I/P: plcVertices1, plcFaces1, plcSegments1, DT1
-// O/P: plcVertices2, plcFaces2, plcSegments2, DT2
 
 	cout << "\nStarting local degeneracy removal...";
 
@@ -886,12 +1066,12 @@ void removeLocalDegeneracies()
 	cout << "\nLocal degeneracy removal completed";
 }
 
-///////////////////////////////////////////////////Local Degeneracy Removal Ends//////////////////////////////////////////////////////
+/*! \fn void formMissingSubfaceQueue(vector<DartHandle> &missingSubfacesQueue)
+    
+     \brief Collects all constraint faces from PLC which are missing from corresponding Delaunay triangulation.
 
-
-
-/////////////////////////////////////////////// Facet recovery starts ///////////////////////////////////////////////////////////
-
+     \param [out] missingSubfacesQueue Add all missing constraint faces in this vector
+ */
 void formMissingSubfaceQueue(vector<DartHandle> &missingSubfacesQueue)
 {
 
@@ -914,43 +1094,16 @@ void formMissingSubfaceQueue(vector<DartHandle> &missingSubfacesQueue)
 	}
 }
 
+/*! \fn void formCavity(vector<DartHandle> *cavity, DartHandle missingSubfaceHandle, vector<DartHandle>& lcc3CellsToBeRemoved)
 
-void copyInfoFromDTToLCC(Delaunay dt, LCC& linearCellComplex, map <CellHandle, DartHandle> *dtCellToLCCCellMap)
-{
+     \brief Computes cavities created by insertion of missing constraint faces into Delaunay triangulation.
 
-	for (Delaunay::Finite_cells_iterator delaunayCellIter = dt.finite_cells_begin(); delaunayCellIter != dt.finite_cells_end(); delaunayCellIter++)
-	{
-		DartHandle lccCellHandle = (*dtCellToLCCCellMap)[delaunayCellIter];
+     \param [out] cavity Output cavity
 
-		for (unsigned int n = 0; n < 4; n++)
-		{
-			CGALPoint delaunayPoint = (delaunayCellIter->vertex(n))->point();
+     \param [in] DartHandle for a missing constraint facet
 
-			for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator lccPointIter = linearCellComplex.one_dart_per_incident_cell<0, 3>(lccCellHandle).begin(); lccPointIter != linearCellComplex.one_dart_per_incident_cell<0, 3>(lccCellHandle).end(); lccPointIter++)
-			{
-				CGALPoint lccPoint = linearCellComplex.point(lccPointIter);
-				if (delaunayPoint == lccPoint)			
-				{
-					linearCellComplex.info<0>(lccPointIter) = (delaunayCellIter->vertex(n))->info();
-					break;
-				}
-			}
-		}
-	}
-
-}
-
-
-void createEquivalentTetrahedralization()
-{
-	
-	//map<CellHandle, DartHandle> *dtVolumeToLccDartMap;
-	import_from_triangulation_3(cdtMesh, DT);//, dtVolumeToLccDartMap);
-
-//	copyInfoFromDTToLCC(DT, cdtMesh, dtVolumeToLccDartMap);
-}
-
-
+     \param [out] Collect handles to the 3-cells intersecting input constraint facet
+ */
 void formCavity(vector<DartHandle> *cavity, DartHandle missingSubfaceHandle, vector<DartHandle>& lcc3CellsToBeRemoved)
 {
 	vector<DartHandle> intersectingTets;				
@@ -1065,10 +1218,19 @@ void formCavity(vector<DartHandle> *cavity, DartHandle missingSubfaceHandle, vec
 
 }
 
+
+/*! \fn bool isStronglyDelaunay(DartHandle facetHandle, vector<DartHandle> cavityVerticesSet, LCC cavityLCC)
+    
+    \brief Tests whether the input facet is _strongly Delaunay_ with respect to cavity vertices.
+
+    \param [in] facetHandle The input facet
+
+    \param [in] cavityVerticesSet Set of vertices in the cavity 
+
+    \param [in] cavityLCC Linear cell complex representation of cavity
+ */
 bool isStronglyDelaunay(DartHandle facetHandle, vector<DartHandle> cavityVerticesSet, LCC cavityLCC)
 {
-	// tests whether facet/triangle pointed to by facetHandle is strongly Delaunay wrt. vertices in cavityVerticesSet
-
 	// compute Delunay tetrahedralization of vertices
 		// check if the face is there in that DT 
 		// If yes then check if the enclosing sphere has any other vertex on its surface
@@ -1100,24 +1262,18 @@ bool isStronglyDelaunay(DartHandle facetHandle, vector<DartHandle> cavityVertice
 }
 
 
+/*! \fn bool areSameFacets(LCC lcc1, DartHandle d1, LCC lcc2, DartHandle d2)
 
-int locateFacetInCavity(DartHandle nonStronglyDelaunayFacet, vector<DartHandle> cavity)
-{
+    \brief Tests whether two input facets from different LCC's are same.
 
-	//if (facetPosition = locateFacetInCavity(tempNonStronglyDelaunayFacet, cavity[i])) // found, 
-	int facetLocation = 0;
-	for (vector<DartHandle>::iterator facetIter = cavity.begin(); facetIter != cavity.end(); facetIter++)
-	{
-		if (nonStronglyDelaunayFacet == *facetIter)
-			return facetLocation;
-		else
-			facetLocation++;
-	}
-	return -1;
-}
+    \param [in] lcc1 LCC containing first facet
 
+    \param [in] d1 DartHandle for first facet
 
+    \param [in] lcc2 LCC constaining second facet
 
+    \param [in] d2 DartHandle for second facet
+ */
 bool areSameFacets(LCC lcc1, DartHandle d1, LCC lcc2, DartHandle d2)
 {
 	DartHandle d3 = lcc2.make_triangle(lcc1.point(d1), lcc1.point(lcc1.beta(d1, 1)), lcc1.point(lcc1.beta(d1, 1, 1))); // TODO: Fix this roundabout way of comparing facets from 2 LCCs
@@ -1127,12 +1283,19 @@ bool areSameFacets(LCC lcc1, DartHandle d1, LCC lcc2, DartHandle d2)
 	return areSameFacets;
 }
 
+/*! \fn DartHandle locateFacetInCavity(DartHandle facet, LCC cavityLCC)
 
-DartHandle locateFacetInCavity(DartHandle facet, LCC cavityLCC)
+    \brief Returns dart handle of the facet from cavityLCC corresponding to a facet in cdtMesh.
+
+    \param [in] cdtMeshFacetHandle DartHandle to a facet in cdtMesh
+
+    \param [in] cavityLCC LCC representation of the cavity
+ */
+DartHandle locateFacetInCavity(DartHandle cdtMeshfacetHandle, LCC cavityLCC)
 {
 	for (LCC::One_dart_per_cell<2>::iterator facetIter = cavityLCC.one_dart_per_cell<2>().begin(), facetIterEnd = cavityLCC.one_dart_per_cell<2>().end(); facetIter != facetIterEnd; facetIter++)
 	{
-		if (areSameFacets(facet, cdtMesh, facetIter, cavityLCC))
+		if (areSameFacets(cdtMeshFacetHandle, cdtMesh, facetIter, cavityLCC))
 			return facetIter;
 		else
 			continue;
@@ -1140,6 +1303,18 @@ DartHandle locateFacetInCavity(DartHandle facet, LCC cavityLCC)
 }
 
 
+/*! \fn void addFaceToLCC(CGALPoint p1, CGALPoint p2, CGALPoint p3, LCC &cavityLCC)
+
+    \brief Adds a facet defined by p1, p2, p3 to the cavity.
+
+    \param [in] p1 First point
+
+    \param [in] p2 Second point
+
+    \param [in] p3 Third point
+
+    \param [out] cavityLCC Add facet defined by p1, p2, p3 in this cavity
+ */
 void addFaceToLCC(CGALPoint p1, CGALPoint p2, CGALPoint p3, LCC &cavityLCC)
 {
 	DartHandle newFace = cavityLCC.make_triangle(p1, p2, p3);
@@ -1193,6 +1368,14 @@ namespace std
 }
 
 
+/*! \fn bool isTetOutsideCavity(DartHandle cellHandle, LCC filledCavityLCC)
+
+    \brief Tests whether a tetrahedron is outside cavity using Point in polygon approach.
+   
+    \param [in] cellHandle DartHandle to a 3-cell 
+    
+    \param [in] filledCavityLCC LCC representation of the tetrahedralized cavity
+ */
 bool isTetOutsideCavity(DartHandle cellHandle, LCC filledCavityLCC)
 {
 
@@ -1281,7 +1464,16 @@ bool isTetOutsideCavity(DartHandle cellHandle, LCC filledCavityLCC)
                
 }
 
+/*! \fn void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>& lcc3CellsToBeRemoved)
 
+  \brief Retetrahedralizes the cavity created due to removal of 3-cells intersecting the missing constraint face.
+
+  First it expands the cavity further(if required) to ensure all facets of cavity are _strongly Delaunay_. Then it fills the cavity with 3-cells and sews it with the original mesh to generate mesh containing the missing constraint face.
+
+  \param [out] cavity Vector of DartHandles for faces representing cavity
+
+  \param [out] Vector of DartHandles for 3-cells to be removed 
+ */
 void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>& lcc3CellsToBeRemoved)
 {
 	// cavity verification/expansion
@@ -1421,7 +1613,10 @@ void cavityRetetrahedralization(vector <DartHandle>& cavity, vector<DartHandle>&
 }
 
 
-// recovers the constraint faces
+/*! \fn void recoverConstraintFaces()
+
+    \brief Top-level routine for recovering constraint faces.
+ */
 void recoverConstraintFaces()
 {
 	 			
@@ -1433,7 +1628,7 @@ void recoverConstraintFaces()
 	vector<Triangle> cdtFacetList;
 	vector<DartHandle> lcc3CellsToBeRemoved;
 
-	createEquivalentTetrahedralization(); 
+	import_from_triangulation_3(cdtMesh, DT);
 
 	while (missingSubfacesQueue.size() != 0)
 	{
@@ -1453,11 +1648,8 @@ void recoverConstraintFaces()
 }		 
 	
 
-
-/////////////////////////////////////////////// Facet recovery ends /////////////////////////////////////////////////////////////
-	
-
-// main procedure
+/*! Main procedure
+ */
 int main()
 {
 	readPLCInput();
