@@ -65,3 +65,15 @@ typedef Line_arc_3<SK> CGALSphericalLineArc;
 typedef Sphere_3<SK> CGALSphericalSphere;
 typedef Segment_3<SK> CGALSphericalSegment; 
 typedef Point_3<SK> CGALSphericalPoint;
+
+/*! \class Triangle
+    \brief Represents triangle 
+  
+    Triangle class stores indices of vertices. 
+*/
+class Triangle
+{
+	public:
+		size_t pointIds[3]; /*< Indices of points */
+};
+
