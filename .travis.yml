@@ -1,7 +1,25 @@
 language: cpp
 compiler:
   - gcc
-# Change this to your needs
+install:
+#- sudo apt-get install build-essential
+- if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-4.9; fi
+- if [ "$CXX" = "g++" ]; then export CXX="g++-4.9" CC="gcc-4.9"; fi
+- sudo apt-get install -qq libboost-all-dev
+- sudo apt-get install -qq libmpfr-dev
+- sudo apt-get install -qq cmake
+- sudo apt-get install -qq libeigen3-dev
+- sudo apt-get install make
+- sudo apt-get install -qq curl
+- sudo apt-get install -qq libgmp3-dev
+- curl -O https://gforge.inria.fr/frs/download.php/file/34149/CGAL-4.5.tar.gz
+- tar zxvf CGAL-4.5.tar.gz &> install.log
+- cd CGAL-4.5
+- cmake -DCMAKE_BUILD_TYPE=Release -DWITH_Eigen3=ON .
+- make
+- sudo make install &>> install.log
 script: 
-       - cmake .
+       - mkdir build
+       - cd build  
+       - cmake ..
        - make  
