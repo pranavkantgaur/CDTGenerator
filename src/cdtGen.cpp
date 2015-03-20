@@ -1,24 +1,20 @@
 #include "cdtGen.h"
 
-LCC plc; /*!< Input piecewise linear cell complex representing the input*/
-Delaunay DT; /*< Intermidiate structure used for storing Delaunay tetrahedralization*/
-vector <CGALPoint> plcVertexVector; /*> Used for initializing plc*/
-vector <Triangle> plcFaceVector; /*> Used for initializing plc*/
-
+LCC plc; // Input piecewise linear cell complex representing the input 
+Delaunay DT; // Intermidiate structure used for storing Delaunay tetrahedralization
+vector <CGALPoint> plcVertexVector; // Used for initializing plc
+vector <Triangle> plcFaceVector; // Used for initializing plc
 LCC cdtMesh; /*!< Output mesh */
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
 static float tempPoint[3]; /*< scratchpad for storing point */
 static int pointCount = 0; /*< count for number of points */
 unsigned int dimensionId = 0; /*< index into x, y, z component of a point */
 static unsigned pointId = 0; /*< unique index of a point */
 
+
 /*! \fn static int vertex_cb(p_ply_argument argument)
     \brief Callback for reading vertex from PLY file	
-    
-    \param argument represents PLY file
- */
+    \param [in] argument represents PLY file
+*/
 static int vertex_cb(p_ply_argument argument) 
 {	
 	long eol;
@@ -34,12 +30,11 @@ static int vertex_cb(p_ply_argument argument)
 	return 1;
 }
 
+
 /*! \fn static int face_cb(p_ply_argument argument)
     \brief Reads face information from PLY file
-
-   \param argument Represents PLY file 
+    \param [in] argument Represents PLY file 
 */
-
 static int face_cb(p_ply_argument argument) 
 {
 	long length, value_index;
@@ -65,12 +60,12 @@ static int face_cb(p_ply_argument argument)
 	return 1;
 }
 
-/*! \fn bool areGeometricallySameSegments(DartHandle d1, DartHandle d2)
+/*! \fn bool CDTGenerator::areGeometricallySameSegments(DartHandle d1, DartHandle d2)
     \brief Tests whether segments represented by d1 and d2 are _geometrically_ same.
     \param [in] d1 DartHandle for first segment
     \param [in] d2 DartHandle for second segment
 */
-bool areGeometricallySameSegments(DartHandle d1, DartHandle d2)
+bool CDTGenerator::areGeometricallySameSegments(DartHandle d1, DartHandle d2)
 {
 	if (plc.point(d1) == plc.point(plc.beta(d2, 1)))
 		if (plc.point(plc.beta(d1, 1)) == plc.point(d2))
@@ -79,12 +74,12 @@ bool areGeometricallySameSegments(DartHandle d1, DartHandle d2)
 } 
 
 
-/*! \fn void readPLCInput()
-    \brief Reads PLC from input(only PLY supported currently) file
+/*! \fn void CDTGenerator::readPLCInput()
+    \brief Reads PLC from input(only PLY supported currently) file.
 
-    Reads vertex and face information and initializes corresponding linear cell complex _plc_
- */
-void readPLCInput()
+    Reads vertex and face information and initializes corresponding linear cell complex _plc_.
+*/
+void CDTGenerator::readPLCInput()
 {
 	// read PLY file(assumed to contain the PLC)
 	string fileName;
@@ -179,16 +174,8 @@ void readPLCInput()
 }
 
 
-/*! \fn void writePLYOutput(LCC &lcc, string fileName)
-    \brief Writes LCC to a PLY file
-
-     Initializes PLY file header, vertices, faces from LCC and writes it to the location pointed to by _filename_
-
-    \param [in] lcc Input linear cell complex
-    \param [in] fileName Name of the putput file
- */
-
- void writePLYOutput(LCC &lcc, string fileName)
+/*
+void CDTGenerator::writePLYOutput(LCCWithInfo &lcc, string fileName)
 {
 	p_ply lccOutputPLY;
 
@@ -243,11 +230,12 @@ void readPLCInput()
 
 	ply_close(lccOutputPLY);			
 }
+*/
 
-/*! \fn void computeDelaunayTetrahedralization()
-    \brief Computes Delaunay tetrahedralization
- */
-void computeDelaunayTetrahedralization()
+/*! \fn void CDTGenerator::computeDelaunayTetrahedralization()
+    \brief Computes Delaunay tetrahedralization.
+*/
+void CDTGenerator::computeDelaunayTetrahedralization()
 {	
 	vector <pair <CGALPoint, DartHandle> > lccVertexVector;
 
@@ -262,15 +250,14 @@ void computeDelaunayTetrahedralization()
 }
 
 
-
-/*! \fn void formMissingSegmentsQueue(vector<DartHandle> &missingSegmentQueue)
+/*! \fn void CDTGenerator::formMissingSegmentsQueue(vector<DartHandle> &missingSegmentQueue)
     \brief Collects missing constraint segments in a queue
 
-    Determines which constraint segments are missing from Delaunay tetrahedralization of vertices of PLC
+    Determines which constraint segments are missing from Delaunay tetrahedralization of vertices of PLC.
 
     \param missingSegmentQueue [Out] Contains the _DartHandle_ to the missing constraint segments after execution.
 */
-void formMissingSegmentsQueue(vector<DartHandle> &missingSegmentQueue)
+void CDTGenerator::formMissingSegmentsQueue(vector<DartHandle> &missingSegmentQueue)
 {
 	missingSegmentQueue.clear();
 
@@ -295,14 +282,15 @@ void formMissingSegmentsQueue(vector<DartHandle> &missingSegmentQueue)
 	return;
 }
 
-/*! \fn unsigned int computeCircumradius(CGALPoint &A, CGALPoint &B, CGALPoint &encroachingCandidate)
-    \brief Computes circumradius of circle defined by input points
+
+/*! \fn unsigned int CDTGenerator::computeCircumradius(CGALPoint &A, CGALPoint &B, CGALPoint &encroachingCandidate)
+    \brief Computes circumradius of circle defined by input points.
 
     \param [in] A Endpoint 1 of constraint segment
     \param [in] B Endpoint 2 of constraint segment
     \param [in] encroachingCandidate Candidate for reference point
 */
-unsigned int computeCircumradius(CGALPoint &A, CGALPoint &B, CGALPoint &encroachingCandidate)
+unsigned int CDTGenerator::computeCircumradius(CGALPoint &A, CGALPoint &B, CGALPoint &encroachingCandidate)
 {
 	// computing circumradius of a triangle:
 	
@@ -316,14 +304,15 @@ unsigned int computeCircumradius(CGALPoint &A, CGALPoint &B, CGALPoint &encroach
 }
 
 
-/*! \fn void computeReferencePoint(CGALPoint *refPoint, DartHandle missingSegmentHandle)
+/*! \fn void CDTGenerator::computeReferencePoint(CGALPoint *refPoint, DartHandle missingSegmentHandle)
     \brief Computes the reference point for segment splitting
 
     Computes reference point which will be used for determing the location of _steiner point_ for the input missing constraint segment.
+
     \param [out] refPoint Pointer to the computed reference point.
     \param [in] missingSegmentHandle Dart handle of missing constraint segment.
 */
-void computeReferencePoint(CGALPoint *refPoint, DartHandle missingSegmentHandle)
+void CDTGenerator::computeReferencePoint(CGALPoint *refPoint, DartHandle missingSegmentHandle)
 {
 
 	CGALPoint &A = plc.point(missingSegmentHandle);
@@ -372,13 +361,13 @@ void computeReferencePoint(CGALPoint *refPoint, DartHandle missingSegmentHandle)
 }
 
 
-/*! \fn float dotProduct(DartHandle segment1Handle, DartHandle segment2Handle)
+/*! \fn float CDTGenerator::dotProduct(DartHandle segment1Handle, DartHandle segment2Handle)
     \brief Computes dot product of vectors represented by input segments.
 
     \param [in] segment1Handle DartHandle for the first segment
     \param [in] segment2Handle DartHandle for the second segment
- */
-float dotProduct(DartHandle segment1Handle, DartHandle segment2Handle)
+*/
+float CDTGenerator::dotProduct(DartHandle segment1Handle, DartHandle segment2Handle)
 {
 	CGALPoint segment1Vertex[2];
 	CGALPoint segment2Vertex[2];
@@ -399,12 +388,13 @@ float dotProduct(DartHandle segment1Handle, DartHandle segment2Handle)
 
 }
 
-/*! \fn float vectorMagnitude(DartHandle inputSegmentHandle)
+
+/*! \fn float CDTGenerator::vectorMagnitude(DartHandle inputSegmentHandle)
     \brief Computes magnitue of input vector
 
     \param [in] inputSegmentHandle DartHandle of input segment
- */
-float vectorMagnitude(DartHandle inputSegmentHandle)
+*/
+float CDTGenerator::vectorMagnitude(DartHandle inputSegmentHandle)
 {
 	CGALPoint segmentVertices[2];
 
@@ -419,13 +409,13 @@ float vectorMagnitude(DartHandle inputSegmentHandle)
 }
 
 
-/*! \fn float computeAngleBetweenSegments(DartHandle segment1Handle, DartHandle segment2Handle)
+/*! \fn float CDTGenerator::computeAngleBetweenSegments(DartHandle segment1Handle, DartHandle segment2Handle)
     \brief Computes angle between vectors represented by input segments.
 
     \param [in] segment1Handle DartHandle for first input segment
     \param [in] segment2Handle DartHandle for second input segment
- */
-float computeAngleBetweenSegments(DartHandle segment1Handle, DartHandle segment2Handle)
+*/
+float CDTGenerator::computeAngleBetweenSegments(DartHandle segment1Handle, DartHandle segment2Handle)
 {
 
 	float angle = acosf(dotProduct(segment1Handle, segment2Handle) / (vectorMagnitude(segment1Handle) * vectorMagnitude(segment2Handle)));
@@ -433,13 +423,14 @@ float computeAngleBetweenSegments(DartHandle segment1Handle, DartHandle segment2
 	return (angle * 180.0f / Pi); // conversion to degrees
 }
 
-/*! \fn bool isVertexAcute(DartHandle inputPointHandle)
+
+/*! \fn bool CDTGenerator::isVertexAcute(DartHandle inputPointHandle)
     \brief Tests whether input vertex is acute
 
     A vertex is _not_ acute if there exists _atleast_ one pair of _incident_ segments which have angle _greater_ than 90 degrees.    
-   \param [in] inputPointHandle DartHandle of input vertex
- */
-bool isVertexAcute(DartHandle inputPointHandle)
+    \param [in] inputPointHandle DartHandle of input vertex
+*/
+bool CDTGenerator::isVertexAcute(DartHandle inputPointHandle)
 {
 	// Determine segment-pair(involving A) 
 	vector<DartHandle> incidentOnInputPoint;
@@ -458,14 +449,14 @@ bool isVertexAcute(DartHandle inputPointHandle)
 }
 
 
-/*! \fn unsigned int determineSegmentType(DartHandle missingSegmentHandle)
+/*! \fn unsigned int CDTGenerator::determineSegmentType(DartHandle missingSegmentHandle)
     \brief Determines the input segment type
 
     A segment is of _type-1_ if _none_ of its endpoints are _acute_. If _exactly_ one endpoint is acute than segment is of _type-2_.
-    \param [in] DartHandle for input constraint segment
 
- */
-unsigned int determineSegmentType(DartHandle missingSegmentHandle)
+    \param [in] DartHandle for input constraint segment
+*/
+unsigned int CDTGenerator::determineSegmentType(DartHandle missingSegmentHandle)
 {
 
 	CGALPoint &A = plc.point(missingSegmentHandle);
@@ -483,26 +474,28 @@ unsigned int determineSegmentType(DartHandle missingSegmentHandle)
 		return 3;
 }
 
-/*! \fn float computeSegmentLangth(CGALPoint &A, CGALPoint &B)
-    \brief Computes Euler length of the segment represented by _A_ and _B_
+
+/*! \fn float CDTGenerator::computeSegmentLength(CGALPoint &A, CGALPoint &B)
+    \brief Computes Euler length of the segment represented by _A_ and _B_.
 
     \param [in] A First endpoint of the segment
     \param [in] B Second endpoint of the segment
- */
-float computeSegmentLength(CGALPoint &A, CGALPoint &B)
+*/
+float CDTGenerator::computeSegmentLength(CGALPoint &A, CGALPoint &B)
 {
 	float sLength;
 	sLength = sqrt(pow(A.x() - B.x(), 2) + pow(A.y() - B.y(), 2) + pow(A.z() - B.z(), 2));
 	return sLength;
 }
 
-/*! void updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
+
+/*! \fn void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
    /brief Updates PLC and Delaunay triangulation after insertion of a new vertex into a constraint segment.
-    
+
    /param [in] v New vertex to be inserted into a constraint segment of PLC
-   /param p[ih] missignSegmentHandle DartHandle of constraint segment which will be split after inserting new vertex  
- */
-void updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
+   /param [ih] missignSegmentHandle DartHandle of constraint segment which will be split after inserting new vertex  
+*/
+void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
 {
 
 	// update PLC
@@ -511,13 +504,15 @@ void updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
 	computeDelaunayTetrahedralization(); 
 }
 
-/*! \fn void splitMissingSegment(DartHandle missingSegmentHandle)
-    \brief Splits the missing constraint segment
-    
+
+/*! \fn void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
+    \brief Splits the missing constraint segment.
+
     A constraint segment is split(by insertion of a new vertex) by applying segment splitting rules. Purpose of splitting is to make resulting subsegments _strongly Delaunay_.
+
     \param [in] missingSegmentHandle DartHandle of missing constraint segment
- */
-void splitMissingSegment(DartHandle missingSegmentHandle)
+*/
+void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 {
 
 	CGALPoint vb, refPoint;
@@ -692,12 +687,13 @@ void splitMissingSegment(DartHandle missingSegmentHandle)
 	return;
 }
 
-/*! void recoverConstraintSegments()
+
+/*! \fn void CDTGenerator::recoverConstraintSegments()
     \brief Top-level routine for recovering constraint segments.
-	
+
     Missing constriant segments of PLC are recovered by spliting the segments in such a way so that resulting sub-segments become _strongly Delaunay_.
 */
-void recoverConstraintSegments()
+void CDTGenerator::recoverConstraintSegments()
 {
 	vector<DartHandle> missingSegmentQueue;
 	DartHandle missingSegment;
@@ -714,20 +710,17 @@ void recoverConstraintSegments()
 	}
 	
 	cout << "\nIn the loop " << i << " number of times" << "\n";
-	
 	return;
 }
 
-		 
-	
 
-/*! Main procedure
+/*! \fn void CDTGenerator::generate()
+    \brief Public interface for CDTGenerator class.
  */
-int main()
+void CDTGenerator::generate()
 {
 	readPLCInput();
-	computeDelaunayTetrahedralization();
 	recoverConstraintSegments();
-	return 0;
 }
+
 

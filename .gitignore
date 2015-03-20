@@ -6,3 +6,4 @@ build/*
 LICENSE~
 src/rply.cpp~
 src/cdtGen.cpp~
+docs/*

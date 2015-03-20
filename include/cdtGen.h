@@ -77,3 +77,26 @@ class Triangle
 		size_t pointIds[3]; /*< Indices of points */
 };
 
+
+class CDTGenerator
+{
+	public:
+		void generate();
+	private:
+		void recoverConstraintSegments();
+		void splitMissingSegment(DartHandle);
+		void updatePLCAndDT(CGALPoint&, DartHandle);
+		float computeSegmentLength(CGALPoint&, CGALPoint&);
+		unsigned int determineSegmentType(DartHandle);
+		bool isVertexAcute(DartHandle);
+		float computeAngleBetweenSegments(DartHandle, DartHandle);
+		float vectorMagnitude(DartHandle);
+		float dotProduct(DartHandle, DartHandle);
+		void computeReferencePoint(CGALPoint*, DartHandle);
+		unsigned int computeCircumradius(CGALPoint&, CGALPoint&, CGALPoint&);
+		void formMissingSegmentsQueue(vector<DartHandle>&);
+		void computeDelaunayTetrahedralization();
+		//void writePLYOutput(LCC&, string); TODO
+		void readPLCInput();
+		bool areGeometricallySameSegments(DartHandle, DartHandle);
+};
