@@ -35,7 +35,7 @@ typedef Linear_cell_complex_traits<3, K> Traits;
 typedef Linear_cell_complex<3, 3, Traits> LCC;
 typedef LCC::Dart_handle DartHandle;
 
-struct MyInfo
+struct MyDartInfo
 {
 	template<class Refs>
 	struct Dart_wrapper
@@ -46,8 +46,20 @@ struct MyInfo
 	};	
 };
 
-typedef Linear_cell_complex<3, 3, Traits, MyInfo> LCCWithInfo;
-typedef LCCWithInfo::Dart_handle DartHandleWithInfo;
+struct MyIntInfo
+{
+	template<class Refs>
+	struct Dart_wrapper
+	{
+		typedef CGAL::Dart<3, Refs > Dart;
+		typedef Cell_attribute_with_point<Refs, size_t > VertexAttribute;
+		typedef cpp11::tuple<VertexAttribute> Attributes;
+	};	
+};
+
+typedef Linear_cell_complex<3, 3, Traits, MyDartInfo> LCCWithDartInfo;
+typedef Linear_cell_complex<3, 3, Traits, MyIntInfo> LCCWithIntInfo;
+typedef LCCWithDartInfo::Dart_handle DartHandleWithDartInfo;
 typedef Triangulation_vertex_base_with_info_3<DartHandle, K> Vb; 
 typedef Triangulation_data_structure_3<Vb> Tds;
 typedef Delaunay_triangulation_3<K, Tds, Fast_location> Delaunay;
@@ -96,7 +108,7 @@ class CDTGenerator
 		unsigned int computeCircumradius(CGALPoint&, CGALPoint&, CGALPoint&);
 		void formMissingSegmentsQueue(vector<DartHandle>&);
 		void computeDelaunayTetrahedralization();
-		//void writePLYOutput(LCC&, string); TODO
+		void writePLYOutput(LCCWithIntInfo&, string); 
 		void readPLCInput();
 		bool areGeometricallySameSegments(DartHandle, DartHandle);
 };

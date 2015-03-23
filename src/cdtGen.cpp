@@ -104,7 +104,6 @@ void CDTGenerator::readPLCInput()
 		exit(0);
 	}
 
-
 	ply_close(inputPLY);
 
 	cout << "Number of vertices:" << plcVertexVector.size() << "\n";
@@ -174,8 +173,12 @@ void CDTGenerator::readPLCInput()
 }
 
 
-/*
-void CDTGenerator::writePLYOutput(LCCWithInfo &lcc, string fileName)
+/*! \fn CDTGenerator::writePLYOutput(LCCWithIntInfo &lcc, string fileName)
+    \brief Writes mesh represented as LCC to PLY file
+    \param [in] lcc Mesh represented using Linear Cell complex
+    \param [in] fileName Name of output PLY file   
+*/
+void CDTGenerator::writePLYOutput(LCCWithIntInfo &lcc, string fileName)
 {
 	p_ply lccOutputPLY;
 
@@ -187,10 +190,10 @@ void CDTGenerator::writePLYOutput(LCCWithInfo &lcc, string fileName)
 
 	// count number of vertices and faces in LCC
 	size_t nVertices = 0, nFaces = 0;
-	for (LCC::One_dart_per_cell_range<0>::iterator pointCountIter = lcc.one_dart_per_cell<0>().begin(), pointCountIterEnd = lcc.one_dart_per_cell<0>().end(); pointCountIter != pointCountIterEnd; pointCountIter++)
+	for (LCCWithIntInfo::One_dart_per_cell_range<0>::iterator pointCountIter = lcc.one_dart_per_cell<0>().begin(), pointCountIterEnd = lcc.one_dart_per_cell<0>().end(); pointCountIter != pointCountIterEnd; pointCountIter++)
 		nVertices++;
 
-	for (LCC::One_dart_per_cell_range<2>::iterator faceCountIter = lcc.one_dart_per_cell<2>().begin(), faceCountIterEnd = lcc.one_dart_per_cell<2>().end(); faceCountIter != faceCountIterEnd; faceCountIter++)
+	for (LCCWithIntInfo::One_dart_per_cell_range<2>::iterator faceCountIter = lcc.one_dart_per_cell<2>().begin(), faceCountIterEnd = lcc.one_dart_per_cell<2>().end(); faceCountIter != faceCountIterEnd; faceCountIter++)
 		nFaces++;
 
 	ply_add_element(lccOutputPLY, "vertex", nVertices);
@@ -203,13 +206,13 @@ void CDTGenerator::writePLYOutput(LCCWithInfo &lcc, string fileName)
 
 	if (!ply_write_header(lccOutputPLY))
 	{
-		cout << "Header cannot be writen!!";
+		cout << "Header cannot be written!!";
 		exit(0);
 	}
 
 	// write vertices
 	size_t pointId = 0;
-	for (LCC::One_dart_per_cell_range<0>::iterator pointIter = lcc.one_dart_per_cell<0>().begin(), pointIterEnd = lcc.one_dart_per_cell<0>().end(); pointIter != pointIterEnd; pointIter++)
+	for (LCCWithIntInfo::One_dart_per_cell_range<0>::iterator pointIter = lcc.one_dart_per_cell<0>().begin(), pointIterEnd = lcc.one_dart_per_cell<0>().end(); pointIter != pointIterEnd; pointIter++)
 	{
 		CGALPoint pt = lcc.point(pointIter); 
 		
@@ -221,16 +224,16 @@ void CDTGenerator::writePLYOutput(LCCWithInfo &lcc, string fileName)
 	}
 	
         // write polygons	
-	for (LCC::One_dart_per_cell_range<2>::iterator faceIter = lcc.one_dart_per_cell<2>().begin(), faceIterEnd = lcc.one_dart_per_cell<2>().end(); faceIter != faceIterEnd; faceIter++)
+	for (LCCWithIntInfo::One_dart_per_cell_range<2>::iterator faceIter = lcc.one_dart_per_cell<2>().begin(), faceIterEnd = lcc.one_dart_per_cell<2>().end(); faceIter != faceIterEnd; faceIter++)
 	{
 		ply_write(lccOutputPLY, 3);
-		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pointInFaceIter = lcc.one_dart_per_incident_cell<0, 2>(faceIter).begin(), pointInFaceIterEnd = lcc.one_dart_per_incident_cell<0, 2>(faceIter).end(); pointInFaceIter != pointInFaceIterEnd; pointInFaceIter++)
+		for (LCCWithIntInfo::One_dart_per_incident_cell_range<0, 2>::iterator pointInFaceIter = lcc.one_dart_per_incident_cell<0, 2>(faceIter).begin(), pointInFaceIterEnd = lcc.one_dart_per_incident_cell<0, 2>(faceIter).end(); pointInFaceIter != pointInFaceIterEnd; pointInFaceIter++)
 			ply_write(lccOutputPLY, lcc.info<0>(pointInFaceIter)); 
 	}
 
 	ply_close(lccOutputPLY);			
 }
-*/
+
 
 /*! \fn void CDTGenerator::computeDelaunayTetrahedralization()
     \brief Computes Delaunay tetrahedralization.
@@ -247,6 +250,11 @@ void CDTGenerator::computeDelaunayTetrahedralization()
 	cout << "\nDelaunay tetrahedralization computed!!";
 	cout << "\nNumber of vertices in Delaunay tetrahedralization:" << DT.number_of_vertices();
 	cout << "\nNumber of tetrahedrons in Delaunay tetrahedralization:" << DT.number_of_cells();
+	
+	LCCWithIntInfo DTLCC;
+	string fileName("../data/delaunay.ply");
+	import_from_triangulation_3(DTLCC, DT);
+	writePLYOutput(DTLCC, fileName);
 }
 
 
