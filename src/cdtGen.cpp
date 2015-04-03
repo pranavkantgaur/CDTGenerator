@@ -251,9 +251,21 @@ void CDTGenerator::computeDelaunayTetrahedralization()
 	cout << "\nNumber of vertices in Delaunay tetrahedralization:" << DT.number_of_vertices();
 	cout << "\nNumber of tetrahedrons in Delaunay tetrahedralization:" << DT.number_of_cells();
 	
+
 	LCCWithIntInfo DTLCC;
-	string fileName("../data/delaunay.ply");
+	string fileName("../../data/delaunay.ply");
+
 	import_from_triangulation_3(DTLCC, DT);
+	
+	size_t nVertices = 0;
+	for (LCCWithIntInfo::One_dart_per_cell_range<0>::iterator pointCountIter = DTLCC.one_dart_per_cell<0>().begin(), pointCountIterEnd = DTLCC.one_dart_per_cell<0>().end(); pointCountIter != pointCountIterEnd; pointCountIter++)
+	{
+		cout <<"\n" <<  DTLCC.point(pointCountIter);
+		nVertices++;
+	}
+
+	cout << "\nNumber of vertices(TEST): " << nVertices << "\n";
+
 	writePLYOutput(DTLCC, fileName);
 }
 
@@ -728,7 +740,8 @@ void CDTGenerator::recoverConstraintSegments()
 void CDTGenerator::generate()
 {
 	readPLCInput();
-	recoverConstraintSegments();
+	computeDelaunayTetrahedralization();
+	//recoverConstraintSegments();
 }
 
 
