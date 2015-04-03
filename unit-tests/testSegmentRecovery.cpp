@@ -19,6 +19,10 @@ TEST (SegmentRecoveryTest, allSegmentsInDT)
 	vector<Point> XdashPointVector;
 	bool edgesPreserved = false;
 
+	// TODO: Initialize X and Xdash
+	
+
+
 	// vector of vertices of Xdash
 	for (LCC::One_dart_per_cell_range<0>::iterator pIter = Xdash.one_dart_per_cell<0>().begin(), pIterEnd = Xdash.one_dart_per_cell<0>.end(); pIter != pIterEnd; pIter++)
 		XdashPointVector.push_back(Xdash.point(pIter));
