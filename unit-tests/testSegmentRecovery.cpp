@@ -1,7 +1,7 @@
 #include "gtest/gtest.h" 
-#include <CGAL/Delaunay_triangulation_3.h>
 #include "cdtGen.h"
 
+extern LCC 
 using namespace std;
 using namespace CGAL;
 
@@ -14,22 +14,22 @@ typedef Point_3<K> Point;
 
 class TestSegmentRecovery::public CDTGenerator
 {
-	// TODO: Define a member function for testing the recoverySegmentRecovery()
+	public:
+		runTest();	
 };
 
 
-TEST (SegmentRecoveryTest, allSegmentsInDT)
+bool TestSegmentRecovery::runTest()
 {
-	LCC X, Xdash;
+	LCC Xdash;
 	Delaunay DT;
 	vector<Point> XdashPointVector;
-	bool edgesPreserved = false;
+	bool edgesPreserved;
 	
 	// TODO: Initialize X and Xdash
-	CDTGenerator cdtGen;
-	Xdash = cdtGen.recoverConstraintSegments();	
-
-
+	readInput();
+	recoverConstraintSegments();	
+	
 	// vector of vertices of Xdash
 	for (LCC::One_dart_per_cell_range<0>::iterator pIter = Xdash.one_dart_per_cell<0>().begin(), pIterEnd = Xdash.one_dart_per_cell<0>.end(); pIter != pIterEnd; pIter++)
 		XdashPointVector.push_back(Xdash.point(pIter));
@@ -52,9 +52,14 @@ TEST (SegmentRecoveryTest, allSegmentsInDT)
 					break;
 				}	
 	}
+	return edgesPreserved;
+}
 
-	// test failed if edgesPreserved = false
- 	ASSERT_EQ(true edgesPreserved);
+
+TEST (SegmentRecoveryTest, allSegmentsInDT)
+{
+	TestSegmentRecovery t;
+ 	ASSERT_EQ(true t.runTest());
 }
 
 
