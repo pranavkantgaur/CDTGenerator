@@ -12,15 +12,22 @@ typedef Linear_cell_complex<3, 3, Traits> LCC;
 typedef Point_3<K> Point;
 
 
+class TestSegmentRecovery::public CDTGenerator
+{
+	// TODO: Define a member function for testing the recoverySegmentRecovery()
+};
+
+
 TEST (SegmentRecoveryTest, allSegmentsInDT)
 {
 	LCC X, Xdash;
 	Delaunay DT;
 	vector<Point> XdashPointVector;
 	bool edgesPreserved = false;
-
-	// TODO: Initialize X and Xdash
 	
+	// TODO: Initialize X and Xdash
+	CDTGenerator cdtGen;
+	Xdash = cdtGen.recoverConstraintSegments();	
 
 
 	// vector of vertices of Xdash
