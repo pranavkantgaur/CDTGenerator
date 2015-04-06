@@ -94,18 +94,12 @@ class CDTGenerator
 {
 	public:
 		void generate();
-	private:
+	protected:
 
 		LCC plc; /*!< Input piecewise linear cell complex representing the input */
 		Delaunay DT; /*!< Intermidiate structure used for storing Delaunay tetrahedralization */
-		vector <CGALPoint> plcVertexVector; /*!< Used for initializing plc */
-		vector <Triangle> plcFaceVector; /*!< Used for initializing plc */
 		LCC cdtMesh; /*!< Output mesh */
-		static float tempPoint[3]; /*!< Used in PLY read callbacks */
-		static int pointCount = 0; /*!< Used in PLY read callbacks */
-		unsigned int dimensionId = 0; /*!< Used in PLY read callbacks */
-		static unsigned pointId = 0; /*!< Used in PLY read callbacks */
-
+		
 		void recoverConstraintSegments();
 		void splitMissingSegment(DartHandle);
 		void updatePLCAndDT(CGALPoint&, DartHandle);

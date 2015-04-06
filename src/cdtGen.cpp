@@ -1,11 +1,17 @@
 #include "cdtGen.h"
 
+static size_t pointId = 0;
+static float tempPoint[3];
+static size_t dimensionId = 0;
+vector<CGALPoint> plcVertexVector;
+vector<Triangle> plcFaceVector;
 /*! \fn static int vertex_cb(p_ply_argument argument)
     \brief Callback for reading vertex from PLY file	
     \param [in] argument represents PLY file
 */
 static int vertex_cb(p_ply_argument argument) 
 {	
+
 	long eol;
 	ply_get_argument_user_data(argument, NULL, &eol);
 	tempPoint[dimensionId++] = ply_get_argument_value(argument);
@@ -87,6 +93,8 @@ void CDTGenerator::readPLCInput()
 	ply_set_read_cb(inputPLY, "vertex", "z", vertex_cb, NULL, 1);
 
 	ply_set_read_cb(inputPLY, "face", "vertex_indices", face_cb, NULL, 0); 
+	dimensionId = 0;
+
 	if (!ply_read(inputPLY))
 	{
 		cout << "Cannot read the PLY file :(";
