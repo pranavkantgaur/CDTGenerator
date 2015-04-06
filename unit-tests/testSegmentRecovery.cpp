@@ -1,5 +1,4 @@
 #include "gtest/gtest.h" 
-#include <CGAL/Delaunay_triangulation_3.h>
 #include "cdtGen.h"
 
 using namespace std;
@@ -9,34 +8,41 @@ typedef Exact_predicates_inexact_constructions K;
 typedef Delaunay_triangulation_3<K> Delaunay;
 typedef Linear_cell_complex_traits<3, K> Traits;
 typedef Linear_cell_complex<3, 3, Traits> LCC;
-typedef Point_3<K> Point;
 
-
-TEST (SegmentRecoveryTest, allSegmentsInDT)
+/*! \class TestSegmentRecovery
+ *  \brief Derived from CDTGenerator class, this class defines a unit-test for segment recovery.
+ */
+class TestSegmentRecovery::public CDTGenerator
 {
-	LCC X, Xdash;
-	Delaunay DT;
-	vector<Point> XdashPointVector;
-	bool edgesPreserved = false;
-
-	// TODO: Initialize X and Xdash
+	public:
+		bool runTest();	
 	
+	protected:
+		bool edgesPreserved;
+};
 
 
-	// vector of vertices of Xdash
-	for (LCC::One_dart_per_cell_range<0>::iterator pIter = Xdash.one_dart_per_cell<0>().begin(), pIterEnd = Xdash.one_dart_per_cell<0>.end(); pIter != pIterEnd; pIter++)
-		XdashPointVector.push_back(Xdash.point(pIter));
+bool TestSegmentRecovery::runTest()
+{
+	readInput();
+	recoverConstraintSegments();
+	
+	plcVertexVector.clear();
+	
+	// vector of vertices of plc
+	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>.end(); pIter != pIterEnd; pIter++)
+		plcVertexVector.push_back(plc.point(pIter));
 
-	DT.insert(XdashPointVector.begin(), XdashPointVector.end());
+	DT.insert(plcVertexVector.begin(), plcVertexVector.end());
 
 	Delaunay::Vertex_handle vh1, vh2;
 	Delaunay::Cell_handle c;
 	size_t i, j;
-	// test if all segments of Xdash are in DT
-	for (LCC::One_dart_per_cell_range<1>::iterator segIter = Xdash.one_dart_per_cell<1>().begin(), segIterEnd = Xdash.one_dart_per_cell<1>.end(); segIter != segIterEnd; segIter++)
+	// test if all segments of plc are in DT
+	for (LCC::One_dart_per_cell_range<1>::iterator segIter = plc.one_dart_per_cell<1>().begin(), segIterEnd = plc.one_dart_per_cell<1>.end(); segIter != segIterEnd; segIter++)
 	{
-		if (DT.is_vertex(Xdash.point(segIter), vh1))
-			if (DT.is_vertex(Xdash.point(Xdash.beta(segIter, 1))))
+		if (DT.is_vertex(plc.point(segIter), vh1))
+			if (DT.is_vertex(plc.point(plc.beta(segIter, 1))))
 				if (DT.is_edge(vh1, vh2, c, i, j))
 					edgesPreserved = true;
 				else
@@ -45,9 +51,14 @@ TEST (SegmentRecoveryTest, allSegmentsInDT)
 					break;
 				}	
 	}
+	return edgesPreserved;
+}
 
-	// test failed if edgesPreserved = false
- 	ASSERT_EQ(true edgesPreserved);
+
+TEST (SegmentRecoveryTest, allSegmentsInDT)
+{
+	TestSegmentRecovery t;
+ 	ASSERT_EQ(true t.runTest());
 }
 
 

@@ -1,16 +1,5 @@
 #include "cdtGen.h"
 
-LCC plc; // Input piecewise linear cell complex representing the input 
-Delaunay DT; // Intermidiate structure used for storing Delaunay tetrahedralization
-vector <CGALPoint> plcVertexVector; // Used for initializing plc
-vector <Triangle> plcFaceVector; // Used for initializing plc
-LCC cdtMesh; /*!< Output mesh */
-static float tempPoint[3]; /*< scratchpad for storing point */
-static int pointCount = 0; /*< count for number of points */
-unsigned int dimensionId = 0; /*< index into x, y, z component of a point */
-static unsigned pointId = 0; /*< unique index of a point */
-
-
 /*! \fn static int vertex_cb(p_ply_argument argument)
     \brief Callback for reading vertex from PLY file	
     \param [in] argument represents PLY file
