@@ -100,6 +100,8 @@ class CDTGenerator
 		Delaunay DT; /*!< Intermidiate structure used for storing Delaunay tetrahedralization */
 		LCC cdtMesh; /*!< Output mesh */
 		
+		void markInfiniteVertexDart(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, int);
+		bool isInfinite(LCCWithIntInfo::Dart_handle, LCCWithIntInfo, int, unsigned int);
 		void recoverConstraintSegments();
 		void splitMissingSegment(DartHandle);
 		void updatePLCAndDT(CGALPoint&, DartHandle);
@@ -113,7 +115,7 @@ class CDTGenerator
 		unsigned int computeCircumradius(CGALPoint&, CGALPoint&, CGALPoint&);
 		void formMissingSegmentsQueue(vector<DartHandle>&);
 		void computeDelaunayTetrahedralization();
-		void writePLYOutput(LCCWithIntInfo&, string); 
+		void writePLYOutput(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, string); 
 		void readPLCInput();
 		bool areGeometricallySameSegments(DartHandle, DartHandle);
 };
