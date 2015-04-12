@@ -10,8 +10,10 @@ include_directories (BEFORE include)
 
 add_subdirectory (src)
 
-# unit testing
-#add_subdirectory (gtest-1.7.0)
-add_subdirectory (unit-tests)
+# unit testing, ON/OFF unit tests
+set (GTEST_ON FALSE)
 
+if (GTEST_ON)
+	add_subdirectory (unit-tests)
+endif()
 
