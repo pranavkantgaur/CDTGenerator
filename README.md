@@ -1,5 +1,5 @@
 # CDTGenerator [![Build Status](https://travis-ci.org/pranavkantgaur/CDTGenerator.svg?branch=master)](https://travis-ci.org/pranavkantgaur/CDTGenerator)
-Implementation of the paper "Meshing piecewise linear complex using CDT" by Hang Si et. al.
+This project is a C++ implementation of the paper "Meshing piecewise linear complex using CDT" by Hang Si et. al for generating [Constrained Delaunay tetrahedralization](http://en.wikipedia.org/wiki/Constrained_Delaunay_triangulation) for a given domain specified using set of points and _constraint_ polygons.
 
 # Building
 Following sequence of commands work on Ubuntu 14.04 LTS(64-bit):  
@@ -10,8 +10,10 @@ Following sequence of commands work on Ubuntu 14.04 LTS(64-bit):
 Currently, it only builds the segment recovery module along with unit tests.  
 
 # Dependencies
+It _atleast_ works with following versions of dependencies:
 * CMake(>=2.8.12) 
 * CGAL(4.6)
+* gtest(1.7.0)
 * gcc-4.8
 
 # Extension
