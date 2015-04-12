@@ -11,9 +11,9 @@ Currently, it only builds the segment recovery module along with unit tests.
 
 # Dependencies
 It _atleast_ works with following versions of dependencies:
-* CMake(>=2.8.7) 
+* CMake(>=2.8.12) 
 * CGAL(4.6)
-* gtest(1.7.0) (_optional_)
+* gtest(1.7.0)
 * gcc-4.8
 
 # Extension
@@ -33,5 +33,8 @@ Main objective is to extend this implementation to support adaptive Constrained 
 * Add functionality for Algorithm execution visualization. 
 
 * Add function in CGAL fork for iterating vertices of a 2-cell using ```One_dart_per_incident_cell_range<0, 2>``` in _counterclockwise_ order. It is useful while writing polygons to data file for visualization.
+<<<<<<< HEAD
 
+=======
+>>>>>>> 446cc752ec882a948e160439ae72ed22a415aeff
 
