@@ -2,11 +2,12 @@
 Implementation of the paper "Meshing piecewise linear complex using CDT" by Hang Si et. al.
 
 # Building
+Following sequence of commands work on Ubuntu 14.04 LTS(64-bit):  
 ```mkdir build```  
 ```cd build```  
 ```cmake ..```  
-```make```  
-Currently, it only builds the segment recovery module along with unit tests. 
+```make ```  
+Currently, it only builds the segment recovery module along with unit tests.  
 
 # Dependencies
 * CMake(>=2.8.12) 
@@ -29,5 +30,5 @@ Main objective is to extend this implementation to support adaptive Constrained 
 
 * Add functionality for Algorithm execution visualization. 
 
-* Add function in CGAL fork for iterating vertices of a 2-cell using ```One_dart_per_incident_cell_range<0, 2>``` in counterclockwise order. It is useful while writing polygons to data file for visualization.
+* Add function in CGAL fork for iterating vertices of a 2-cell using ```One_dart_per_incident_cell_range<0, 2>``` in _counterclockwise_ order. It is useful while writing polygons to data file for visualization.
 
