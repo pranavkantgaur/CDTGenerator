@@ -5,6 +5,7 @@ static float tempPoint[3];
 static size_t dimensionId = 0;
 vector<CGALPoint> plcVertexVector;
 vector<Triangle> plcFaceVector;
+
 /*! \fn static int vertex_cb(p_ply_argument argument)
     \brief Callback for reading vertex from PLY file	
     \param [in] argument represents PLY file

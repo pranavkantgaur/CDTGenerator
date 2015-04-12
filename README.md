@@ -2,14 +2,21 @@
 Implementation of the paper "Meshing piecewise linear complex using CDT" by Hang Si et. al.
 
 # Building
-The code is under testing right now but one can get fair idea of overall steps involved in implementation of Hang Si's Constrained Delaunay tetrahedralization(CDT) algorithm.
+```mkdir build```  
+```cd build```
+```cmake ..```  
+```make```  
+Currently, it only builds the segment recovery module along with unit tests. 
+
+# Dependencies
+* CMake(>=2.8.12) 
+* CGAL(4.6)
+* gcc-4.8
 
 # Extension
 Main objective is to extend this implementation to support adaptive Constrained Delaunay tetrahedralization for 3D domain.
 
 # TODO:
-* Use CGAL::Linear_cell_complex as PLC.
-
 * Input should allow for more file options than ply.
 
 * Why g++ -lgmp -lCGAL rply.cpp cdtCode.cpp does not link whereas, g++ rply.cpp cdtCode.cpp -lgmp -lCGAL does? Also there is issue in example usage of -l option given in 'man gcc' :(
@@ -22,4 +29,5 @@ Main objective is to extend this implementation to support adaptive Constrained 
 
 * Add functionality for Algorithm execution visualization. 
 
+* Add function in CGAL fork for iterating vertices of a 2-cell using ```One_dart_per_incident_cell_range<0, 2>``` in counterclockwise order. It is useful while writing polygons to data file for visualization.
 
