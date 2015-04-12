@@ -13,7 +13,7 @@ Currently, it only builds the segment recovery module along with unit tests.
 It _atleast_ works with following versions of dependencies:
 * CMake(>=2.8.12) 
 * CGAL(4.6)
-* gtest(1.7.0)
+* gtest(1.7.0)[_optional_, please see ```GTEST_ON``` switch in CMakeLists in root directory]
 * gcc-4.8
 
 # Extension
