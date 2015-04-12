@@ -3,7 +3,7 @@ Implementation of the paper "Meshing piecewise linear complex using CDT" by Hang
 
 # Building
 ```mkdir build```  
-```cd build```
+```cd build```  
 ```cmake ..```  
 ```make```  
 Currently, it only builds the segment recovery module along with unit tests. 
