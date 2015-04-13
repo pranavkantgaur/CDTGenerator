@@ -104,9 +104,6 @@ void CDTGenerator::readPLCInput()
 
 	ply_close(inputPLY);
 
-	cout << "Number of vertices:" << plcVertexVector.size() << "\n";
-	cout << "Number of faces:" << plcFaceVector.size() << "\n";
-
 	// Initialize PLC
 	vector<pair<DartHandle, DartHandle> > twoCellsToBeSewed;
 	size_t vertexIds[3];
@@ -165,9 +162,6 @@ void CDTGenerator::readPLCInput()
 			plc.sew<2>(dIter->first, dIter->second);
 			k++;	
 		}
-
-	cout << "\nNumber of sewable facets: " << k;
-	cout << "\nNumber of pairs to be sewed: " << twoCellsToBeSewed.size() << "\n";
 }
 
 
@@ -305,10 +299,6 @@ void CDTGenerator::writePLYOutput(LCCWithIntInfo::Dart_handle dartToInfiniteVert
 			nInfiniteFaces++;
 	}
 
-	
-	cout << "Number of Finite faces: " << nFiniteFaces << "\n";
-	cout << "Number of Infinite faces: " << nInfiniteFaces << "\n";
-
 	lcc.free_mark(infiniteVertexMark);
 	ply_close(lccOutputPLY);			
 }
@@ -327,17 +317,14 @@ void CDTGenerator::computeDelaunayTetrahedralization()
 
 	DT.insert(lccVertexVector.begin(), lccVertexVector.end());
 
-	cout << "\nDelaunay tetrahedralization computed!!";
-	cout << "\nNumber of vertices in Delaunay tetrahedralization:" << DT.number_of_vertices();
-	cout << "\nNumber of tetrahedrons in Delaunay tetrahedralization:" << DT.number_of_cells();
-	
+//	cout << "\nDelaunay tetrahedralization computed!!";
 
 	LCCWithIntInfo DTLCC;
 	string fileName("../../data/delaunay.ply");
 
 	LCCWithIntInfo::Dart_handle dartToInfiniteVertex = import_from_triangulation_3(DTLCC, DT);
 	
-	writePLYOutput(dartToInfiniteVertex, DTLCC, fileName);
+//	writePLYOutput(dartToInfiniteVertex, DTLCC, fileName);
 }
 
 
@@ -367,7 +354,7 @@ void CDTGenerator::formMissingSegmentsQueue(vector<DartHandle> &missingSegmentQu
 					missingSegmentQueue.push_back(segmentIter);
 	}
 
-	cout << "\nTotal number of missing constraint segments:" << missingSegmentQueue.size() << "\n";
+	cout << "\nTotal number of missing constraint segments:" << missingSegmentQueue.size() << endl;
 
 
 	return;
@@ -793,14 +780,14 @@ void CDTGenerator::recoverConstraintSegments()
 	int i = 0;
 	while (missingSegmentQueue.size() != 0)
 	{
+		cout << "Segment recovery iteration: #" << i << endl;
 		missingSegment = missingSegmentQueue.back();
 		missingSegmentQueue.pop_back();
 		splitMissingSegment(missingSegment);
-		formMissingSegmentsQueue(missingSegmentQueue);
+		formMissingSegmentsQueue(missingSegmentQueue); // update missingSegmentQueue
 		i++;
 	}
-	
-	cout << "\nIn the loop " << i << " number of times" << "\n";
+
 	return;
 }
 
