@@ -791,6 +791,14 @@ void CDTGenerator::recoverConstraintSegments()
 	return;
 }
 
+/*! \fn void CDTGenerator::removeLocalDegeneracies()
+ *  \brief Breaks cosphericality condition among any neighbouring 5-points set in Delaunay triangulation. 
+ */
+void CDTGenerator::removeLocalDegeneracies()
+{
+	//TODO: Define function.
+}
+
 
 /*! \fn void CDTGenerator::generate()
     \brief Public interface for CDTGenerator class.
@@ -800,6 +808,7 @@ void CDTGenerator::generate()
 	readPLCInput();
 	computeDelaunayTetrahedralization();
 	recoverConstraintSegments();
+	removeLocalDegeneracies();
 }
 
 

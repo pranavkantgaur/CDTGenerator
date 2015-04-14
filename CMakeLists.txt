@@ -11,7 +11,7 @@ include_directories (BEFORE include)
 add_subdirectory (src)
 
 # unit testing, ON/OFF unit tests
-set (GTEST_ON FALSE)
+set (GTEST_ON true)
 
 if (GTEST_ON)
 	add_subdirectory (unit-tests)

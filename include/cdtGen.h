@@ -118,4 +118,7 @@ class CDTGenerator
 		void writePLYOutput(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, string); 
 		void readPLCInput();
 		bool areGeometricallySameSegments(DartHandle, DartHandle);
+		
+		// local degeneracy removal
+		void removeLocalDegeneracies();
 };
