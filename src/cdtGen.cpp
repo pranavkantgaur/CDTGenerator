@@ -796,7 +796,10 @@ void CDTGenerator::recoverConstraintSegments()
  */
 void CDTGenerator::removeLocalDegeneracies()
 {
-	//TODO: Define function.
+	// Test for 5-point set of vertices which are cospherical
+	// If I compute Delaunay triangulation of vertices of PLC then it will internally fix the local generacy issue 
+	// It means I will not be able to find out local degeneracy issue, even if it is there?? 
+	// How to update PLC using symbolic perturbation 	
 }
 
 
