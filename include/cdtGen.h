@@ -121,4 +121,7 @@ class CDTGenerator
 		
 		// local degeneracy removal
 		void removeLocalDegeneracies();
+
+		// constraint facet recovery
+		void recoverConstraintFacets();
 };
