@@ -808,7 +808,67 @@ void CDTGenerator::removeLocalDegeneracies()
  */
 void CDTGenerator::recoverConstraintFacets()
 {
+	// collect list of faces which are missing from DT
+	// import DT to LCC
+	// for each missing face:
+	// 	compute 3-cells intersecting this facet
+	// 	collect all these cells in a list
+	//	compute cavity LCC:
+	//		For each intersecting tetrahedron in cavity, extract the facets which should be part of cavityLCC
+	//		Add those facets to cavityLCC
+	// 	expand/verify cavity:     
+	// 		Collect list of all facets L in cavityLCC which are not strongly Delaunay
+	//		Remove that facet from L and cavityLCC
+	//		Determine all other facets of the tetrahedra containing L:
+	//			If that facet is already in L,  
+	//				Yes, remove it from L and cavityLCC(if present)
+	//				No, Add it to cavityLCC(it may be added in later iteration in L if it is not strongly Delaunay)
+	//		Goto first step in cavity expansion	
+	//	cavity retetrahedralization: 				
+	//		Compute Delaunay tetrahedralization of vertices of cavityLCC
+	//		For each tetrahedron in cavityLCC DT:
+	//			Label it as inside/outside cavityLCC
+	//		Sew all 'inside' tetrahedrons back to the hole creating in cdtMesh(LCC representation of output)
+	
+
+	vector <DartHandle> missingConstraintFacets;
+	vector <DartHandle> intersectingTets;
+	LCC cavityLCC;
+
+
+	computeMissingConstraintFacets(missingConstraintFacets);
+	DartHandle d = import_from_triangulation_3(DT, cdtMesh);
+	// TODO: What to do with infinite vetices?
+	int visitedOnceMark = cdtMesh.get_new_mark();
+	int visitedTwiceMark = cdtMesh.get_new_mark();       	
+	while (missingConstraintFacets.size() != 0)
+	{
+		DartHandle missingFacetHandle = missingConstraintFacets.back();
+		missingConstraintFacets.pop();
+		
+		// compute cells intersecting this facet:
+		for (LCC::One_dart_per_cell<3>::iterator cIter = cdtMesh.one_dart_per_cell<3>().begin(), cIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cIter != cIterEnd; cIter++)
+		{
+			if (areIntersecting(3, 2, cIter, missingFacetHandle, cdtMesh)) // TODO: Implement this function.
+				intersectingTets.push_back(cIter);
+		}	
+		
+		// Insert faces in cavityLCC:
+		// we want outer faces from above listed intersecting cells 
+		// 	For each cell in list:
+		// 		Assign a counter of 2 to its every face.  
+		// 		Reduce the counter by one for each face as you remove the cell from list
+		// 		By the end of removal of all cells, check value of counter for each face:
+		// 			If value == 1, include this face into cavityLCC
+		// 			If value == 0, means both cells sharing this face were removed so discard this face.
+	
+		// cavity verification/expansion:
+		
+		// cavity retetrahedralization:	
+			
+	}
 }
+
 
 /*! \fn void CDTGenerator::generate()
     \brief Public interface for CDTGenerator class.
