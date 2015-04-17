@@ -123,7 +123,7 @@ class CDTGenerator
 		void removeLocalDegeneracies();
 
 		// constraint facet recovery
-		bool areIntersecting(size_t, size_t, DartHandle, DartHandle, LCC); // first 2 arguments specify the dimension of first and second cells respectively.
-		void computeMissingConstraintFacets(vector<DartHandle>);
+		bool areIntersecting(size_t, size_t, DartHandle, DartHandle); // first 2 arguments specify the dimension of first and second cells respectively.
+		void computeMissingConstraintFacets(vector<DartHandle>&);
 		void recoverConstraintFacets();
 };
