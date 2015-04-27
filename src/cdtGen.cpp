@@ -858,13 +858,18 @@ void CDTGenerator::recoverConstraintFacets()
 	vector <DartHandle> intersectingTets;
 	LCCWithDartInfo cavityLCC;
 
-	computeMissingConstraintFacets(missingConstraintFacets);
+	computeMissingConstraintFacets(missingConstraintFacets); // list missing constraint facets
 	DartHandle d = import_from_triangulation_3(cdtMesh, DT);
 	// TODO: What to do with infinite vetices?
+	
+	int partOfIntersectingTetMark = cdtMesh.get_new_mark();
+	
+	if (partOfIntersectingTetMark == -1)
+		exit(0);
 
 	while (missingConstraintFacets.size() != 0)
 	{
-		DartHandle missingFacetHandle = missingConstraintFacets.back();
+		DartHandle missingFacetHandle = missingConstraintFacets.back(); // test for each missing facet
 		missingConstraintFacets.pop_back();
 		
 		// compute cells intersecting this facet:
@@ -874,27 +879,35 @@ void CDTGenerator::recoverConstraintFacets()
 				intersectingTets.push_back(cIter);
 		}	
 		
-		// INITIAL CAVITY CREATION:
+		// INITIAL CAVITY CREATION:(target is to remove intersecting cells and to create cavity using their faces)
 		for (vector<DartHandle>::iterator intersectingTetIter = intersectingTets.begin(), intersectingTetIterEnd = intersectingTets.end(); intersectingTetIter != intersectingTetIterEnd; intersectingTetIter++)
 		{
-				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).begin(), fIterEnd = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).end(); fIter != fIterEnd; fIter++)
-					if (cdtMesh.beta<3>(fIter) == NULL) // this is a boundary facet
-					{
-
-						CGALPoint p[3];
-						size_t i = 0;
-						for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pointIter = cdtMesh.one_dart_per_incident_cell<0, 2>(fIter).begin(), pointIterEnd = cdtMesh.one_dart_per_incident_cell<0, 2>(fIter).end(); pointIter != pointIterEnd; pointIter++)		
-							p[i++] = cdtMesh.point(pointIter);
-
-						DartHandle facetHandle = cavityLCC.make_triangle(p[0], p[1], p[2]);
-						cavityLCC.info<2>(facetHandle) = fIter; // used for accessing external tetrahedron
-					}
-					else 
-						continue;
+			// TODO: Use mark = 2 based approach
+			for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator faceIter = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).begin(), faceIterEnd = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).end(); faceIter != faceIterEnd; faceIter++)
+			{
+				cdtMesh.mark(faceIter, partOfIntersectingTetMark);
+				cdtMesh.mark(cdtMesh.beta<3>(faceIter), partOfIntersectingTetMark);
+			}
 		}
-		//// TODO: Link faces together.
-		//// TODO: delete the intersecting tetrahedrons from cdtMesh	
 		
+		//// remove intersecting tets from cdtMesh
+		//// add marked faces to cavityLCC
+		for (vector<DartHandle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
+			remove_cell<LCC, 3>(cdtMesh, *tetIter);
+	
+		for (LCC::Dart_range::iterator fHandle = cdtMesh.darts().begin(), fHandleEnd = cdtMesh.darts().end(); fHandle != fHandleEnd; fHandle++)
+			if (cdtMesh.is_marked(fHandle, partOfIntersectingTetMark))
+			{
+				CGALPoint p[3];
+
+				size_t i = 0;
+				for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>(fHandle).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
+					p[i] = cdtMesh.point(pIter);
+				
+				cavityLCC.make_triangle(p[0], p[1], p[2]);
+			}
+
+		/*
 		// CAVITY VERIFICATION:
 
 	
@@ -942,7 +955,7 @@ void CDTGenerator::recoverConstraintFacets()
 		////// create set of vertices in cavity
 		//// import DT to LCC
 		//// Label each 3-cell as either inside or outside cavity boundary
-	
+	*/	
 	}
 
 }
