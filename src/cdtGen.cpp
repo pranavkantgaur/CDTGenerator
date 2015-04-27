@@ -70,6 +70,59 @@ bool CDTGenerator::areGeometricallySameSegments(DartHandle d1, DartHandle d2)
 } 
 
 
+/*! \fn void CDTGenerator::sew2CellsFromEdge(LCC &lcc)
+ *  \brief Sews 2-cells sharing common edge.
+ *  \param [in, out] lcc Linear cell complex containing 2-cells. 
+ */
+void CDTGenerator::sew2CellsFromEdge(LCC &lcc)
+{
+
+	vector<pair<DartHandle, DartHandle> > twoCellsToBeSewed;
+	int sewedMark = plc.get_new_mark();
+
+	if (sewedMark == -1)
+	{
+		cout << "\nNo free mark available!!";
+		exit(0);
+	}	
+
+	// sew facets sharing edge
+	for (LCC::Dart_range::iterator segIter1 = lcc.darts().begin(), segIterEnd1 = lcc.darts().end(); segIter1 != segIterEnd1; segIter1++)
+	{
+		if (!lcc.is_marked(segIter1, sewedMark)) // not sewed till now
+		{
+			for (LCC::Dart_range::iterator segIter2 = lcc.darts().begin(), segIterEnd2 = lcc.darts().end(); segIter2 != segIterEnd2; segIter2++)
+			{
+				if (!lcc.is_marked(segIter2, sewedMark) && lcc.is_sewable<2>(segIter1, segIter2))
+				{
+					if (areGeometricallySameSegments(segIter1, segIter2)) // checks the geometry of segments
+					{
+						lcc.mark(segIter1, sewedMark);
+						lcc.mark(segIter2, sewedMark);
+						twoCellsToBeSewed.push_back(pair<DartHandle, DartHandle>(segIter1, segIter2));
+						break;
+					}
+				}
+				else
+					continue;
+			}
+		}	
+		else
+			continue;
+	}
+	
+	// sew the faces sharing an edge
+	unsigned int k = 0;
+	for (vector<pair<DartHandle, DartHandle> >::iterator dIter = twoCellsToBeSewed.begin(), dIterEnd = twoCellsToBeSewed.end(); dIter != dIterEnd; dIter++)
+		if (lcc.is_sewable<2>(dIter->first, dIter->second))
+		{
+			lcc.sew<2>(dIter->first, dIter->second);
+			k++;	
+		}
+
+}
+
+
 /*! \fn void CDTGenerator::readPLCInput()
     \brief Reads PLC from input(only PLY supported currently) file.
 
@@ -105,17 +158,8 @@ void CDTGenerator::readPLCInput()
 	ply_close(inputPLY);
 
 	// Initialize PLC
-	vector<pair<DartHandle, DartHandle> > twoCellsToBeSewed;
 	size_t vertexIds[3];
  
-	int sewedMark = plc.get_new_mark();
-
-	if (sewedMark == -1)
-	{
-		cout << "\nNo free mark available!!";
-		exit(0);
-	}
-	
 	CGALPoint trianglePoints[3];
 
 	for (unsigned int n = 0, m = plcFaceVector.size(); n < m; n++)
@@ -130,38 +174,7 @@ void CDTGenerator::readPLCInput()
 	}
 
 	// sew facets sharing edge
-	for (LCC::Dart_range::iterator segIter1 = plc.darts().begin(), segIterEnd1 = plc.darts().end(); segIter1 != segIterEnd1; segIter1++)
-	{
-		if (!plc.is_marked(segIter1, sewedMark)) // not sewed till now
-		{
-			for (LCC::Dart_range::iterator segIter2 = plc.darts().begin(), segIterEnd2 = plc.darts().end(); segIter2 != segIterEnd2; segIter2++)
-			{
-				if (!plc.is_marked(segIter2, sewedMark) && plc.is_sewable<2>(segIter1, segIter2))
-				{
-					if (areGeometricallySameSegments(segIter1, segIter2)) // checks the geometry of segments
-					{
-						plc.mark(segIter1, sewedMark);
-						plc.mark(segIter2, sewedMark);
-						twoCellsToBeSewed.push_back(pair<DartHandle, DartHandle>(segIter1, segIter2));
-						break;
-					}
-				}
-				else
-					continue;
-			}
-		}	
-		else
-			continue;
-	}
-	
-	// sew the faces sharing an edge
-	unsigned int k = 0;
-	for (vector<pair<DartHandle, DartHandle> >::iterator dIter = twoCellsToBeSewed.begin(), dIterEnd = twoCellsToBeSewed.end(); dIter != dIterEnd; dIter++)
-		if (plc.is_sewable<2>(dIter->first, dIter->second))
-		{
-			plc.sew<2>(dIter->first, dIter->second);
-			k++;	
-		}
+	sew2CellsFromEdge(plc);
 }
 
 
@@ -906,11 +919,12 @@ void CDTGenerator::recoverConstraintFacets()
 				
 				cavityLCC.make_triangle(p[0], p[1], p[2]);
 			}
-
-		/*
+		//// sew 2-cells at boundaries
+		//sew2CellsFromEdge<LCCWithDartInfo>(cavityLCC);
+		
 		// CAVITY VERIFICATION:
-
-	
+		
+/*	
 		//// TODO: Link faces together.
 		//// TODO: delete the intersecting tetrahedrons from cdtMesh	
 		

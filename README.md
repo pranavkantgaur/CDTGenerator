@@ -37,3 +37,4 @@ Main objective is to extend this implementation to support adaptive Constrained 
 
 * Add function in CGAL fork for iterating vertices of a 2-cell using ```One_dart_per_incident_cell_range<0, 2>``` in _counterclockwise_ order. It is useful while writing polygons to data file for visualization.
 
+* Generic ```sew2CellsFromEdge``` for both ```LCC``` and ```LCCWithDartInfo```.
