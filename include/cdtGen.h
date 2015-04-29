@@ -117,8 +117,11 @@ class CDTGenerator
 		void computeDelaunayTetrahedralization();
 		void writePLYOutput(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, string); 
 		void readPLCInput();
-		bool areGeometricallySameSegments(DartHandle, DartHandle);
+
+		bool areGeometricallySameSegments(DartHandle, DartHandle, LCC);
+		bool areGeometricallySameSegmentsWithDartInfo(LCCWithDartInfo::Dart_handle, LCCWithDartInfo::Dart_handle, LCCWithDartInfo);
 		void sew2CellsFromEdge(LCC &);
+		void sew2CellsWithDartInfoFromEdge(LCCWithDartInfo &);
 
 		// local degeneracy removal
 		void removeLocalDegeneracies();
@@ -127,4 +130,7 @@ class CDTGenerator
 		bool areIntersecting(size_t, size_t, DartHandle, DartHandle); // first 2 arguments specify the dimension of first and second cells respectively.
 		void computeMissingConstraintFacets(vector<DartHandle>&);
 		void recoverConstraintFacets();
+		bool isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle, LCCWithDartInfo);
+		bool isInCavity(LCC::Dart_handle, LCC, LCCWithDartInfo::Dart_handle&, LCCWithDartInfo);
+		bool isTetInsideCavity(Delaunay::Cell_handle, LCCWithDartInfo);
 };

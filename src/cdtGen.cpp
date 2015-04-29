@@ -61,10 +61,23 @@ static int face_cb(p_ply_argument argument)
     \param [in] d1 DartHandle for first segment
     \param [in] d2 DartHandle for second segment
 */
-bool CDTGenerator::areGeometricallySameSegments(DartHandle d1, DartHandle d2)
+bool CDTGenerator::areGeometricallySameSegments(DartHandle d1, DartHandle d2, LCC lcc)
 {
-	if (plc.point(d1) == plc.point(plc.beta(d2, 1)))
-		if (plc.point(plc.beta(d1, 1)) == plc.point(d2))
+	if (lcc.point(d1) == lcc.point(lcc.beta(d2, 1)))
+		if (lcc.point(lcc.beta(d1, 1)) == lcc.point(d2))
+			return true;
+	return false;
+} 
+
+/*! \fn bool CDTGenerator::areGeometricallySameSegments(DartHandle d1, DartHandle d2)
+    \brief Tests whether segments represented by d1 and d2 are _geometrically_ same.
+    \param [in] d1 DartHandle for first segment
+    \param [in] d2 DartHandle for second segment
+*/
+bool CDTGenerator::areGeometricallySameSegmentsWithDartInfo(LCCWithDartInfo::Dart_handle d1, LCCWithDartInfo::Dart_handle d2, LCCWithDartInfo lcc)
+{
+	if (lcc.point(d1) == lcc.point(lcc.beta(d2, 1)))
+		if (lcc.point(lcc.beta(d1, 1)) == lcc.point(d2))
 			return true;
 	return false;
 } 
@@ -95,7 +108,7 @@ void CDTGenerator::sew2CellsFromEdge(LCC &lcc)
 			{
 				if (!lcc.is_marked(segIter2, sewedMark) && lcc.is_sewable<2>(segIter1, segIter2))
 				{
-					if (areGeometricallySameSegments(segIter1, segIter2)) // checks the geometry of segments
+					if (areGeometricallySameSegments(segIter1, segIter2, lcc)) // checks the geometry of segments
 					{
 						lcc.mark(segIter1, sewedMark);
 						lcc.mark(segIter2, sewedMark);
@@ -123,6 +136,57 @@ void CDTGenerator::sew2CellsFromEdge(LCC &lcc)
 }
 
 
+/*! \fn void CDTGenerator::sew2CellsWithDartInfoFromEdge(LCCWithDartInfo &lcc)
+ *  \brief Sews 2-cells of LCC with dart info sharing common edge.
+ *  \param [in, out] Linear cell complex containing 2-cells.  
+ */
+void CDTGenerator::sew2CellsWithDartInfoFromEdge(LCCWithDartInfo &lcc)
+{
+
+	vector<pair<LCCWithDartInfo::Dart_handle, LCCWithDartInfo::Dart_handle> > twoCellsToBeSewed;
+	int sewedMark = plc.get_new_mark();
+
+	if (sewedMark == -1)
+	{
+		cout << "\nNo free mark available!!";
+		exit(0);
+	}	
+
+	// sew facets sharing edge
+	for (LCCWithDartInfo::Dart_range::iterator segIter1 = lcc.darts().begin(), segIterEnd1 = lcc.darts().end(); segIter1 != segIterEnd1; segIter1++)
+	{
+		if (!lcc.is_marked(segIter1, sewedMark)) // not sewed till now
+		{
+			for (LCCWithDartInfo::Dart_range::iterator segIter2 = lcc.darts().begin(), segIterEnd2 = lcc.darts().end(); segIter2 != segIterEnd2; segIter2++)
+			{
+				if (!lcc.is_marked(segIter2, sewedMark) && lcc.is_sewable<2>(segIter1, segIter2))
+				{
+					if (areGeometricallySameSegmentsWithDartInfo(segIter1, segIter2, lcc)) // checks the geometry of segments
+					{
+						lcc.mark(segIter1, sewedMark);
+						lcc.mark(segIter2, sewedMark);
+						twoCellsToBeSewed.push_back(pair<LCCWithDartInfo::Dart_handle, LCCWithDartInfo::Dart_handle>(segIter1, segIter2));
+						break;
+					}
+				}
+				else
+					continue;
+			}
+		}	
+		else
+			continue;
+	}
+	
+	// sew the faces sharing an edge
+	unsigned int k = 0;
+	for (vector<pair<LCCWithDartInfo::Dart_handle, LCCWithDartInfo::Dart_handle> >::iterator dIter = twoCellsToBeSewed.begin(), dIterEnd = twoCellsToBeSewed.end(); dIter != dIterEnd; dIter++)
+		if (lcc.is_sewable<2>(dIter->first, dIter->second))
+		{
+			lcc.sew<2>(dIter->first, dIter->second);
+			k++;	
+		}
+
+}
 /*! \fn void CDTGenerator::readPLCInput()
     \brief Reads PLC from input(only PLY supported currently) file.
 
@@ -838,6 +902,38 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
 }
 
 
+/*! \fn bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle d, LCCWithDartInfo lcc)
+ *  \brief Tests whether input facet is not strongly Delaunay.
+ *  \param [in] d Dart handle to the facet.
+ *  \param [in] lcc Linear cell complex containing d.
+ */
+bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle d, LCCWithDartInfo lcc)
+{
+}
+
+/*! \fn bool CDTGenerator::isInCavity(LCC::Dart_handle fHandle, LCC lcc, LCCWithDartInfo::Dart_handle& correspondingFacetInCavity, LCCWithDartInfo lccWithDartInfo)
+ *  \brief Tests whether facet is in cavity
+ *  \param [in] fHandle Dart handle to the facet in LCC
+ *  \param [in] lcc Linear cell complex constaining fHandle.
+ *  \param [out] correspondingFacetInCavity Returned facet in cavity.
+ *  \param [in] lccWithDartInfo LCC representation of cavity
+ *  \return True if input facet is in cavity.
+ */
+bool CDTGenerator::isInCavity(LCC::Dart_handle fHandle, LCC lcc, LCCWithDartInfo::Dart_handle& correspondingFacetInCavity, LCCWithDartInfo cavityLCC)
+{
+}
+
+
+/*! \fn bool CDTGenerator::isCellInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo cavityLCC)
+ *  \brief Determines whether given 3-cell is inside Cavity boundary.
+ *  \param [in] ch Cell handle pointing to the query tetrahedron.
+ *  \param [in] cavityLCC LCC representation of cavity.
+ *  \return True if given tetrahedron is inside cavityLCC.
+ */
+bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo cavityLCC)
+{
+}
+
 /*! \fn void CDTGenerator::recoveryConstraintFacets()
  *  \brief Recovers constraint facets.
  */
@@ -870,6 +966,7 @@ void CDTGenerator::recoverConstraintFacets()
 	vector <DartHandle> missingConstraintFacets;
 	vector <DartHandle> intersectingTets;
 	LCCWithDartInfo cavityLCC;
+	LCCWithDartInfo::Dart_handle cavityFaceHandle;
 
 	computeMissingConstraintFacets(missingConstraintFacets); // list missing constraint facets
 	DartHandle d = import_from_triangulation_3(cdtMesh, DT);
@@ -917,59 +1014,82 @@ void CDTGenerator::recoverConstraintFacets()
 				for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>(fHandle).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
 					p[i] = cdtMesh.point(pIter);
 				
-				cavityLCC.make_triangle(p[0], p[1], p[2]);
+				cavityFaceHandle = cavityLCC.make_triangle(p[0], p[1], p[2]);
+				cavityLCC.info<0>(cavityFaceHandle) = fHandle; // TODO: Fix here, should I set dart info for all vertices of this facet?
 			}
 		//// sew 2-cells at boundaries
-		//sew2CellsFromEdge<LCCWithDartInfo>(cavityLCC);
+		sew2CellsWithDartInfoFromEdge(cavityLCC);
 		
-		// CAVITY VERIFICATION:
+		// CAVITY VERIFICATION/EXPANSION:
 		
-/*	
-		//// TODO: Link faces together.
-		//// TODO: delete the intersecting tetrahedrons from cdtMesh	
 		
 		//// create queue of non strongly Delaunay faces in cavityLCC
-		vector<DartHandle> nonStronglyDelaunayFacetsInCavity;
+		vector<LCCWithDartInfo::Dart_handle> nonStronglyDelaunayFacetsInCavity;
+		LCCWithDartInfo::Dart_handle correspondingFacetInCavity;
 
 		do
 		{
 			//// initialize vector
-			for (vector<DartHandle>::iterator nonStrongFaceIter = cavity.begin(), nonStrongFaceEndIter = cavity.end(); nonStrongFaceIter != nonStrongFaceEndIter; nonStrongFaceIter++)	
-				if (isNonStronglyDelaunay(*nonStrongFaceIter, cavity)) // TODO:Implement. 
-					nonStronglyDelaunayFacetsInCavity.push_back(*nonStrongFaceIter);
+			for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator nonStrongFaceIter = cavityLCC.one_dart_per_cell<2>().begin(), nonStrongFaceIterEnd = cavityLCC.one_dart_per_cell<2>().end(); nonStrongFaceIter != nonStrongFaceIterEnd; nonStrongFaceIter++)	
+				if (isNonStronglyDelaunayFacet(nonStrongFaceIter, cavityLCC)) // TODO:Implement. 
+					nonStronglyDelaunayFacetsInCavity.push_back(nonStrongFaceIter);
 				else
 					continue;	
-
+		
 			//// cavity expansion
 			while (!nonStronglyDelaunayFacetsInCavity.size())	
 			{
-				DartHandle nonStronglyDelaunayFace = nonStronglyDelaunayFacetsInCavity.back();
+				LCCWithDartInfo::Dart_handle nonStronglyDelaunayFace = nonStronglyDelaunayFacetsInCavity.back();
 				nonStronglyDelaunayFacetsInCavity.pop_back();
-	
-				if (isInCavity(nonStronglyDelaunayFace, cavity)) // TODO: Implement
+					
+				LCC::Dart_handle exteriorCellSharingNonDelaunayFacet = cdtMesh.beta<3>(cavityLCC.info<0>(nonStronglyDelaunayFace)); // TODO: Fix here 
+
+				//// Explore all faces of this cell
+				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++)			
 				{
-					DartHandle exteriorCellSharingNonDelaunayFacet = cdtMesh.beta<3>(nonStronglyDelaunayFace); // goes to the neighboring 3-cell outside cavity. 
-					//// Explore faces of this cell
-					for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++)			
-					{
-						size_t facetLocation;
-	
-						if (isInCavity(facetInCellHandle, cavity, &facetLocation)) // returns location of facet if found
-							cavity.erase(cavity.begin() + facetLocation);
+					size_t facetLocation;
+					if (isInCavity(facetInCellHandle, cdtMesh, correspondingFacetInCavity, cavityLCC)) 
+						remove_cell<LCCWithDartInfo, 2>(cavityLCC, correspondingFacetInCavity);
 						
-						else
-							cavity.push_back(facetInCellHandle);
+					else
+					{
+						CGALPoint p[3];
+						size_t i = 0;
+						for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>(facetInCellEndHandle).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 2>(facetInCellEndHandle).end(); pIter != pIterEnd; pIter++)
+							p[i] = cdtMesh.point(pIter);
+				
+						cavityLCC.make_triangle(p[0], p[1], p[2]);
+						sew2CellsWithDartInfoFromEdge(cavityLCC);
 					}
-				}			 
-			}	
+				}
+			}
+			
 		}while (!nonStronglyDelaunayFacetsInCavity.size());
 		
 		// CAVITY RETETRAHEDRALIZATION		
-		//// compute Delaunay triangulation of all vertices of cavity 
-		////// create set of vertices in cavity
-		//// import DT to LCC
-		//// Label each 3-cell as either inside or outside cavity boundary
-	*/	
+		vector<pair<CGALPoint, LCC::Dart_handle> > cavityVertices;
+		
+		for (LCCWithDartInfo::One_dart_per_cell_range<0, 3>::iterator pIter = cavityLCC.one_dart_per_cell<0, 3>().begin(), pIterEnd = cavityLCC.one_dart_per_cell<0, 3>().end(); pIter != pIterEnd; pIter++)	
+			cavityVertices.push_back(make_pair(cavityLCC.point(pIter), cavityLCC.info<0>(pIter)));
+		
+		Delaunay cavityDelaunay;
+		cavityDelaunay.insert(cavityVertices.begin(), cavityVertices.end()); // DT of cavity vertices
+		
+		// mark each cell of DT as either inside/outside cavity
+		for (Delaunay::Finite_cells_iterator cIter = cavityDelaunay.finite_cells_begin(), cIterEnd = cavityDelaunay.finite_cells_end(); cIter != cIterEnd; cIter++)
+		{
+			if (isTetInsideCavity(cIter, cavityLCC))
+			{
+				// create identical 3-cell in cdtMesh
+				CGALPoint p[4];
+				for (size_t i = 0; i < 4; i++)
+					p[i] = ((*cIter).vertex(i))->point();
+				cdtMesh.make_tetrahedron(p[0], p[1], p[2], p[3]); 
+			}
+			else
+				continue;
+		}
+		cdtMesh.sew3_same_facets();
 	}
 
 }
