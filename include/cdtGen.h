@@ -4,6 +4,7 @@
 #include <map>
 #include <unordered_set>
 
+#include <CGAL/Kernel/global_functions.h>
 #include <CGAL/Random.h>
 #include <CGAL/Object.h>
 #include <CGAL/Ray_3.h>
@@ -131,6 +132,9 @@ class CDTGenerator
 		void computeMissingConstraintFacets(vector<DartHandle>&);
 		void recoverConstraintFacets();
 		bool isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle, LCCWithDartInfo);
-		bool isInCavity(LCC::Dart_handle, LCC, LCCWithDartInfo::Dart_handle&, LCCWithDartInfo);
+		bool facetsHaveSameGeometry(LCC::Dart_handle, LCC, LCCWithDartInfo::Dart_handle, LCCWithDartInfo);
+		bool isFacetInCavity(LCC::Dart_handle, LCC, LCCWithDartInfo::Dart_handle&, LCCWithDartInfo);
+	
 		bool isTetInsideCavity(Delaunay::Cell_handle, LCCWithDartInfo);
+		bool rayIntersectsFacet(CGALRay, LCCWithDartInfo::Dart_handle, LCCWithDartInfo);
 };

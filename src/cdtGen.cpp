@@ -909,19 +909,82 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
  */
 bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle d, LCCWithDartInfo lcc)
 {
+	// a facet is non strongly Delaunay if there do not exist any circumsphere which does not include and other point on and inside it.
+	// we need to check it against vertices of lcc
+
 }
 
-/*! \fn bool CDTGenerator::isInCavity(LCC::Dart_handle fHandle, LCC lcc, LCCWithDartInfo::Dart_handle& correspondingFacetInCavity, LCCWithDartInfo lccWithDartInfo)
+
+/*! \fn bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC lcc, LCCWithDartInfo::Dart_handle facetInCavity, LCCWithDartInfo cavityLCC)
+ *   \brief Tests whether input facets from two different LCCs are _geometrically_ same.
+ *  \param [in] fHandle Dart handle to the facet in LCC
+ *  \param [in] lcc Linear cell complex constaining fHandle.
+ *  \param [in] facetInCavity Dart handle to the facet in cavity.
+ *  \param [in] cavityLCC LCC representation of cavity
+ *  \return True if input facets have same geometry.   
+ */
+bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC lcc, LCCWithDartInfo::Dart_handle facetInCavity, LCCWithDartInfo cavityLCC)
+{
+	LCC alcc;
+	CGALPoint p[3];
+	
+	size_t i = 0;
+	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = lcc.one_dart_per_incident_cell<0, 2>(fHandle).begin(),  pIterEnd = lcc.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
+		p[i++] = lcc.point(pIter);
+
+	LCC::Dart_handle d1 = alcc.make_triangle(p[0], p[1], p[2]);
+
+	i = 0;
+	for (LCCWithDartInfo::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cavityLCC.one_dart_per_incident_cell<0, 2>(facetInCavity).begin(),  pIterEnd = cavityLCC.one_dart_per_incident_cell<0, 2>(facetInCavity).end(); pIter != pIterEnd; pIter++)
+		p[i++] = cavityLCC.point(pIter);
+	
+	LCC::Dart_handle d2 = alcc.make_triangle(p[0], p[1], p[2]);
+
+	if (alcc.are_facets_same_geometry(d1, d2))
+		return true;
+	else
+		return false;
+}
+
+
+/*! \fn bool CDTGenerator::isFacetInCavity(LCC::Dart_handle fHandle, LCC lcc, LCCWithDartInfo::Dart_handle& correspondingFacetInCavity, LCCWithDartInfo cavityLCC)
  *  \brief Tests whether facet is in cavity
  *  \param [in] fHandle Dart handle to the facet in LCC
  *  \param [in] lcc Linear cell complex constaining fHandle.
  *  \param [out] correspondingFacetInCavity Returned facet in cavity.
- *  \param [in] lccWithDartInfo LCC representation of cavity
+ *  \param [in] cavityLCC LCC representation of cavity
  *  \return True if input facet is in cavity.
  */
-bool CDTGenerator::isInCavity(LCC::Dart_handle fHandle, LCC lcc, LCCWithDartInfo::Dart_handle& correspondingFacetInCavity, LCCWithDartInfo cavityLCC)
+bool CDTGenerator::isFacetInCavity(LCC::Dart_handle fHandle, LCC lcc, LCCWithDartInfo::Dart_handle& correspondingFacetInCavity, LCCWithDartInfo cavityLCC)
 {
+	for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator fIter = cavityLCC.one_dart_per_cell<2>().begin(), fIterEnd = cavityLCC.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
+		if (facetsHaveSameGeometry(fHandle, lcc, fIter, cavityLCC))
+			return true;
+	return false;
 }
+
+
+/*! \fn bool CDTGenerator::rayIntersectsFacet(CGALRay ray, LCCWithDartInfo::Dart_handle fHandle, LCCWithDartInfo lcc)
+ *  \brief Tests whether input ray intersect the facet in LCC.
+ *  \param [in] ray Given ray.
+ *  \param [in] fHandle Dart handle to facet in LCC.
+ *  \param [in] lcc Linear cell complex containing fHandle.
+ *  \return True if ray does intersect the given facet in LCC.
+ */
+bool CDTGenerator::rayIntersectsFacet(CGALRay ray, LCCWithDartInfo::Dart_handle fHandle, LCCWithDartInfo lcc)
+{
+	// represent facet in triangle_3 form 
+	CGALPoint p[3];
+	size_t i = 0;
+	for (LCCWithDartInfo::One_dart_per_incident_cell_range<0, 2>::iterator pIter = lcc.one_dart_per_incident_cell<0, 2>(fHandle).begin(), pIterEnd = lcc.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
+		p[i++] = lcc.point(pIter);
+
+	CGALTriangle triangle = CGALTriangle(p[0], p[1], p[2]);
+
+	cpp11::result_of<K::Intersect_3(CGALRay, CGALTriangle)>::type result = intersection(ray, triangle);
+	
+	return result;
+}	
 
 
 /*! \fn bool CDTGenerator::isCellInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo cavityLCC)
@@ -932,7 +995,27 @@ bool CDTGenerator::isInCavity(LCC::Dart_handle fHandle, LCC lcc, LCCWithDartInfo
  */
 bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo cavityLCC)
 {
+
+	CGALPoint circumcenter1 = circumcenter(ch->vertex(0)->point(), ch->vertex(1)->point(), ch->vertex(2)->point(), ch->vertex(3)->point());
+
+	// generate a random ray from circumcenter
+	CGALPoint randomEndpoint; // TODO: Initialize
+	CGALRay randomRay = CGALRay(circumcenter1, randomEndpoint);
+	// find intersection with each face of cavity
+	// if number of intersections are even then tetrahedron is outside
+	// else, tetrahedron is outside.
+	size_t nIntersections = 0;
+	for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator fHandle = cavityLCC.one_dart_per_cell<2>().begin(), fHandleEnd = cavityLCC.one_dart_per_cell<2>().end(); fHandle != fHandleEnd; fHandle++)
+	{
+		if (rayIntersectsFacet(randomRay, fHandle, cavityLCC))
+			nIntersections++;
+		else 
+			continue;
+	}
+	
+	return (nIntersections % 2) ? false : true;
 }
+
 
 /*! \fn void CDTGenerator::recoveryConstraintFacets()
  *  \brief Recovers constraint facets.
@@ -1012,7 +1095,7 @@ void CDTGenerator::recoverConstraintFacets()
 
 				size_t i = 0;
 				for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>(fHandle).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
-					p[i] = cdtMesh.point(pIter);
+					p[i++] = cdtMesh.point(pIter);
 				
 				cavityFaceHandle = cavityLCC.make_triangle(p[0], p[1], p[2]);
 				cavityLCC.info<0>(cavityFaceHandle) = fHandle; // TODO: Fix here, should I set dart info for all vertices of this facet?
@@ -1048,7 +1131,7 @@ void CDTGenerator::recoverConstraintFacets()
 				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++)			
 				{
 					size_t facetLocation;
-					if (isInCavity(facetInCellHandle, cdtMesh, correspondingFacetInCavity, cavityLCC)) 
+					if (isFacetInCavity(facetInCellHandle, cdtMesh, correspondingFacetInCavity, cavityLCC)) 
 						remove_cell<LCCWithDartInfo, 2>(cavityLCC, correspondingFacetInCavity);
 						
 					else
@@ -1056,7 +1139,7 @@ void CDTGenerator::recoverConstraintFacets()
 						CGALPoint p[3];
 						size_t i = 0;
 						for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>(facetInCellEndHandle).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 2>(facetInCellEndHandle).end(); pIter != pIterEnd; pIter++)
-							p[i] = cdtMesh.point(pIter);
+							p[i++] = cdtMesh.point(pIter);
 				
 						cavityLCC.make_triangle(p[0], p[1], p[2]);
 						sew2CellsWithDartInfoFromEdge(cavityLCC);
