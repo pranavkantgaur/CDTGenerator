@@ -880,17 +880,39 @@ void CDTGenerator::removeLocalDegeneracies()
 	
 }
 
-/*! \fn bool CDTGenerator::areIntersecting(size_t cell1Dimension, size_t cell2Dimension, DartHandle cell1Handle, DartHandle cell2Handle)
- *  \brief Determines whether cell1 intersects cell2.
- *  \param [in] cell1Dimension Dimension of first cell.
- *  \param [in] cell2Dimension Dimension of second cell.
- *  \param [in] cell1Handle Dart handle to first cell.
- *  \param [in] cell2Handle Dart handle to second cell.
- *  \return true if cell1 and cell2 intersect otherwise returns false.
- */
-bool CDTGenerator::areIntersecting(size_t cell1Dimension, size_t cell2Dimension, DartHandle cell1Handle, DartHandle cell2Handle)
-{
 
+/*! \fn bool CDTGenerator::areFacetTetIntersecting(DartHandle tetHandle, DartHandle facetHandle)
+ *  \brief Determines whether cell1 intersects cell2.
+ *  \param [in] tetHandle Dart handle to first cell.
+ *  \param [in] facetHandle Dart handle to second cell.
+ *  \return true if tet anf facet intersect otherwise returns false.
+ */
+bool CDTGenerator::areFacetTetIntersecting(DartHandle tetHandle, DartHandle facetHandle)
+{
+	// represent facet as CGALTriangle and tet as CGALTeterahedron
+	// call do_intersect(tet, tri)
+	
+	CGALTriangle tri;
+	CGALTetrahedron tet;
+	
+	CGALPoint p[4];
+
+	size_t i = 0;
+	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>(facetHandle).begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>(facetHandle).end(); pIter != pIterEnd; pIter++)
+		p[i++] = plc.point(pIter);
+
+	tri = CGALTriangle(p[0], p[1], p[2]);
+
+	i = 0;
+	for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 3>(tetHandle).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 3>(tetHandle).end(); pIter != pIterEnd; pIter++)
+		p[i++] = plc.point(pIter);
+
+	tet = CGALTetrahedron(p[0], p[1], p[2], p[3]);
+
+	if (do_intersect(tet, tri))
+		return true;
+	else
+		return false;
 }
 
 /*! \fn void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFacetList)
@@ -899,6 +921,22 @@ bool CDTGenerator::areIntersecting(size_t cell1Dimension, size_t cell2Dimension,
  */
 void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFacetList)
 {
+	// test which facets are non present in Delaunay triangulation 
+	// add them to missing list vector
+	Delaunay::Vertex_handle v1, v2, v3;
+	Delaunay::Cell_handle c;
+	int i, j, k;
+
+	for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
+	{
+		if (DT.is_vertex(plc.point(fIter), v1))
+			if (DT.is_vertex(plc.point(plc.beta(fIter, 1)), v2))
+				if (DT.is_vertex(plc.point(plc.beta(fIter, 1, 1)), v3))
+					if (DT.is_facet(v1, v2, v3, c, i, j, k))
+						continue;
+		else
+			missingFacetList.push_back(fIter);
+	}
 }
 
 
@@ -998,7 +1036,7 @@ bool CDTGenerator::rayIntersectsFacet(CGALRay ray, LCCWithDartInfo::Dart_handle 
 
 	CGALTriangle triangle = CGALTriangle(p[0], p[1], p[2]);
 
-	cpp11::result_of<K::Intersect_3(CGALRay, CGALTriangle)>::type result = intersection(ray, triangle);
+	cpp11::result_of<K::Intersect_3(CGALRay, CGALTriangle)>::type result = intersection(ray, triangle); // TODO: replace it with do_intersect
 	
 	return result;
 }	
@@ -1085,7 +1123,7 @@ void CDTGenerator::recoverConstraintFacets()
 		// compute cells intersecting this facet:
 		for (LCC::One_dart_per_cell_range<3>::iterator cIter = cdtMesh.one_dart_per_cell<3>().begin(), cIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cIter != cIterEnd; cIter++)
 		{
-			if (areIntersecting(3, 2, cIter, missingFacetHandle)) // TODO: Implement this function.
+			if (areFacetTetIntersecting(cIter, missingFacetHandle)) // TODO: Implement this function.
 				intersectingTets.push_back(cIter);
 		}	
 		
