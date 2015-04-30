@@ -910,8 +910,25 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
 bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle d, LCCWithDartInfo lcc)
 {
 	// a facet is non strongly Delaunay if there do not exist any circumsphere which does not include and other point on and inside it.
-	// we need to check it against vertices of lcc
+	// since local degeneracies are already removed we only need to check for input facet in Delaunay tetrahedralization of vetices of cavity.
+	
+	vector<CGALPoint> cavityPoints;
+	for (LCCWithDartInfo::One_dart_per_cell_range<0>::iterator pIter = lcc.one_dart_per_cell<0>().begin(), pIterEnd = lcc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
+		cavityPoints.push_back(lcc.point(pIter));
 
+	Delaunay cavityDT;
+	cavityDT.insert(cavityPoints.begin(), cavityPoints.end());
+	
+	Delaunay::Vertex_handle v1, v2, v3;
+	Delaunay::Cell_handle c;
+	int i, j, k;
+	// test for facet
+	if (cavityDT.is_vertex(lcc.point(d), v1))
+		if (cavityDT.is_vertex(lcc.point(lcc.beta(d, 1)), v2))
+			if (cavityDT.is_vertex(lcc.point(lcc.beta(d, 1, 1)), v3))
+				if (cavityDT.is_facet(v1, v2, v3, c, i, j, k))
+					return false;
+	return true;
 }
 
 
