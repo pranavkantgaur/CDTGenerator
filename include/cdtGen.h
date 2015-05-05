@@ -91,6 +91,12 @@ class Triangle
 };
 
 
+class DegenerateVertexSet
+{
+	LCC::Dart_handle vertHandles[5];
+};
+
+
 class CDTGenerator
 {
 	public:
@@ -125,6 +131,10 @@ class CDTGenerator
 		void sew2CellsWithDartInfoFromEdge(LCCWithDartInfo &);
 
 		// local degeneracy removal
+		bool hasDegeneracyWithNeighbor(Delaunay::Cell_handle, Delaunay::Cell_handle); 
+		void correspondingVerticesInLCC(Delaunay::Cell_handle, size_t, vector<LCC::Dart_handle>&); 
+		bool isVertexPerturbable(LCC::Dart_handle);
+		bool hasPerturbableVertex(DegenerateVertexSet, LCC::Dart_handle);
 		void removeLocalDegeneracies();
 
 		// constraint facet recovery
