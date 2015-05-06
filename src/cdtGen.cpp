@@ -877,23 +877,21 @@ void CDTGenerator::recoverConstraintSegments()
     \param [out] If there is a neighbor having degenerate condition with cHandle then it is returned here.
     \return True if cHandle has degenerate condition with a neighbor cell.    
 */
-bool CDTGenerator::hasDegeneracyWithNeighbor(Delaunay::Cell_handle cHandle, Delaunay::Cell_handle degenPartner)
+bool CDTGenerator::hasDegeneracyWithNeighbor(Delaunay::Cell_handle cHandle, size_t degenPartnerID)
 {
-	for (size_t neighborID = 0; neighborID < 5; neighborID++)
+	for (size_t neighborID = 0; neighborID < 4; neighborID++)
 	{
 		Delaunay::Cell_handle neighbor = cHandle->neighbor(neighborID);
 		CGALPoint p[5];
 
 		// initialize all other vertices of the 5-point set
 		for (size_t i = 0, k = 0; i < 4; i++)
-		{
-			if (i != neighborID)
-				p[k++] = cHandle->vertex(i)->point();
-		}	
+			p[k++] = cHandle->vertex(i)->point();
+			
 		p[4] = (neighbor->vertex(DT.mirror_index(cHandle, neighborID)))->point(); // the vertex opposite to cHandle in neighbor.
-		if (cospherical(p[0], p[1], p[2], p[3], p[4]))
+		if (side_of_bounded_sphere(p[0], p[1], p[2], p[3], p[4]) == ON_BOUNDARY)
 		{
-			degenPartner = cHandle->neighbor(neighborID);
+			degenPartnerID = neighborID;
 			return true;
 		}
 		else
@@ -904,38 +902,38 @@ bool CDTGenerator::hasDegeneracyWithNeighbor(Delaunay::Cell_handle cHandle, Dela
 }
 
 
-/*! \fn CDTGenerator::correspondingVerticesInLCC(Delaunay::Cell_handle c1, size_t neighborID, vector<LCC::Dart_handle> &vertexSet)
+/*! \fn CDTGenerator::correspondingVerticesInLCC(Delaunay::Cell_handle c1, size_t neighborID, DegenerateVertexSet &vertexSet)
  *  \brief Determines Dart handles to vertices involved in given degeneracy set.
  *  \param [in] c1 Handle to first cell.
  *  \param [in] neighborID Index of neighbor in c1.
  *  \param [out] vertexSet Vector of dart handles to vertices of LCC.
  */
-void CDTGenerator::correspondingVerticesInLCC(Delaunay::Cell_handle c1, size_t neighborID, vector<LCC::Dart_handle> &vertexSet)
+void CDTGenerator::correspondingVerticesInLCC(Delaunay::Cell_handle c1, size_t neighborID, DegenerateVertexSet &vertexSet)
 {
 	// search for every vertex in cells inside plc 
 	Delaunay::Cell_handle c2 = c1->neighbor(neighborID);
-
+	size_t k = 0;
 	for (size_t n = 0; n < 4; n++)
 	{
-		if (c1->neighbor(n) == c2)
-			continue;
 		for (LCC::One_dart_per_cell_range<0>::iterator pHandle = plc.one_dart_per_cell<0>().begin(), pHandleEnd = plc.one_dart_per_cell<0>().end(); pHandle != pHandleEnd; pHandle++)
 		{
-			if (plc.point(pIter) == c1->vertex(n)->point())
-				vertexSet.push_back(pIter);
+
+			if (plc.point(pHandle) == c1->vertex(n)->point())
+				vertexSet.vertHandles[k++] = pHandle;
 			else
 				continue;
 		}
 	}
 	
 	// add the vertex from c2 as well
-	size_t neighborVertexIndex = c2->vertex(DT.mirror_index(c1, neighborID));
+	size_t neighborVertexIndex = DT.mirror_index(c1, neighborID);
 	for (LCC::One_dart_per_cell_range<0>::iterator pHandle = plc.one_dart_per_cell<0>().begin(), pHandleEnd = plc.one_dart_per_cell<0>().end(); pHandle != pHandleEnd; pHandle++)
-			if (plc.point(pIter) == c2->vertex(neighborVertexIndex)->point())
-				vertexSet.push_back(pIter);
+			if (plc.point(pHandle) == c2->vertex(neighborVertexIndex)->point())
+				vertexSet.vertHandles[k++] = pHandle;
 			else
 				continue;
-
+	
+	
 }
 
 
@@ -960,40 +958,62 @@ bool CDTGenerator::hasPerturbableVertex(DegenerateVertexSet degenVertexSet, LCC:
 {
 	for (size_t i = 0; i < 5; i++) // test for each vertex
 	{
-		if (isVertexPerturbable(degenVertexSet[i]))
+		if (isVertexPerturbable(degenVertexSet.vertHandles[i]))
 		{
-			perturbableVertexHandle = degenVertexSet[i];
+			perturbableVertexHandle = degenVertexSet.vertHandles[i];
 			return true;
 		}
 	}
 	return false;
 }
 
+
+/*! \fn bool CDTGenerator::segmentSafePerturbable(LCC::Dart_handle vertexHandle)
+ *  \brief Tests whether the perturbation of input vertex is _segment-safe_.
+ *  \param [in] vertexHandle Handle to the vertex to be perturbed.
+ *  \return True is input vertex is _segment-safe_ perturbable.
+ */
+bool CDTGenerator::segmentSafePerturbable(LCC::Dart_handle vertexHandle)
+{
+	
+}
+
+
+/*! \fn void CDTGenerator::perturbVertex(LCC::Dart_handle vertexToBePerturbed)
+ *  \brief _Symbolically_ perturbs input vertex.
+ *  \param [in] vertexToBePerturbed Handle to the vertex to be symbolically perturbed.
+ */
+void CDTGenerator::perturbVertex(LCC::Dart_handle vertexToBePerturbed)
+{
+}
+
+
 /*! \fn void CDTGenerator::removeLocalDegeneracies()
  *  \brief Breaks cosphericality condition(if exists) among any neighboring 5-points set in Delaunay triangulation. 
  */
 void CDTGenerator::removeLocalDegeneracies()
 {
-	vector <DegenerateVertexSet> degenerateVertexSet;
-	Delaunay::Cell_handle degenPartner;
+	DegenerateVertexSet degenerateVertexSet;
+	vector<DegenerateVertexSet> localDegeneracySet;
+	size_t degenPartnerID;
 	// Test for 5-point set of vertices which are cospherical
-	for (Delaunay::Finite_cell_iterator cIter = DT.finite_cells_begin(), cIterEnd = DT.finite_cells_end(); cIter != cIterEnd; cIter++)
+	for (Delaunay::Finite_cells_iterator cIter = DT.finite_cells_begin(), cIterEnd = DT.finite_cells_end(); cIter != cIterEnd; cIter++)
 	{
-		if (hasDegeneracyWithNeighbor(cIter, degenPartner))
+		if (hasDegeneracyWithNeighbor(cIter, degenPartnerID))
 		{
-			correspondingVerticesInLCC(cIter, degenPartner, degenerateVertexSet); // handle to corresponding 5 vertices in PLC
+			correspondingVerticesInLCC(cIter, degenPartnerID, degenerateVertexSet); // handle to corresponding 5 vertices in PLC
 			localDegeneracySet.push_back(degenerateVertexSet);		
 		}
 	}	
 	
 	// perturb a vertex in local degenerate vertex sets in 'segment safe' way.
-	LCC::Dart_handle perturbableVertex;
-	for (vector<DegenerateVertexSet>::iterator dSetIter = degenerateVertexSet.begin(), dSetIterEnd = degenerateVertexSet.end(); dSetIter != dSetIterEnd; dSetIter++)
+	LCC::Dart_handle perturbableVertexHandle;
+	for (vector<DegenerateVertexSet>::iterator dSetIter = localDegeneracySet.begin(), dSetIterEnd = localDegeneracySet.end(); dSetIter != dSetIterEnd; dSetIter++)
 	{
-		if (perturbableVertex = hasPerturbableVertex(*dSetIter))
+		if (hasPerturbableVertex(*dSetIter, perturbableVertexHandle))
 		{
-			if (segmentSafePerturbable(perturbableVertex))
-				perturbVertex(perturbableVertex); // symbolic perturbation
+			if (segmentSafePerturbable(perturbableVertexHandle))
+				perturbVertex(perturbableVertexHandle); // symbolic perturbation
 		}
 	}
 	// compute DT of modified vertices
