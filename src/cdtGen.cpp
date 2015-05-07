@@ -937,6 +937,29 @@ void CDTGenerator::correspondingVerticesInLCC(Delaunay::Cell_handle c1, size_t n
 }
 
 
+/*! \fn bool CDTGenerator::isVertexOnSegment(LCC::Dart_handle vertexHandle)
+ *  \brief Tests whether input vertex is on a segment.
+ *  \param [in] vertexHandle Dart handle to the input vertex.
+ *  \return True if input vertex is on a segment. 
+ */
+bool CDTGenerator::isVertexOnSegment(LCC::Dart_handle vertexHandle)
+{
+	// take vertex 
+	// check its neighborhood
+	 
+}
+
+
+/*! \fn bool CDTGenerator::isVertexOnFacet(LCC::Dart_handle vertexHandle)
+ *  \brief Tests whether input vertex is on a facet.
+ *  \param [in] vertexHandle Dart handle to the input vertex.
+ *  \return True if input vertex is on a facet. 
+ */
+bool CDTGenerator::isVertexOnFacet(LCC::Dart_handle vertexHandle)
+{
+}
+
+
 /*! \fn bool CDTGenerator::isVertexPerturbable(LCC::Dart_handle perturbableVertexHandle)
  *  \brief Tests whether input vertex is _perturbable_.
  *  \param perturbableVertexHandle Handle to input vertex.
@@ -944,7 +967,20 @@ void CDTGenerator::correspondingVerticesInLCC(Delaunay::Cell_handle c1, size_t n
  */
 bool CDTGenerator::isVertexPerturbable(LCC::Dart_handle perturbableVertexHandle)
 {
-	// TODO:
+	// Perturbable if symbolically perturbing it does not break consistency of PLC
+	// Consistency:
+		// Coplanarity
+		// Collinearity
+	//// STEPS:
+	//////// 1. Parametric representation of problem.
+	//////// 2. Check position of vertex: If on a segment or inside a facet then it is perturbable.
+	//////// 3. If the vertex is an endpoint with more than one    	
+	if (isVertexOnSegment(perturbableVertexHandle) || isVertexOnFacet(perturbableVertexHandle))
+		return true;
+	else // vertex at intersection of 3 or more facets, vertex on intersection of more than 3 segments
+		return false;
+	
+	
 }
 
 
@@ -985,6 +1021,14 @@ bool CDTGenerator::segmentSafePerturbable(LCC::Dart_handle vertexHandle)
  */
 void CDTGenerator::perturbVertex(LCC::Dart_handle vertexToBePerturbed)
 {
+	// express the vertex into 4d coordinates
+	
+	// add segment safe perturbation value to 4th coordinate of vertex
+	for (LCC::One_dart_per_cell_range<1>::iterator segHandle = plc.one_dart_per_cell<1>().begin(), segHandleEnd = plc.one_dart_per_cell<1>().end(); segHandle != segHandleEnd; segHandle++)
+	{
+		// TODO: compute value of point perturbation.
+	}
+	// compute Delaunay triangulation of peturbed vertex.
 }
 
 

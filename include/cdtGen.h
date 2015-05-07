@@ -134,6 +134,8 @@ class CDTGenerator
 		// local degeneracy removal
 		bool hasDegeneracyWithNeighbor(Delaunay::Cell_handle, size_t); 
 		void correspondingVerticesInLCC(Delaunay::Cell_handle, size_t, DegenerateVertexSet&); 
+		bool isVertexOnSegment(LCC::Dart_handle);
+		bool isVertexOnFacet(LCC::Dart_handle);
 		bool isVertexPerturbable(LCC::Dart_handle);
 		bool hasPerturbableVertex(DegenerateVertexSet, LCC::Dart_handle);
 		bool segmentSafePerturbable(LCC::Dart_handle);
