@@ -1,4 +1,6 @@
 # CDTGenerator [![Build Status](https://travis-ci.org/pranavkantgaur/CDTGenerator.svg?branch=master)](https://travis-ci.org/pranavkantgaur/CDTGenerator)
+
+[![Join the chat at https://gitter.im/pranavkantgaur/CDTGenerator](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pranavkantgaur/CDTGenerator?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 This project is a C++ implementation of the paper "Meshing piecewise linear complex using CDT" by Hang Si et. al for generating [Constrained Delaunay tetrahedralization](http://en.wikipedia.org/wiki/Constrained_Delaunay_triangulation) for a given domain specified using set of points and _constraint_ polygons.
 
 # Building
