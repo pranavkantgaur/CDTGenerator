@@ -109,18 +109,18 @@ class CDTGenerator
 		LCC cdtMesh; /*!< Output mesh */
 		
 		void markInfiniteVertexDart(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, int);
-		bool isInfinite(LCCWithIntInfo::Dart_handle, LCCWithIntInfo, int, unsigned int);
+		bool isInfinite(LCCWithIntInfo::Dart_handle, LCCWithIntInfo, int, size_t);
 		void recoverConstraintSegments();
 		void splitMissingSegment(DartHandle);
 		void updatePLCAndDT(CGALPoint&, DartHandle);
 		float computeSegmentLength(CGALPoint&, CGALPoint&);
-		unsigned int determineSegmentType(DartHandle);
+		size_t determineSegmentType(DartHandle);
 		bool isVertexAcute(DartHandle);
 		float computeAngleBetweenSegments(DartHandle, DartHandle);
 		float vectorMagnitude(DartHandle);
 		float dotProduct(DartHandle, DartHandle);
 		void computeReferencePoint(CGALPoint*, DartHandle);
-		unsigned int computeCircumradius(CGALPoint&, CGALPoint&, CGALPoint&);
+		size_t computeCircumradius(CGALPoint&, CGALPoint&, CGALPoint&);
 		void formMissingSegmentsQueue(vector<DartHandle>&);
 		void computeDelaunayTetrahedralization();
 		void writePLYOutput(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, string); 
