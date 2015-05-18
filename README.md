@@ -21,6 +21,8 @@ Main objective is to extend this implementation to support adaptive Constrained 
 
 # TODO:
 
+* Replace loop in current definition of ```sew2CellsFromEdge``` with _efficient_ alternative so that it can be used for larger domains as well.
+
 * CGAL's Delaunay triangulation deals with _cospherical_ points using [symbolic perturbation](https://hal.inria.fr/inria-00166710/file/soda.pdf). How to modify the corresponding PLC accordingly?
 
 * Input should allow for more file options than ply.

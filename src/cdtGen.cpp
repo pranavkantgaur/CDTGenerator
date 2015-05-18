@@ -6,6 +6,7 @@ static size_t dimensionId = 0;
 vector<CGALPoint> plcVertexVector;
 vector<Triangle> plcFaceVector;
 
+
 /*! \fn static int vertex_cb(p_ply_argument argument)
     \brief Callback for reading vertex from PLY file	
     \param [in] argument represents PLY file
@@ -127,7 +128,7 @@ void CDTGenerator::sew2CellsFromEdge(LCC &lcc)
 	}
 	
 	// sew the faces sharing an edge
-	unsigned int k = 0;
+	size_t k = 0;
 	for (vector<pair<DartHandle, DartHandle> >::iterator dIter = twoCellsToBeSewed.begin(), dIterEnd = twoCellsToBeSewed.end(); dIter != dIterEnd; dIter++)
 		if (lcc.is_sewable<2>(dIter->first, dIter->second))
 		{
@@ -180,7 +181,7 @@ void CDTGenerator::sew2CellsWithDartInfoFromEdge(LCCWithDartInfo &lcc)
 	}
 	
 	// sew the faces sharing an edge
-	unsigned int k = 0;
+	size_t k = 0;
 	for (vector<pair<LCCWithDartInfo::Dart_handle, LCCWithDartInfo::Dart_handle> >::iterator dIter = twoCellsToBeSewed.begin(), dIterEnd = twoCellsToBeSewed.end(); dIter != dIterEnd; dIter++)
 		if (lcc.is_sewable<2>(dIter->first, dIter->second))
 		{
@@ -228,12 +229,12 @@ void CDTGenerator::readPLCInput()
  
 	CGALPoint trianglePoints[3];
 
-	for (unsigned int n = 0, m = plcFaceVector.size(); n < m; n++)
+	for (size_t n = 0, m = plcFaceVector.size(); n < m; n++)
 	{
-		for (unsigned int k = 0; k < 3; k++)
+		for (size_t k = 0; k < 3; k++)
 			vertexIds[k] = plcFaceVector[n].pointIds[k];
 	
-		for (unsigned int i = 0; i < 3; i++)
+		for (size_t i = 0; i < 3; i++)
 			trianglePoints[i] = CGALPoint(plcVertexVector[vertexIds[i]].x(), plcVertexVector[vertexIds[i]].y(), plcVertexVector[vertexIds[i]].z());
 			
 		plc.make_triangle(trianglePoints[0], trianglePoints[1], trianglePoints[2]);
@@ -267,7 +268,7 @@ void CDTGenerator::markInfiniteVertexDart(LCCWithIntInfo::Dart_handle d, LCCWith
 }
 
 
-/** \fn isInfinite(LCC::Dart_handle adart, LCC lcc, unsigned int cell_dimension)
+/** \fn isInfinite(LCC::Dart_handle adart, LCC lcc, size_t cell_dimension)
  *  \brief Tests whether the given i-cell is infinite.
  *  \param [in] adart a dart handle to the i-cell.
  *  \param [in] lcc Linear cell complex to be checked.
@@ -275,7 +276,7 @@ void CDTGenerator::markInfiniteVertexDart(LCCWithIntInfo::Dart_handle d, LCCWith
  *  \param [in] cell_dimension dimension of i-cell.
  *  \return True if input vertex or face is infinite    
 **/
-bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, LCCWithIntInfo lcc, int infiniteVertexMark, unsigned int cell_dimension)
+bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, LCCWithIntInfo lcc, int infiniteVertexMark, size_t cell_dimension)
 {
 	bool isInfinite = false;
 	
@@ -440,14 +441,14 @@ void CDTGenerator::formMissingSegmentsQueue(vector<DartHandle> &missingSegmentQu
 }
 
 
-/*! \fn unsigned int CDTGenerator::computeCircumradius(CGALPoint &A, CGALPoint &B, CGALPoint &encroachingCandidate)
+/*! \fn size_t CDTGenerator::computeCircumradius(CGALPoint &A, CGALPoint &B, CGALPoint &encroachingCandidate)
     \brief Computes circumradius of circle defined by input points.
 
     \param [in] A Endpoint 1 of constraint segment
     \param [in] B Endpoint 2 of constraint segment
     \param [in] encroachingCandidate Candidate for reference point
 */
-unsigned int CDTGenerator::computeCircumradius(CGALPoint &A, CGALPoint &B, CGALPoint &encroachingCandidate)
+size_t CDTGenerator::computeCircumradius(CGALPoint &A, CGALPoint &B, CGALPoint &encroachingCandidate)
 {
 	// computing circumradius of a triangle:
 	
@@ -606,14 +607,14 @@ bool CDTGenerator::isVertexAcute(DartHandle inputPointHandle)
 }
 
 
-/*! \fn unsigned int CDTGenerator::determineSegmentType(DartHandle missingSegmentHandle)
+/*! \fn size_t CDTGenerator::determineSegmentType(DartHandle missingSegmentHandle)
     \brief Determines the input segment type
 
     A segment is of _type-1_ if _none_ of its endpoints are _acute_. If _exactly_ one endpoint is acute than segment is of _type-2_.
 
     \param [in] DartHandle for input constraint segment
 */
-unsigned int CDTGenerator::determineSegmentType(DartHandle missingSegmentHandle)
+size_t CDTGenerator::determineSegmentType(DartHandle missingSegmentHandle)
 {
 
 	CGALPoint &A = plc.point(missingSegmentHandle);
@@ -675,7 +676,7 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 	CGALPoint vb, refPoint;
 	CGALPoint sphereCenter;
 	float sphereRadius;
-	unsigned int segmentType;
+	size_t segmentType;
 	segmentType = determineSegmentType(missingSegmentHandle);
 
 	computeReferencePoint(&refPoint, missingSegmentHandle);
@@ -799,7 +800,7 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 		if (vbLength < vrefpointLength) // v was rejected
 		{
 			CGALSphericalPoint sphereCenter(acuteParent);
-			unsigned int avLength = computeSegmentLength(plc.point(AHandle), v);
+			size_t avLength = computeSegmentLength(plc.point(AHandle), v);
 			if (vrefpointLength < 0.5 * avLength)
 				{
 					CGALPoint temp(acuteParentLinearField.x(), acuteParentLinearField.y(), acuteParentLinearField.z());
@@ -1028,7 +1029,8 @@ void CDTGenerator::perturbVertex(LCC::Dart_handle vertexToBePerturbed)
 	{
 		// TODO: compute value of point perturbation.
 	}
-	// compute Delaunay triangulation of peturbed vertex.
+	// need to do optimization of perturbation value
+	// compute Delaunay triangulation of perturbed vertex.
 }
 
 
