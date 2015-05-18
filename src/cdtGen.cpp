@@ -1222,7 +1222,7 @@ bool CDTGenerator::rayIntersectsFacet(CGALRay ray, LCCWithDartInfo::Dart_handle 
 
 	CGALTriangle triangle = CGALTriangle(p[0], p[1], p[2]);
 
-	cpp11::result_of<K::Intersect_3(CGALRay, CGALTriangle)>::type result = intersection(ray, triangle); // TODO: replace it with do_intersect
+	bool result = do_intersect(ray, triangle); 
 	
 	return result;
 }	
