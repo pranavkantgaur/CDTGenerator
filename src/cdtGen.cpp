@@ -239,7 +239,7 @@ void CDTGenerator::readPLCInput()
 			
 		plc.make_triangle(trianglePoints[0], trianglePoints[1], trianglePoints[2]);
 	}
-
+	
 	// sew facets sharing edge
 	sew2CellsFromEdge(plc);
 }
@@ -268,7 +268,7 @@ void CDTGenerator::markInfiniteVertexDart(LCCWithIntInfo::Dart_handle d, LCCWith
 }
 
 
-/** \fn isInfinite(LCC::Dart_handle adart, LCC lcc, size_t cell_dimension)
+/** \fn isInfinite(LCC::Dart_handle adart, LCC& lcc, size_t cell_dimension)
  *  \brief Tests whether the given i-cell is infinite.
  *  \param [in] adart a dart handle to the i-cell.
  *  \param [in] lcc Linear cell complex to be checked.
@@ -276,14 +276,15 @@ void CDTGenerator::markInfiniteVertexDart(LCCWithIntInfo::Dart_handle d, LCCWith
  *  \param [in] cell_dimension dimension of i-cell.
  *  \return True if input vertex or face is infinite    
 **/
-bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, LCCWithIntInfo lcc, int infiniteVertexMark, size_t cell_dimension)
+bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, LCCWithIntInfo& lcc, int infiniteVertexMark, size_t cell_dimension)
 {
 	bool isInfinite = false;
 	
 	if (cell_dimension == 0)
 	{
+		// TODO: Add code for traversing all darts associated with input 0-cell
 		if (lcc.is_marked(adart, infiniteVertexMark)) 
-		return true;
+			return true;
 	}
 
 	if (cell_dimension == 2)
@@ -296,6 +297,7 @@ bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, LCCWithIntInfo 
 				break;
 			}
 		}
+	
 	}
 	return isInfinite;
 }
@@ -349,7 +351,8 @@ void CDTGenerator::writePLYOutput(LCCWithIntInfo::Dart_handle dartToInfiniteVert
 		cout << "Header cannot be written!!";
 		exit(0);
 	}
-
+	
+	cout << "#### Writing vertices..." << endl;
 	// write vertices
 	size_t pointId = 0;
 	for (LCCWithIntInfo::One_dart_per_cell_range<0>::iterator pointIter = lcc.one_dart_per_cell<0>().begin(), pointIterEnd = lcc.one_dart_per_cell<0>().end(); pointIter != pointIterEnd; pointIter++)
@@ -364,6 +367,7 @@ void CDTGenerator::writePLYOutput(LCCWithIntInfo::Dart_handle dartToInfiniteVert
 		}
 	}
 	
+	cout << "#### Writing polygons..." << endl;
         // write polygons	
 	size_t nFiniteFaces = 0, nInfiniteFaces = 0;
 	for (LCCWithIntInfo::One_dart_per_cell_range<2>::iterator faceIter = lcc.one_dart_per_cell<2>().begin(), faceIterEnd = lcc.one_dart_per_cell<2>().end(); faceIter != faceIterEnd; faceIter++)
@@ -378,9 +382,11 @@ void CDTGenerator::writePLYOutput(LCCWithIntInfo::Dart_handle dartToInfiniteVert
 		else
 			nInfiniteFaces++;
 	}
-
+	
+	cout << "Output file written successfully!" << endl;
 	lcc.free_mark(infiniteVertexMark);
 	ply_close(lccOutputPLY);			
+
 }
 
 
@@ -404,6 +410,7 @@ void CDTGenerator::computeDelaunayTetrahedralization()
 
 	LCCWithIntInfo::Dart_handle dartToInfiniteVertex = import_from_triangulation_3(DTLCC, DT);
 	
+	cout << "Writing Delaunay triangulation to output file..." << endl;	
 	writePLYOutput(dartToInfiniteVertex, DTLCC, fileName);
 }
 
@@ -1426,10 +1433,10 @@ void CDTGenerator::generate()
 {
 	readPLCInput();
 	computeDelaunayTetrahedralization();
-/*	recoverConstraintSegments();
+	recoverConstraintSegments();
 	removeLocalDegeneracies();
 	recoverConstraintFacets();
-*/
+
 }
 
 
