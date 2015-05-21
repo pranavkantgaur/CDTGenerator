@@ -72,7 +72,7 @@ bool CDTGenerator::areGeometricallySameSegments(DartHandle d1, DartHandle d2, LC
 } 
 
 
-/*! \fn bool CDTGenerator::areGeometricallySameSegments(DartHandle d1, DartHandle d2)
+/*! \fn bool CDTGenerator::areGeometricallySameSegmentsWithDartInfo(DartHandle d1, DartHandle d2)
     \brief Tests whether segments represented by d1 and d2 are _geometrically_ same.
     \param [in] d1 DartHandle for first segment
     \param [in] d2 DartHandle for second segment
@@ -268,14 +268,14 @@ void CDTGenerator::markInfiniteVertexDart(LCCWithIntInfo::Dart_handle d, LCCWith
 }
 
 
-/** \fn isInfinite(LCC::Dart_handle adart, LCC& lcc, size_t cell_dimension)
+/*! \fn bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, LCCWithIntInfo& lcc, int infiniteVertexMark, size_t cell_dimension)
  *  \brief Tests whether the given i-cell is infinite.
  *  \param [in] adart a dart handle to the i-cell.
  *  \param [in] lcc Linear cell complex to be checked.
  *  \param [in] infiniteVertexMark mark representing the infinite vertex.
  *  \param [in] cell_dimension dimension of i-cell.
- *  \return True if input vertex or face is infinite    
-**/
+ *  \return True if input i-cell is infinite.
+ */
 bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, LCCWithIntInfo& lcc, int infiniteVertexMark, size_t cell_dimension)
 {
 	bool isInfinite = false;
@@ -992,13 +992,13 @@ bool CDTGenerator::isVertexPerturbable(LCC::Dart_handle perturbableVertexHandle)
 }
 
 
-/*! \fn bool CDTGenerator::hasPerturbableVetex(DegenerateVertexSet degenVertSet, LCC::Dart_handle &perturbableVertexHandle)
+/*! \fn bool CDTGenerator::hasPerturbableVertex(DegenerateVertexSet degenVertSet, LCC::Dart_handle &perturbableVertexHandle)
  *  \brief Tests whether given vertex set has atleast one perturbable vertex.
  *  \param [in] degenVertexSet Input vertex set of 5 degenerate vertices.
  *  \param [out] perturbableVertexHandle Handle to the perurbable vertex.
  *  \return True if there exists _atleast_ one degenerate vertex.
  */
-bool CDTGenerator::hasPerturbableVertex(DegenerateVertexSet degenVertexSet, LCC::Dart_handle perturbableVertexHandle)
+bool CDTGenerator::hasPerturbableVertex(DegenerateVertexSet degenVertexSet, LCC::Dart_handle &perturbableVertexHandle)
 {
 	for (size_t i = 0; i < 5; i++) // test for each vertex
 	{
@@ -1235,7 +1235,7 @@ bool CDTGenerator::rayIntersectsFacet(CGALRay ray, LCCWithDartInfo::Dart_handle 
 }	
 
 
-/*! \fn bool CDTGenerator::isCellInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo cavityLCC)
+/*! \fn bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo cavityLCC)
  *  \brief Determines whether given 3-cell is inside Cavity boundary.
  *  \param [in] ch Cell handle pointing to the query tetrahedron.
  *  \param [in] cavityLCC LCC representation of cavity.
@@ -1265,7 +1265,7 @@ bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo c
 }
 
 
-/*! \fn void CDTGenerator::recoveryConstraintFacets()
+/*! \fn void CDTGenerator::recoverConstraintFacets()
  *  \brief Recovers constraint facets.
  */
 void CDTGenerator::recoverConstraintFacets()
@@ -1434,7 +1434,7 @@ void CDTGenerator::generate()
 	readPLCInput();
 	computeDelaunayTetrahedralization();
 	recoverConstraintSegments();
-	removeLocalDegeneracies();
+//	removeLocalDegeneracies();
 	recoverConstraintFacets();
 
 }

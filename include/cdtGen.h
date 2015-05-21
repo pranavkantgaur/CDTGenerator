@@ -137,7 +137,7 @@ class CDTGenerator
 		bool isVertexOnSegment(LCC::Dart_handle);
 		bool isVertexOnFacet(LCC::Dart_handle);
 		bool isVertexPerturbable(LCC::Dart_handle);
-		bool hasPerturbableVertex(DegenerateVertexSet, LCC::Dart_handle);
+		bool hasPerturbableVertex(DegenerateVertexSet, LCC::Dart_handle&);
 		bool segmentSafePerturbable(LCC::Dart_handle);
 		void perturbVertex(LCC::Dart_handle);
 		void removeLocalDegeneracies();
