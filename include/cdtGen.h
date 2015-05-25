@@ -109,7 +109,7 @@ class CDTGenerator
 		LCC cdtMesh; /*!< Output mesh */
 		
 		void markInfiniteVertexDart(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, int);
-		bool isInfinite(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, int, size_t);
+		bool isInfinite(LCCWithIntInfo::Dart_handle, const LCCWithIntInfo&, int, size_t);
 		void recoverConstraintSegments();
 		void splitMissingSegment(DartHandle);
 		void updatePLCAndDT(CGALPoint&, DartHandle);

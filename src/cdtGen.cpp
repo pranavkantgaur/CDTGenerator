@@ -276,7 +276,7 @@ void CDTGenerator::markInfiniteVertexDart(LCCWithIntInfo::Dart_handle d, LCCWith
  *  \param [in] cell_dimension dimension of i-cell.
  *  \return True if input i-cell is infinite.
  */
-bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, LCCWithIntInfo& lcc, int infiniteVertexMark, size_t cell_dimension)
+bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, const LCCWithIntInfo& lcc, int infiniteVertexMark, size_t cell_dimension)
 {
 	bool isInfinite = false;
 	
@@ -289,7 +289,7 @@ bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, LCCWithIntInfo&
 
 	if (cell_dimension == 2)
 	{
-		for (LCCWithIntInfo::One_dart_per_incident_cell_range<0, 2>::iterator pIter = lcc.one_dart_per_incident_cell<0, 2>(adart).begin(), pIterEnd = lcc.one_dart_per_incident_cell<0, 2>(adart).end(); pIter != pIterEnd; pIter++)
+		for (LCCWithIntInfo::One_dart_per_incident_cell_const_range<0, 2>::const_iterator pIter = lcc.one_dart_per_incident_cell<0, 2>(adart).begin(), pIterEnd = lcc.one_dart_per_incident_cell<0, 2>(adart).end(); pIter != pIterEnd; pIter++)
 		{
 			if (lcc.is_marked(pIter, infiniteVertexMark)) 
 			{
