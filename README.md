@@ -23,6 +23,10 @@ Main objective is to extend this implementation to support adaptive Constrained 
 
 # TODO:
 
+* Adding steiner point in PLC and current mesh using _edge flipping_ and combination of _edge flipping_ and _face flipping_(Refer Si's thesis).  
+
+* Search for candidate _reference point_ only in the vertices of tetrahedrons intersecting the missing segment in function ```computeReferencePoint``` instead of all points of PLC.  
+
 * Replace loop in current definition of ```sew2CellsFromEdge``` with _efficient_ alternative so that it can be used for larger domains as well.
 
 * CGAL's Delaunay triangulation deals with _cospherical_ points using [symbolic perturbation](https://hal.inria.fr/inria-00166710/file/soda.pdf). How to modify the corresponding PLC accordingly?
