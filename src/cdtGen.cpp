@@ -299,6 +299,19 @@ bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, const LCCWithIn
 		}
 	
 	}
+
+	if (cell_dimension == 3)
+	{
+		for (LCCWithIntInfo::One_dart_per_incident_cell_const_range<0, 3>::const_iterator pIter = lcc.one_dart_per_incident_cell<0, 3>(adart).begin(), pIterEnd = lcc.one_dart_per_incident_cell<0, 3>(adart).end(); pIter != pIterEnd; pIter++)
+		{
+			if (lcc.is_marked(pIter, infiniteVertexMark)) 
+			{
+				isInfinite = true;
+				break;
+			}
+		}
+	}
+
 	return isInfinite;
 }
 
@@ -329,21 +342,21 @@ void CDTGenerator::writePLYOutput(LCCWithIntInfo::Dart_handle dartToInfiniteVert
 	markInfiniteVertexDart(dartToInfiniteVertex, lcc, infiniteVertexMark);
 	
 	// count number of vertices and faces in LCC
-	size_t nVertices = 0, nFaces = 0;
+	size_t nVertices = 0, nTets = 0;
 	for (LCCWithIntInfo::One_dart_per_cell_range<0>::iterator pointCountIter = lcc.one_dart_per_cell<0>().begin(), pointCountIterEnd = lcc.one_dart_per_cell<0>().end(); pointCountIter != pointCountIterEnd; pointCountIter++)
 		if (!isInfinite(pointCountIter, lcc, infiniteVertexMark, 0))
 			nVertices++;
 
-	for (LCCWithIntInfo::One_dart_per_cell_range<2>::iterator faceCountIter = lcc.one_dart_per_cell<2>().begin(), faceCountIterEnd = lcc.one_dart_per_cell<2>().end(); faceCountIter != faceCountIterEnd; faceCountIter++)
-		if(!isInfinite(faceCountIter, lcc, infiniteVertexMark, 2))
-			nFaces++;
+	for (LCCWithIntInfo::One_dart_per_cell_range<3>::iterator faceCountIter = lcc.one_dart_per_cell<3>().begin(), faceCountIterEnd = lcc.one_dart_per_cell<3>().end(); faceCountIter != faceCountIterEnd; faceCountIter++)
+		if(!isInfinite(faceCountIter, lcc, infiniteVertexMark, 3))
+			nTets++;
 	
 	ply_add_element(lccOutputPLY, "vertex", nVertices);
 	ply_add_scalar_property(lccOutputPLY, "x", PLY_FLOAT);
 	ply_add_scalar_property(lccOutputPLY, "y", PLY_FLOAT);
 	ply_add_scalar_property(lccOutputPLY, "z", PLY_FLOAT);
 
-	ply_add_element(lccOutputPLY, "face", nFaces);
+	ply_add_element(lccOutputPLY, "face", nTets*4);
 	ply_add_list_property(lccOutputPLY, "vertex_indices", PLY_UCHAR, PLY_INT32);
 
 	if (!ply_write_header(lccOutputPLY))
@@ -367,21 +380,45 @@ void CDTGenerator::writePLYOutput(LCCWithIntInfo::Dart_handle dartToInfiniteVert
 		}
 	}
 	
-	cout << "#### Writing polygons..." << endl;
-        // write polygons	
-	size_t nFiniteFaces = 0, nInfiniteFaces = 0;
-	for (LCCWithIntInfo::One_dart_per_cell_range<2>::iterator faceIter = lcc.one_dart_per_cell<2>().begin(), faceIterEnd = lcc.one_dart_per_cell<2>().end(); faceIter != faceIterEnd; faceIter++)
+	// write tetrahedrons	
+	LCCWithIntInfo::Dart_handle pts[4];
+	size_t i;
+ 
+	size_t nFiniteTets = 0, nInfiniteTets = 0;
+	for (LCCWithIntInfo::One_dart_per_cell_range<3>::iterator tetIter = lcc.one_dart_per_cell<3>().begin(), tetIterEnd = lcc.one_dart_per_cell<3>().end(); tetIter != tetIterEnd; tetIter++)
 	{
-		if (!isInfinite(faceIter, lcc, infiniteVertexMark, 2))
+		if (!isInfinite(tetIter, lcc, infiniteVertexMark, 3))
 		{
+			i = 0;
+ 
+			for (LCCWithIntInfo::One_dart_per_incident_cell_range<0, 3>::iterator pIter = lcc.one_dart_per_incident_cell<0, 3>(tetIter).begin(), pIterEnd = lcc.one_dart_per_incident_cell<0, 3>(tetIter).end(); pIter != pIterEnd; pIter++)
+				pts[i++] = pIter;
+			// t1	
+			ply_write(lccOutputPLY, 3);	
+			ply_write(lccOutputPLY, lcc.info<0>(pts[0]));
+			ply_write(lccOutputPLY, lcc.info<0>(pts[1]));
+			ply_write(lccOutputPLY, lcc.info<0>(pts[2]));
+		
+			// t2
 			ply_write(lccOutputPLY, 3);
-			for (LCCWithIntInfo::One_dart_per_incident_cell_range<0, 2>::iterator pointInFaceIter = lcc.one_dart_per_incident_cell<0, 2>(faceIter).begin(), pointInFaceIterEnd = lcc.one_dart_per_incident_cell<0, 2>(faceIter).end(); pointInFaceIter != pointInFaceIterEnd; pointInFaceIter++)
-				ply_write(lccOutputPLY, lcc.info<0>(pointInFaceIter)); 
-			nFiniteFaces++;
+			ply_write(lccOutputPLY, lcc.info<0>(pts[1]));
+			ply_write(lccOutputPLY, lcc.info<0>(pts[0]));
+			ply_write(lccOutputPLY, lcc.info<0>(pts[3]));
+		
+			// t3 	
+			ply_write(lccOutputPLY, 3);	
+			ply_write(lccOutputPLY, lcc.info<0>(pts[1]));
+			ply_write(lccOutputPLY, lcc.info<0>(pts[3]));
+			ply_write(lccOutputPLY, lcc.info<0>(pts[2]));
+
+			// t4
+			ply_write(lccOutputPLY, 3);	
+			ply_write(lccOutputPLY, lcc.info<0>(pts[3]));
+			ply_write(lccOutputPLY, lcc.info<0>(pts[0]));
+			ply_write(lccOutputPLY, lcc.info<0>(pts[2]));
 		}
-		else
-			nInfiniteFaces++;
 	}
+
 	
 	cout << "Output file written successfully!" << endl;
 	lcc.free_mark(infiniteVertexMark);
@@ -1435,7 +1472,7 @@ void CDTGenerator::generate()
 	computeDelaunayTetrahedralization();
 	recoverConstraintSegments();
 //	removeLocalDegeneracies();
-	recoverConstraintFacets();
+//	recoverConstraintFacets();
 
 }
 
