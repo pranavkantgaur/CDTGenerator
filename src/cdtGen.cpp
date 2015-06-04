@@ -63,12 +63,13 @@ static int face_cb(p_ply_argument argument)
     \param [in] d1 DartHandle for first segment
     \param [in] d2 DartHandle for second segment
 */
-bool CDTGenerator::areGeometricallySameSegments(DartHandle d1, DartHandle d2, LCC lcc)
+bool CDTGenerator::areGeometricallySameSegments(DartHandle d1, DartHandle d2, LCC& lcc)
 {
 	if (lcc.point(d1) == lcc.point(lcc.beta(d2, 1)))
 		if (lcc.point(lcc.beta(d1, 1)) == lcc.point(d2))
 			return true;
-	return false;
+
+		return false;
 } 
 
 
@@ -77,7 +78,7 @@ bool CDTGenerator::areGeometricallySameSegments(DartHandle d1, DartHandle d2, LC
     \param [in] d1 DartHandle for first segment
     \param [in] d2 DartHandle for second segment
 */
-bool CDTGenerator::areGeometricallySameSegmentsWithDartInfo(LCCWithDartInfo::Dart_handle d1, LCCWithDartInfo::Dart_handle d2, LCCWithDartInfo lcc)
+bool CDTGenerator::areGeometricallySameSegmentsWithDartInfo(LCCWithDartInfo::Dart_handle d1, LCCWithDartInfo::Dart_handle d2, LCCWithDartInfo &lcc)
 {
 	if (lcc.point(d1) == lcc.point(lcc.beta(d2, 1)))
 		if (lcc.point(lcc.beta(d1, 1)) == lcc.point(d2))
@@ -1472,7 +1473,7 @@ void CDTGenerator::generate()
 	computeDelaunayTetrahedralization();
 	recoverConstraintSegments();
 //	removeLocalDegeneracies();
-//	recoverConstraintFacets();
+	recoverConstraintFacets();
 
 }
 
