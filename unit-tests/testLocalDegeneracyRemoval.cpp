@@ -51,7 +51,7 @@ size_t TestLocalDegeneracyRemoval :: locateLocalDegeneracies()
 bool TestLocalDegeneracyRemoval :: runTest()
 {
 	readPLCInput();
-	computeDelaunayTetrahedralization();
+	computeDelaunayTetrahedralization(-1);
 	recoverConstraintSegments();
 
 	size_t nLocalDegeneraciesBeforeRemoval = 0, nLocalDegeneraciesAfterRemoval = 0;

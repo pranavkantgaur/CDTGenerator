@@ -107,7 +107,8 @@ class CDTGenerator
 		LCC plc; /*!< Input piecewise linear cell complex representing the input */
 		Delaunay DT; /*!< Intermidiate structure used for storing Delaunay tetrahedralization */
 		LCC cdtMesh; /*!< Output mesh */
-		
+		vector<LCC::Dart_handle> missingSegmentQueue;
+
 		void markInfiniteVertexDart(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, int);
 		bool isInfinite(LCCWithIntInfo::Dart_handle, const LCCWithIntInfo&, int, size_t);
 		void recoverConstraintSegments();
@@ -121,8 +122,8 @@ class CDTGenerator
 		float dotProduct(DartHandle, DartHandle);
 		void computeReferencePoint(CGALPoint*, DartHandle);
 		size_t computeCircumradius(CGALPoint&, CGALPoint&, CGALPoint&);
-		void formMissingSegmentsQueue(vector<DartHandle>&);
-		void computeDelaunayTetrahedralization();
+		void formMissingSegmentsQueue();//vector<DartHandle>&);
+		void computeDelaunayTetrahedralization(int);
 		void writePLYOutput(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, string); 
 		void readPLCInput();
 

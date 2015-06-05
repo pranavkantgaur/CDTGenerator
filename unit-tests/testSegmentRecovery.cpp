@@ -20,7 +20,7 @@ class TestSegmentRecovery:public CDTGenerator
 bool TestSegmentRecovery::runTest()
 {
 	readPLCInput();
-	computeDelaunayTetrahedralization();
+	computeDelaunayTetrahedralization(-1);
 
 	Delaunay::Vertex_handle vh1, vh2;
 	Delaunay::Cell_handle c;

@@ -108,7 +108,7 @@ size_t TestRecoverConstraintFacets::numberOfRecoveredConstraintFacets()
 bool TestRecoverConstraintFacets::runTest()
 {
 	readPLCInput();
-	computeDelaunayTetrahedralization();
+	computeDelaunayTetrahedralization(-1);
 	recoverConstraintSegments();
 	removeLocalDegeneracies();
 	

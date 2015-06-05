@@ -366,7 +366,7 @@ void CDTGenerator::writePLYOutput(LCCWithIntInfo::Dart_handle dartToInfiniteVert
 		exit(0);
 	}
 	
-	cout << "#### Writing vertices..." << endl;
+//	cout << "#### Writing vertices..." << endl;
 	// write vertices
 	size_t pointId = 0;
 	for (LCCWithIntInfo::One_dart_per_cell_range<0>::iterator pointIter = lcc.one_dart_per_cell<0>().begin(), pointIterEnd = lcc.one_dart_per_cell<0>().end(); pointIter != pointIterEnd; pointIter++)
@@ -382,6 +382,7 @@ void CDTGenerator::writePLYOutput(LCCWithIntInfo::Dart_handle dartToInfiniteVert
 	}
 	
 	// write tetrahedrons	
+//	cout << "#### Writing polygons..." << endl;
 	LCCWithIntInfo::Dart_handle pts[4];
 	size_t i;
  
@@ -421,7 +422,7 @@ void CDTGenerator::writePLYOutput(LCCWithIntInfo::Dart_handle dartToInfiniteVert
 	}
 
 	
-	cout << "Output file written successfully!" << endl;
+//	cout << "Output file written successfully!" << endl;
 	lcc.free_mark(infiniteVertexMark);
 	ply_close(lccOutputPLY);			
 
@@ -432,7 +433,7 @@ void CDTGenerator::writePLYOutput(LCCWithIntInfo::Dart_handle dartToInfiniteVert
 /*! \fn void CDTGenerator::computeDelaunayTetrahedralization()
     \brief Computes Delaunay tetrahedralization.
 */
-void CDTGenerator::computeDelaunayTetrahedralization()
+void CDTGenerator::computeDelaunayTetrahedralization(int missingSegmentQueueSize)
 {	
 	vector <pair <CGALPoint, DartHandle> > lccVertexVector;
 
@@ -448,8 +449,9 @@ void CDTGenerator::computeDelaunayTetrahedralization()
 
 	LCCWithIntInfo::Dart_handle dartToInfiniteVertex = import_from_triangulation_3(DTLCC, DT);
 	
-	cout << "Writing Delaunay triangulation to output file..." << endl;	
-	writePLYOutput(dartToInfiniteVertex, DTLCC, fileName);
+//	cout << "Writing Delaunay triangulation to output file..." << endl;	
+	if (missingSegmentQueueSize == 0)
+		writePLYOutput(dartToInfiniteVertex, DTLCC, fileName);
 }
 
 
@@ -460,7 +462,7 @@ void CDTGenerator::computeDelaunayTetrahedralization()
 
     \param missingSegmentQueue [Out] Contains the _DartHandle_ to the missing constraint segments after execution.
 */
-void CDTGenerator::formMissingSegmentsQueue(vector<DartHandle> &missingSegmentQueue)
+void CDTGenerator::formMissingSegmentsQueue()
 {
 	missingSegmentQueue.clear();
 
@@ -704,7 +706,7 @@ void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
 	// update PLC
 	plc.insert_point_in_cell<1>(missingSegmentHandle, v);
 	// update DT
-	computeDelaunayTetrahedralization(); 
+	computeDelaunayTetrahedralization(missingSegmentQueue.size()); 
 }
 
 
@@ -898,10 +900,10 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 */
 void CDTGenerator::recoverConstraintSegments()
 {
-	vector<DartHandle> missingSegmentQueue;
+//	vector<DartHandle> missingSegmentQueue;
 	DartHandle missingSegment;
 
-	formMissingSegmentsQueue(missingSegmentQueue);
+	formMissingSegmentsQueue();//missingSegmentQueue);
 	int i = 0;
 	while (missingSegmentQueue.size() != 0)
 	{
@@ -909,7 +911,7 @@ void CDTGenerator::recoverConstraintSegments()
 		missingSegment = missingSegmentQueue.back();
 		missingSegmentQueue.pop_back();
 		splitMissingSegment(missingSegment);
-		formMissingSegmentsQueue(missingSegmentQueue); // update missingSegmentQueue
+		formMissingSegmentsQueue();//missingSegmentQueue); // update missingSegmentQueue
 		i++;
 	}
 
@@ -1108,7 +1110,7 @@ void CDTGenerator::removeLocalDegeneracies()
 		}
 	}
 	// compute DT of modified vertices
-	computeDelaunayTetrahedralization(); // TODO: Must consider the symbolic perturbation information
+	computeDelaunayTetrahedralization(-1); // TODO: Must consider the symbolic perturbation information
 }
 
 
@@ -1331,7 +1333,6 @@ void CDTGenerator::recoverConstraintFacets()
 	//			Label it as inside/outside cavityLCC
 	//		Sew all 'inside' tetrahedrons back to the hole creating in cdtMesh(LCC representation of output)
 	
-
 	vector <DartHandle> missingConstraintFacets;
 	vector <DartHandle> intersectingTets;
 	LCCWithDartInfo cavityLCC;
@@ -1470,7 +1471,7 @@ void CDTGenerator::recoverConstraintFacets()
 void CDTGenerator::generate()
 {
 	readPLCInput();
-	computeDelaunayTetrahedralization();
+	computeDelaunayTetrahedralization(-1);
 	recoverConstraintSegments();
 //	removeLocalDegeneracies();
 	recoverConstraintFacets();
