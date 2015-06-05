@@ -191,6 +191,8 @@ void CDTGenerator::sew2CellsWithDartInfoFromEdge(LCCWithDartInfo &lcc)
 		}
 
 }
+
+
 /*! \fn void CDTGenerator::readPLCInput()
     \brief Reads PLC from input(only PLY supported currently) file.
 
@@ -1339,9 +1341,17 @@ void CDTGenerator::recoverConstraintFacets()
 	LCCWithDartInfo::Dart_handle cavityFaceHandle;
 
 	computeMissingConstraintFacets(missingConstraintFacets); // list missing constraint facets
-	DartHandle d = import_from_triangulation_3(cdtMesh, DT);
-	// TODO: What to do with infinite vetices?
+	DartHandle d = import_from_triangulation_3(cdtMesh, DT); 
 	
+	// Remove infinite cells		
+	for (LCCWithDartInfo::One_dart_per_cell_range<3>::iterator tetIter = cdtMesh.one_dart_per_cell<3>().begin(), tetIterEnd = cdtMesh.one_dart_per_cell_range<3>().end(); tetIter != tetIterEnd; tetIter++)
+	{
+		if (isInfinite(tetIter, cdtMesh, d, 3))
+			remove_cell(cdtMesh, tetIter);
+		else 
+			continue;
+	}
+
 	int partOfIntersectingTetMark = cdtMesh.get_new_mark();
 	
 	if (partOfIntersectingTetMark == -1)
