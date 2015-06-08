@@ -23,6 +23,8 @@ Main objective is to extend this implementation to support adaptive Constrained 
 
 # TODO:
 
+* Template definition of ```isInfinite``` and other such functions.  
+
 * Adding steiner point in PLC and current mesh using _edge flipping_ and combination of _edge flipping_ and _face flipping_(Refer Si's thesis).  
 
 * Search for candidate _reference point_ only in the vertices of tetrahedrons intersecting the missing segment in function ```computeReferencePoint``` instead of all points of PLC.  

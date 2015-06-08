@@ -308,7 +308,6 @@ bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, const LCCWithIn
 	
 	if (cell_dimension == 0)
 	{
-		// TODO: Add code for traversing all darts associated with input 0-cell
 		if (lcc.is_marked(adart, infiniteVertexMark)) 
 			return true;
 	}
@@ -341,6 +340,8 @@ bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, const LCCWithIn
 	return isInfinite;
 }
 
+
+
 /*! \fn bool CDTGenerator::isInfinite(LCC::Dart_handle adart, LCC& lcc, int infiniteVertexMark, size_t cell_dimension)
  *  \brief Tests whether the given i-cell is infinite.
  *  \param [in] adart a dart handle to the i-cell.
@@ -348,21 +349,23 @@ bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, const LCCWithIn
  *  \param [in] infiniteVertexMark mark representing the infinite vertex.
  *  \param [in] cell_dimension dimension of i-cell.
  *  \return True if input i-cell is infinite.
- */
-bool CDTGenerator::isInfinite(LCC::Dart_handle adart, const LCC& lcc, int infiniteVertexMark, size_t cell_dimension)
+*/
+bool CDTGenerator::isInfinite(typename LCC::Dart_handle adart, const LCC& lcc, int infiniteVertexMark, size_t cell_dimension)
 {
 	bool isInfinite = false;
 	
 	if (cell_dimension == 0)
 	{
-		// TODO: Add code for traversing all darts associated with input 0-cell
+	
 		if (lcc.is_marked(adart, infiniteVertexMark)) 
 			return true;
 	}
 
+	//typedef typename T::template One_dart_per_incident_cell_const_range<0, 2> DartRange;
+
 	if (cell_dimension == 2)
 	{
-		for (LCC::One_dart_per_incident_cell_const_range<0, 2>::const_iterator pIter = lcc.one_dart_per_incident_cell<0, 2>(adart).begin(), pIterEnd = lcc.one_dart_per_incident_cell<0, 2>(adart).end(); pIter != pIterEnd; pIter++)
+		for (typename LCC::template One_dart_per_incident_cell_const_range<0, 2>::const_iterator pIter = lcc.one_dart_per_incident_cell<0, 2>(adart).begin(), pIterEnd = lcc.one_dart_per_incident_cell<0, 2>(adart).end(); pIter != pIterEnd; pIter++)
 		{
 			if (lcc.is_marked(pIter, infiniteVertexMark)) 
 			{
@@ -375,7 +378,7 @@ bool CDTGenerator::isInfinite(LCC::Dart_handle adart, const LCC& lcc, int infini
 
 	if (cell_dimension == 3)
 	{
-		for (LCC::One_dart_per_incident_cell_const_range<0, 3>::const_iterator pIter = lcc.one_dart_per_incident_cell<0, 3>(adart).begin(), pIterEnd = lcc.one_dart_per_incident_cell<0, 3>(adart).end(); pIter != pIterEnd; pIter++)
+		for (typename LCC::template One_dart_per_incident_cell_const_range<0, 3>::const_iterator pIter = lcc.one_dart_per_incident_cell<0, 3>(adart).begin(), pIterEnd = lcc.one_dart_per_incident_cell<0, 3>(adart).end(); pIter != pIterEnd; pIter++)
 		{
 			if (lcc.is_marked(pIter, infiniteVertexMark)) 
 			{
@@ -1358,7 +1361,7 @@ bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo c
 	CGALPoint circumcenter1 = circumcenter(ch->vertex(0)->point(), ch->vertex(1)->point(), ch->vertex(2)->point(), ch->vertex(3)->point());
 
 	// generate a random ray from circumcenter
-	CGALPoint randomEndpoint; // TODO: Initialize
+	CGALPoint randomEndpoint = ; // TODO: Initialize
 	CGALRay randomRay = CGALRay(circumcenter1, randomEndpoint);
 	// find intersection with each face of cavity
 	// if number of intersections are even then tetrahedron is outside
@@ -1436,7 +1439,7 @@ void CDTGenerator::recoverConstraintFacets()
 		// compute cells intersecting this facet:
 		for (LCC::One_dart_per_cell_range<3>::iterator cIter = cdtMesh.one_dart_per_cell<3>().begin(), cIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cIter != cIterEnd; cIter++)
 		{
-			if (areFacetTetIntersecting(cIter, missingFacetHandle)) // TODO: Implement this function.
+			if (areFacetTetIntersecting(cIter, missingFacetHandle)) 
 				intersectingTets.push_back(cIter);
 		}	
 		
@@ -1452,10 +1455,10 @@ void CDTGenerator::recoverConstraintFacets()
 		}
 		
 		//// remove intersecting tets from cdtMesh
-		//// add marked faces to cavityLCC
 		for (vector<DartHandle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
 			remove_cell<LCC, 3>(cdtMesh, *tetIter);
-	
+
+		//// add marked faces to cavityLCC
 		for (LCC::Dart_range::iterator fHandle = cdtMesh.darts().begin(), fHandleEnd = cdtMesh.darts().end(); fHandle != fHandleEnd; fHandle++)
 			if (cdtMesh.is_marked(fHandle, partOfIntersectingTetMark))
 			{
@@ -1466,8 +1469,10 @@ void CDTGenerator::recoverConstraintFacets()
 					p[i++] = cdtMesh.point(pIter);
 				
 				cavityFaceHandle = cavityLCC.make_triangle(p[0], p[1], p[2]);
-				cavityLCC.info<0>(cavityFaceHandle) = fHandle; // TODO: Fix here, should I set dart info for all vertices of this facet?
+				for (LCCWithDartInfo::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cavityLCC.one_dart_per_incident_cell<0, 2>(cavityFaceHandle).begin(), pIterEnd = cavityLCC.one_dart_per_incident_cell<0, 2>(cavityFaceHandle).end(); pIter != pIterEnd; pIter++)	
+					cavityLCC.info<0>(pIter) = fHandle; 				
 			}
+		
 		//// sew 2-cells at boundaries
 		sew2CellsWithDartInfoFromEdge(cavityLCC);
 		
@@ -1482,7 +1487,7 @@ void CDTGenerator::recoverConstraintFacets()
 		{
 			//// initialize vector
 			for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator nonStrongFaceIter = cavityLCC.one_dart_per_cell<2>().begin(), nonStrongFaceIterEnd = cavityLCC.one_dart_per_cell<2>().end(); nonStrongFaceIter != nonStrongFaceIterEnd; nonStrongFaceIter++)	
-				if (isNonStronglyDelaunayFacet(nonStrongFaceIter, cavityLCC)) // TODO:Implement. 
+				if (isNonStronglyDelaunayFacet(nonStrongFaceIter, cavityLCC))  
 					nonStronglyDelaunayFacetsInCavity.push_back(nonStrongFaceIter);
 				else
 					continue;	
