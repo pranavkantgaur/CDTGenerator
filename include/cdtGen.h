@@ -110,7 +110,10 @@ class CDTGenerator
 		vector<LCC::Dart_handle> missingSegmentQueue;
 
 		void markInfiniteVertexDart(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, int);
+		void markInfiniteVertexDart(LCC::Dart_handle, LCC&, int);
+
 		bool isInfinite(LCCWithIntInfo::Dart_handle, const LCCWithIntInfo&, int, size_t);
+		bool isInfinite(LCC::Dart_handle, const LCC&, int, size_t);
 		void recoverConstraintSegments();
 		void splitMissingSegment(DartHandle);
 		void updatePLCAndDT(CGALPoint&, DartHandle);

@@ -271,6 +271,29 @@ void CDTGenerator::markInfiniteVertexDart(LCCWithIntInfo::Dart_handle d, LCCWith
 }
 
 
+/*! void CDTGenerator::markInfinteVertexDart(LCC::Dart_handle d, LCC &lcc, int infiniteVertexMark)
+*   \brief Marks all darts defining the infinite vertex in LCC.
+*   \param [in] d Handle to the dart representing infinite vertex.
+*   \param [in] lcc Linear cell complex to be marked.
+*   \param [in] infiniteVertexMark Mark representing a dart defining the infinite vertex.
+*/
+void CDTGenerator::markInfiniteVertexDart(LCC::Dart_handle d, LCC &lcc, int infiniteVertexMark)
+{
+	if (!lcc.is_marked(d, infiniteVertexMark))
+	{
+		lcc.mark(d, infiniteVertexMark);
+		
+		d = lcc.beta(d, 2, 1);
+		markInfiniteVertexDart(d, lcc, infiniteVertexMark);
+
+		d = lcc.beta(d, 3, 1);
+		markInfiniteVertexDart(d, lcc, infiniteVertexMark);
+	}
+
+	return;
+}
+
+
 /*! \fn bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, LCCWithIntInfo& lcc, int infiniteVertexMark, size_t cell_dimension)
  *  \brief Tests whether the given i-cell is infinite.
  *  \param [in] adart a dart handle to the i-cell.
@@ -318,6 +341,52 @@ bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, const LCCWithIn
 	return isInfinite;
 }
 
+/*! \fn bool CDTGenerator::isInfinite(LCC::Dart_handle adart, LCC& lcc, int infiniteVertexMark, size_t cell_dimension)
+ *  \brief Tests whether the given i-cell is infinite.
+ *  \param [in] adart a dart handle to the i-cell.
+ *  \param [in] lcc Linear cell complex to be checked.
+ *  \param [in] infiniteVertexMark mark representing the infinite vertex.
+ *  \param [in] cell_dimension dimension of i-cell.
+ *  \return True if input i-cell is infinite.
+ */
+bool CDTGenerator::isInfinite(LCC::Dart_handle adart, const LCC& lcc, int infiniteVertexMark, size_t cell_dimension)
+{
+	bool isInfinite = false;
+	
+	if (cell_dimension == 0)
+	{
+		// TODO: Add code for traversing all darts associated with input 0-cell
+		if (lcc.is_marked(adart, infiniteVertexMark)) 
+			return true;
+	}
+
+	if (cell_dimension == 2)
+	{
+		for (LCC::One_dart_per_incident_cell_const_range<0, 2>::const_iterator pIter = lcc.one_dart_per_incident_cell<0, 2>(adart).begin(), pIterEnd = lcc.one_dart_per_incident_cell<0, 2>(adart).end(); pIter != pIterEnd; pIter++)
+		{
+			if (lcc.is_marked(pIter, infiniteVertexMark)) 
+			{
+				isInfinite = true;
+				break;
+			}
+		}
+	
+	}
+
+	if (cell_dimension == 3)
+	{
+		for (LCC::One_dart_per_incident_cell_const_range<0, 3>::const_iterator pIter = lcc.one_dart_per_incident_cell<0, 3>(adart).begin(), pIterEnd = lcc.one_dart_per_incident_cell<0, 3>(adart).end(); pIter != pIterEnd; pIter++)
+		{
+			if (lcc.is_marked(pIter, infiniteVertexMark)) 
+			{
+				isInfinite = true;
+				break;
+			}
+		}
+	}
+
+	return isInfinite;
+}
 
 /*! \fn void CDTGenerator::writePLYOutput(LCC::Dart_handle dartToInfiniteVertex, LCC &lcc, string fileName)
 *   \brief Writes mesh represented as LCC to PLY file
@@ -1343,11 +1412,13 @@ void CDTGenerator::recoverConstraintFacets()
 	computeMissingConstraintFacets(missingConstraintFacets); // list missing constraint facets
 	DartHandle d = import_from_triangulation_3(cdtMesh, DT); 
 	
-	// Remove infinite cells		
-	for (LCCWithDartInfo::One_dart_per_cell_range<3>::iterator tetIter = cdtMesh.one_dart_per_cell<3>().begin(), tetIterEnd = cdtMesh.one_dart_per_cell_range<3>().end(); tetIter != tetIterEnd; tetIter++)
+	// Remove infinite cells
+	int infiniteVertexMark = cdtMesh.get_new_mark();
+	markInfiniteVertexDart(d, cdtMesh, infiniteVertexMark);		
+	for (LCC::One_dart_per_cell_range<3>::iterator tetIter = cdtMesh.one_dart_per_cell<3>().begin(), tetIterEnd = cdtMesh.one_dart_per_cell<3>().end(); tetIter != tetIterEnd; tetIter++)
 	{
-		if (isInfinite(tetIter, cdtMesh, d, 3))
-			remove_cell(cdtMesh, tetIter);
+		if (isInfinite(tetIter, cdtMesh, infiniteVertexMark, 3))
+			remove_cell<LCC, 3>(cdtMesh, tetIter);
 		else 
 			continue;
 	}
