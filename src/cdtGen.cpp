@@ -95,7 +95,7 @@ void CDTGenerator::sew2CellsFromEdge(LCC &lcc)
 {
 
 	vector<pair<DartHandle, DartHandle> > twoCellsToBeSewed;
-	int sewedMark = plc.get_new_mark();
+	int sewedMark = lcc.get_new_mark();
 
 	if (sewedMark == -1)
 	{
@@ -148,7 +148,7 @@ void CDTGenerator::sew2CellsWithDartInfoFromEdge(LCCWithDartInfo &lcc)
 {
 
 	vector<pair<LCCWithDartInfo::Dart_handle, LCCWithDartInfo::Dart_handle> > twoCellsToBeSewed;
-	int sewedMark = plc.get_new_mark();
+	int sewedMark = lcc.get_new_mark();
 
 	if (sewedMark == -1)
 	{
@@ -1428,6 +1428,7 @@ void CDTGenerator::recoverConstraintFacets()
 		else 
 			continue;
 	}
+	cdtMesh.unmark_all(infiniteVertexMark);
 
 	for (vector<LCC::Dart_handle>::iterator cellIter = cellsToBeRemoved.begin(), cellIterEnd = cellsToBeRemoved.end(); cellIter != cellIterEnd; cellIter++)
 		remove_cell<LCC, 3>(cdtMesh, *cellIter);
@@ -1436,7 +1437,7 @@ void CDTGenerator::recoverConstraintFacets()
 	
 	if (partOfIntersectingTetMark == -1)
 		exit(0);
-
+//	size_t count = 0;
 	while (missingConstraintFacets.size() != 0)
 	{
 		DartHandle missingFacetHandle = missingConstraintFacets.back(); // test for each missing facet
@@ -1460,9 +1461,6 @@ void CDTGenerator::recoverConstraintFacets()
 			}
 		}
 	
-		//// remove intersecting tets from cdtMesh
-		for (vector<DartHandle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
-			remove_cell<LCC, 3>(cdtMesh, *tetIter);
 
 		//// add marked faces to cavityLCC
 		for (LCC::Dart_range::iterator fHandle = cdtMesh.darts().begin(), fHandleEnd = cdtMesh.darts().end(); fHandle != fHandleEnd; fHandle++)
@@ -1478,7 +1476,8 @@ void CDTGenerator::recoverConstraintFacets()
 				for (LCCWithDartInfo::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cavityLCC.one_dart_per_incident_cell<0, 2>(cavityFaceHandle).begin(), pIterEnd = cavityLCC.one_dart_per_incident_cell<0, 2>(cavityFaceHandle).end(); pIter != pIterEnd; pIter++)	
 					cavityLCC.info<0>(pIter) = fHandle;// handle to that facet in original mesh 				
 			}
-		
+		cdtMesh.unmark_all(partOfIntersectingTetMark); 
+
 		//// sew 2-cells at boundaries
 		sew2CellsWithDartInfoFromEdge(cavityLCC); // cavity is created
 		
@@ -1495,15 +1494,15 @@ void CDTGenerator::recoverConstraintFacets()
 					nonStronglyDelaunayFacetsInCavity.push_back(nonStrongFaceIter); // handle to facets in cavityLCC
 				else
 					continue;	
-		
+//			cout << "#" << count << "Number of non strongly Delaunay facets: " << nonStronglyDelaunayFacetsInCavity.size() << endl;
 			//// cavity expansion
-			while (!nonStronglyDelaunayFacetsInCavity.size())	
+			while (nonStronglyDelaunayFacetsInCavity.size() != 0)	
 			{
 				LCCWithDartInfo::Dart_handle nonStronglyDelaunayFace = nonStronglyDelaunayFacetsInCavity.back();
 				nonStronglyDelaunayFacetsInCavity.pop_back();
 					
 				LCC::Dart_handle exteriorCellSharingNonDelaunayFacet = cavityLCC.info<0>(nonStronglyDelaunayFace);  
-
+				
 				//// Explore all faces of this cell
 				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++)			
 				{
@@ -1522,11 +1521,13 @@ void CDTGenerator::recoverConstraintFacets()
 						sew2CellsWithDartInfoFromEdge(cavityLCC);
 					}
 				}
+				
 			}
 			
-		}while (!nonStronglyDelaunayFacetsInCavity.size());
-		
-		// CAVITY RETETRAHEDRALIZATION		
+			
+		}while (nonStronglyDelaunayFacetsInCavity.size() != 0);
+//	count++;
+/*		// CAVITY RETETRAHEDRALIZATION		
 		vector<pair<CGALPoint, LCC::Dart_handle> > cavityVertices;
 		
 		for (LCCWithDartInfo::One_dart_per_cell_range<0, 3>::iterator pIter = cavityLCC.one_dart_per_cell<0, 3>().begin(), pIterEnd = cavityLCC.one_dart_per_cell<0, 3>().end(); pIter != pIterEnd; pIter++)	
@@ -1549,10 +1550,12 @@ void CDTGenerator::recoverConstraintFacets()
 			else
 				continue;
 		}
+		//// remove intersecting tets from cdtMesh
+		for (vector<LCC::Dart_handle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
+			remove_cell<LCC, 3>(cdtMesh, *tetIter);
+
 		cdtMesh.sew3_same_facets();
-		// unmark all faces of intersecting tets
-		cdtMesh.unmark_all(partOfIntersectingTetMark); 
-		
+*/		
 	}
 
 }
