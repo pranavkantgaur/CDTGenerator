@@ -1455,10 +1455,11 @@ void CDTGenerator::recoverConstraintFacets()
 			for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator faceIter = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).begin(), faceIterEnd = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).end(); faceIter != faceIterEnd; faceIter++)
 			{
 				cdtMesh.mark(faceIter, partOfIntersectingTetMark);
-				cdtMesh.mark(cdtMesh.beta<3>(faceIter), partOfIntersectingTetMark);
+				if (cdtMesh.beta<3>(faceIter) != cdtMesh.null_dart_handle)
+					cdtMesh.mark(cdtMesh.beta<3>(faceIter), partOfIntersectingTetMark);
 			}
 		}
-		
+	
 		//// remove intersecting tets from cdtMesh
 		for (vector<DartHandle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
 			remove_cell<LCC, 3>(cdtMesh, *tetIter);
