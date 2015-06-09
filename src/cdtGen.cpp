@@ -1527,15 +1527,15 @@ void CDTGenerator::recoverConstraintFacets()
 			
 		}while (nonStronglyDelaunayFacetsInCavity.size() != 0);
 //	count++;
-/*		// CAVITY RETETRAHEDRALIZATION		
+		// CAVITY RETETRAHEDRALIZATION		
 		vector<pair<CGALPoint, LCC::Dart_handle> > cavityVertices;
 		
 		for (LCCWithDartInfo::One_dart_per_cell_range<0, 3>::iterator pIter = cavityLCC.one_dart_per_cell<0, 3>().begin(), pIterEnd = cavityLCC.one_dart_per_cell<0, 3>().end(); pIter != pIterEnd; pIter++)	
 			cavityVertices.push_back(make_pair(cavityLCC.point(pIter), cavityLCC.info<0>(pIter)));
-		
+	
 		Delaunay cavityDelaunay;
 		cavityDelaunay.insert(cavityVertices.begin(), cavityVertices.end()); // DT of cavity vertices
-		
+	/*	
 		// mark each cell of DT as either inside/outside cavity
 		for (Delaunay::Finite_cells_iterator cIter = cavityDelaunay.finite_cells_begin(), cIterEnd = cavityDelaunay.finite_cells_end(); cIter != cIterEnd; cIter++)
 		{
@@ -1555,7 +1555,7 @@ void CDTGenerator::recoverConstraintFacets()
 			remove_cell<LCC, 3>(cdtMesh, *tetIter);
 
 		cdtMesh.sew3_same_facets();
-*/		
+	*/	
 	}
 
 }
