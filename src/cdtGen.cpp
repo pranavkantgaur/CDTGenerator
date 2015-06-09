@@ -1361,7 +1361,8 @@ bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo c
 	CGALPoint circumcenter1 = circumcenter(ch->vertex(0)->point(), ch->vertex(1)->point(), ch->vertex(2)->point(), ch->vertex(3)->point());
 
 	// generate a random ray from circumcenter
-	CGALPoint randomEndpoint = ; // TODO: Initialize
+	Random r1 = Random(), r2 = Random(), r3 = Random(); // system time serves as seed.
+	CGALPoint randomEndpoint(r1.get_bits<64>(), r2.get_bits<64>(), r3.get_bits<64>()); 
 	CGALRay randomRay = CGALRay(circumcenter1, randomEndpoint);
 	// find intersection with each face of cavity
 	// if number of intersections are even then tetrahedron is outside
@@ -1418,13 +1419,18 @@ void CDTGenerator::recoverConstraintFacets()
 	// Remove infinite cells
 	int infiniteVertexMark = cdtMesh.get_new_mark();
 	markInfiniteVertexDart(d, cdtMesh, infiniteVertexMark);		
+	vector <LCC::Dart_handle> cellsToBeRemoved;
+
 	for (LCC::One_dart_per_cell_range<3>::iterator tetIter = cdtMesh.one_dart_per_cell<3>().begin(), tetIterEnd = cdtMesh.one_dart_per_cell<3>().end(); tetIter != tetIterEnd; tetIter++)
 	{
 		if (isInfinite(tetIter, cdtMesh, infiniteVertexMark, 3))
-			remove_cell<LCC, 3>(cdtMesh, tetIter);
+			cellsToBeRemoved.push_back(tetIter);
 		else 
 			continue;
 	}
+
+	for (vector<LCC::Dart_handle>::iterator cellIter = cellsToBeRemoved.begin(), cellIterEnd = cellsToBeRemoved.end(); cellIter != cellIterEnd; cellIter++)
+		remove_cell<LCC, 3>(cdtMesh, *cellIter);
 
 	int partOfIntersectingTetMark = cdtMesh.get_new_mark();
 	
@@ -1446,7 +1452,6 @@ void CDTGenerator::recoverConstraintFacets()
 		// INITIAL CAVITY CREATION:(target is to remove intersecting cells and to create cavity using their faces)
 		for (vector<DartHandle>::iterator intersectingTetIter = intersectingTets.begin(), intersectingTetIterEnd = intersectingTets.end(); intersectingTetIter != intersectingTetIterEnd; intersectingTetIter++)
 		{
-			// TODO: Use mark = 2 based approach
 			for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator faceIter = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).begin(), faceIterEnd = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).end(); faceIter != faceIterEnd; faceIter++)
 			{
 				cdtMesh.mark(faceIter, partOfIntersectingTetMark);
@@ -1470,15 +1475,13 @@ void CDTGenerator::recoverConstraintFacets()
 				
 				cavityFaceHandle = cavityLCC.make_triangle(p[0], p[1], p[2]);
 				for (LCCWithDartInfo::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cavityLCC.one_dart_per_incident_cell<0, 2>(cavityFaceHandle).begin(), pIterEnd = cavityLCC.one_dart_per_incident_cell<0, 2>(cavityFaceHandle).end(); pIter != pIterEnd; pIter++)	
-					cavityLCC.info<0>(pIter) = fHandle; 				
+					cavityLCC.info<0>(pIter) = fHandle;// handle to that facet in original mesh 				
 			}
 		
 		//// sew 2-cells at boundaries
-		sew2CellsWithDartInfoFromEdge(cavityLCC);
+		sew2CellsWithDartInfoFromEdge(cavityLCC); // cavity is created
 		
 		// CAVITY VERIFICATION/EXPANSION:
-		
-		
 		//// create queue of non strongly Delaunay faces in cavityLCC
 		vector<LCCWithDartInfo::Dart_handle> nonStronglyDelaunayFacetsInCavity;
 		LCCWithDartInfo::Dart_handle correspondingFacetInCavity;
@@ -1488,7 +1491,7 @@ void CDTGenerator::recoverConstraintFacets()
 			//// initialize vector
 			for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator nonStrongFaceIter = cavityLCC.one_dart_per_cell<2>().begin(), nonStrongFaceIterEnd = cavityLCC.one_dart_per_cell<2>().end(); nonStrongFaceIter != nonStrongFaceIterEnd; nonStrongFaceIter++)	
 				if (isNonStronglyDelaunayFacet(nonStrongFaceIter, cavityLCC))  
-					nonStronglyDelaunayFacetsInCavity.push_back(nonStrongFaceIter);
+					nonStronglyDelaunayFacetsInCavity.push_back(nonStrongFaceIter); // handle to facets in cavityLCC
 				else
 					continue;	
 		
@@ -1498,7 +1501,7 @@ void CDTGenerator::recoverConstraintFacets()
 				LCCWithDartInfo::Dart_handle nonStronglyDelaunayFace = nonStronglyDelaunayFacetsInCavity.back();
 				nonStronglyDelaunayFacetsInCavity.pop_back();
 					
-				LCC::Dart_handle exteriorCellSharingNonDelaunayFacet = cdtMesh.beta<3>(cavityLCC.info<0>(nonStronglyDelaunayFace)); // TODO: Fix here 
+				LCC::Dart_handle exteriorCellSharingNonDelaunayFacet = cavityLCC.info<0>(nonStronglyDelaunayFace);  
 
 				//// Explore all faces of this cell
 				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++)			
@@ -1546,6 +1549,9 @@ void CDTGenerator::recoverConstraintFacets()
 				continue;
 		}
 		cdtMesh.sew3_same_facets();
+		// unmark all faces of intersecting tets
+		cdtMesh.unmark_all(partOfIntersectingTetMark); 
+		
 	}
 
 }
