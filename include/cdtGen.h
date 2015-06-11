@@ -150,10 +150,10 @@ class CDTGenerator
 		bool areFacetTetIntersecting(DartHandle, DartHandle); // first 2 arguments specify the dimension of first and second cells respectively.
 		void computeMissingConstraintFacets(vector<DartHandle>&);
 		void recoverConstraintFacets();
-		bool isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle, LCCWithDartInfo);
-		bool facetsHaveSameGeometry(LCC::Dart_handle, LCC, LCCWithDartInfo::Dart_handle, LCCWithDartInfo);
-		bool isFacetInCavity(LCC::Dart_handle, LCC, LCCWithDartInfo::Dart_handle&, LCCWithDartInfo);
+		bool isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle, LCCWithDartInfo&); //TODO
+		bool facetsHaveSameGeometry(LCC::Dart_handle, LCC&, LCCWithDartInfo::Dart_handle, LCCWithDartInfo&); // TODO
+		bool isFacetInCavity(LCC::Dart_handle, LCC&, LCCWithDartInfo::Dart_handle&, LCCWithDartInfo&);
 	
-		bool isTetInsideCavity(Delaunay::Cell_handle, LCCWithDartInfo);
-		bool rayIntersectsFacet(CGALRay, LCCWithDartInfo::Dart_handle, LCCWithDartInfo);
+		bool isTetInsideCavity(Delaunay::Cell_handle, LCCWithDartInfo&);
+		bool rayIntersectsFacet(CGALRay, LCCWithDartInfo::Dart_handle, LCCWithDartInfo&);
 };

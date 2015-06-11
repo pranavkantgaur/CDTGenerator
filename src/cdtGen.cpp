@@ -1252,7 +1252,7 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
  *  \param [in] d Dart handle to the facet.
  *  \param [in] lcc Linear cell complex containing d.
  */
-bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle d, LCCWithDartInfo lcc)
+bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle d, LCCWithDartInfo& lcc)
 {
 	// a facet is non strongly Delaunay if there do not exist any circumsphere which does not include and other point on and inside it.
 	// since local degeneracies are already removed we only need to check for input facet in Delaunay tetrahedralization of vetices of cavity.
@@ -1285,7 +1285,7 @@ bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle d, LC
  *  \param [in] cavityLCC LCC representation of cavity
  *  \return True if input facets have same geometry.   
  */
-bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC lcc, LCCWithDartInfo::Dart_handle facetInCavity, LCCWithDartInfo cavityLCC)
+bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC& lcc, LCCWithDartInfo::Dart_handle facetInCavity, LCCWithDartInfo& cavityLCC)
 {
 	LCC alcc;
 	CGALPoint p[3];
@@ -1317,7 +1317,7 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC lcc, LCC
  *  \param [in] cavityLCC LCC representation of cavity
  *  \return True if input facet is in cavity.
  */
-bool CDTGenerator::isFacetInCavity(LCC::Dart_handle fHandle, LCC lcc, LCCWithDartInfo::Dart_handle& correspondingFacetInCavity, LCCWithDartInfo cavityLCC)
+bool CDTGenerator::isFacetInCavity(LCC::Dart_handle fHandle, LCC& lcc, LCCWithDartInfo::Dart_handle& correspondingFacetInCavity, LCCWithDartInfo& cavityLCC)
 {
 	for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator fIter = cavityLCC.one_dart_per_cell<2>().begin(), fIterEnd = cavityLCC.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
 		if (facetsHaveSameGeometry(fHandle, lcc, fIter, cavityLCC))
@@ -1326,14 +1326,14 @@ bool CDTGenerator::isFacetInCavity(LCC::Dart_handle fHandle, LCC lcc, LCCWithDar
 }
 
 
-/*! \fn bool CDTGenerator::rayIntersectsFacet(CGALRay ray, LCCWithDartInfo::Dart_handle fHandle, LCCWithDartInfo lcc)
+/*! \fn bool CDTGenerator::rayIntersectsFacet(CGALRay ray, LCCWithDartInfo::Dart_handle fHandle, LCCWithDartInfo& lcc)
  *  \brief Tests whether input ray intersect the facet in LCC.
  *  \param [in] ray Given ray.
  *  \param [in] fHandle Dart handle to facet in LCC.
  *  \param [in] lcc Linear cell complex containing fHandle.
  *  \return True if ray does intersect the given facet in LCC.
  */
-bool CDTGenerator::rayIntersectsFacet(CGALRay ray, LCCWithDartInfo::Dart_handle fHandle, LCCWithDartInfo lcc)
+bool CDTGenerator::rayIntersectsFacet(CGALRay ray, LCCWithDartInfo::Dart_handle fHandle, LCCWithDartInfo& lcc)
 {
 	// represent facet in triangle_3 form 
 	CGALPoint p[3];
@@ -1349,20 +1349,20 @@ bool CDTGenerator::rayIntersectsFacet(CGALRay ray, LCCWithDartInfo::Dart_handle 
 }	
 
 
-/*! \fn bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo cavityLCC)
+/*! \fn bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo& cavityLCC)
  *  \brief Determines whether given 3-cell is inside Cavity boundary.
  *  \param [in] ch Cell handle pointing to the query tetrahedron.
  *  \param [in] cavityLCC LCC representation of cavity.
  *  \return True if given tetrahedron is inside cavityLCC.
  */
-bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo cavityLCC)
+bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo& cavityLCC)
 {
 
 	CGALPoint circumcenter1 = circumcenter(ch->vertex(0)->point(), ch->vertex(1)->point(), ch->vertex(2)->point(), ch->vertex(3)->point());
 
 	// generate a random ray from circumcenter
 	Random r1 = Random(), r2 = Random(), r3 = Random(); // system time serves as seed.
-	CGALPoint randomEndpoint(r1.get_bits<64>(), r2.get_bits<64>(), r3.get_bits<64>()); 
+	CGALPoint randomEndpoint(r1.get_bits<15>(), r2.get_bits<15>(), r3.get_bits<15>()); 
 	CGALRay randomRay = CGALRay(circumcenter1, randomEndpoint);
 	// find intersection with each face of cavity
 	// if number of intersections are even then tetrahedron is outside
@@ -1437,7 +1437,7 @@ void CDTGenerator::recoverConstraintFacets()
 	
 	if (partOfIntersectingTetMark == -1)
 		exit(0);
-//	size_t count = 0;
+
 	while (missingConstraintFacets.size() != 0)
 	{
 		DartHandle missingFacetHandle = missingConstraintFacets.back(); // test for each missing facet
@@ -1507,7 +1507,7 @@ void CDTGenerator::recoverConstraintFacets()
 				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++)			
 				{
 					size_t facetLocation;
-					if (isFacetInCavity(facetInCellHandle, cdtMesh, correspondingFacetInCavity, cavityLCC)) 
+				/*	if (isFacetInCavity(facetInCellHandle, cdtMesh, correspondingFacetInCavity, cavityLCC)) 
 						remove_cell<LCCWithDartInfo, 2>(cavityLCC, correspondingFacetInCavity);
 						
 					else
@@ -1520,13 +1520,13 @@ void CDTGenerator::recoverConstraintFacets()
 						cavityLCC.make_triangle(p[0], p[1], p[2]);
 						sew2CellsWithDartInfoFromEdge(cavityLCC);
 					}
-				}
+				*/}
 				
 			}
 			
 			
 		}while (nonStronglyDelaunayFacetsInCavity.size() != 0);
-//	count++;
+
 		// CAVITY RETETRAHEDRALIZATION		
 		vector<pair<CGALPoint, LCC::Dart_handle> > cavityVertices;
 		
@@ -1535,7 +1535,7 @@ void CDTGenerator::recoverConstraintFacets()
 	
 		Delaunay cavityDelaunay;
 		cavityDelaunay.insert(cavityVertices.begin(), cavityVertices.end()); // DT of cavity vertices
-	/*	
+	
 		// mark each cell of DT as either inside/outside cavity
 		for (Delaunay::Finite_cells_iterator cIter = cavityDelaunay.finite_cells_begin(), cIterEnd = cavityDelaunay.finite_cells_end(); cIter != cIterEnd; cIter++)
 		{
@@ -1550,12 +1550,13 @@ void CDTGenerator::recoverConstraintFacets()
 			else
 				continue;
 		}
+		
 		//// remove intersecting tets from cdtMesh
 		for (vector<LCC::Dart_handle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
 			remove_cell<LCC, 3>(cdtMesh, *tetIter);
 
 		cdtMesh.sew3_same_facets();
-	*/	
+		
 	}
 
 }
