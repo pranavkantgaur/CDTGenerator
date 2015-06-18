@@ -1289,11 +1289,12 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC& lcc, LC
 {
 	LCC alcc;
 	CGALPoint p[3];
-	
+	cout << "Inside facetsHaveSameGeometry!!" << endl;
 	size_t i = 0;
+
 	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = lcc.one_dart_per_incident_cell<0, 2>(fHandle).begin(),  pIterEnd = lcc.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
 		p[i++] = lcc.point(pIter);
-
+	
 	LCC::Dart_handle d1 = alcc.make_triangle(p[0], p[1], p[2]);
 
 	i = 0;
@@ -1301,7 +1302,7 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC& lcc, LC
 		p[i++] = cavityLCC.point(pIter);
 	
 	LCC::Dart_handle d2 = alcc.make_triangle(p[0], p[1], p[2]);
-
+	cout << "Nothing here!!" << endl;
 	if (alcc.are_facets_same_geometry(d1, d2))
 		return true;
 	else
@@ -1319,9 +1320,11 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC& lcc, LC
  */
 bool CDTGenerator::isFacetInCavity(LCC::Dart_handle fHandle, LCC& lcc, LCCWithDartInfo::Dart_handle& correspondingFacetInCavity, LCCWithDartInfo& cavityLCC)
 {
+	cout << "Inside isFacetInCavity!!" << endl;
 	for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator fIter = cavityLCC.one_dart_per_cell<2>().begin(), fIterEnd = cavityLCC.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
 		if (facetsHaveSameGeometry(fHandle, lcc, fIter, cavityLCC))
 			return true;
+	
 	return false;
 }
 
@@ -1407,7 +1410,8 @@ void CDTGenerator::recoverConstraintFacets()
 	//		For each tetrahedron in cavityLCC DT:
 	//			Label it as inside/outside cavityLCC
 	//		Sew all 'inside' tetrahedrons back to the hole creating in cdtMesh(LCC representation of output)
-	
+
+	cout << "Facet recovery starts..." << endl;	
 	vector <DartHandle> missingConstraintFacets;
 	vector <DartHandle> intersectingTets;
 	LCCWithDartInfo cavityLCC;
@@ -1437,6 +1441,7 @@ void CDTGenerator::recoverConstraintFacets()
 	
 	if (partOfIntersectingTetMark == -1)
 		exit(0);
+	cout << "Infinite cells removed!!" << endl;
 
 	while (missingConstraintFacets.size() != 0)
 	{
@@ -1462,8 +1467,7 @@ void CDTGenerator::recoverConstraintFacets()
 					cdtMesh.mark(cdtMesh.beta<3>(faceIter), partOfIntersectingTetMark);
 			}
 		}
-	
-
+		cout << "Initial cavity created!!" << endl;	
 		//// add marked faces to cavityLCC
 		for (LCC::Dart_range::iterator fHandle = cdtMesh.darts().begin(), fHandleEnd = cdtMesh.darts().end(); fHandle != fHandleEnd; fHandle++)
 			if (cdtMesh.is_marked(fHandle, partOfIntersectingTetMark))
@@ -1479,15 +1483,16 @@ void CDTGenerator::recoverConstraintFacets()
 					cavityLCC.info<0>(pIter) = fHandle;// handle to that facet in original mesh 				
 			}
 		cdtMesh.unmark_all(partOfIntersectingTetMark); 
+
 		//// remove intersecting tets from cdtMesh
 		for (vector<LCC::Dart_handle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
 			remove_cell<LCC, 3>(cdtMesh, *tetIter);
-
-
+		cout << "Intersecting tets removed from mesh!!" << endl;
 
 		//// sew 2-cells at boundaries
 		sew2CellsWithDartInfoFromEdge(cavityLCC); // cavity is created
 		
+		cout << "Cavity verification started!!" << endl;
 		// CAVITY VERIFICATION/EXPANSION:
 		//// create queue of non strongly Delaunay faces in cavityLCC
 		vector<LCCWithDartInfo::Dart_handle> nonStronglyDelaunayFacetsInCavity;
@@ -1499,9 +1504,9 @@ void CDTGenerator::recoverConstraintFacets()
 			for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator nonStrongFaceIter = cavityLCC.one_dart_per_cell<2>().begin(), nonStrongFaceIterEnd = cavityLCC.one_dart_per_cell<2>().end(); nonStrongFaceIter != nonStrongFaceIterEnd; nonStrongFaceIter++)	
 				if (isNonStronglyDelaunayFacet(nonStrongFaceIter, cavityLCC))  
 					nonStronglyDelaunayFacetsInCavity.push_back(nonStrongFaceIter); // handle to facets in cavityLCC
-				else
+				else 
 					continue;	
-//			cout << "#" << count << "Number of non strongly Delaunay facets: " << nonStronglyDelaunayFacetsInCavity.size() << endl;
+			cout << "Found non-strongly Delaunay facets in cavity!!" << endl;
 			//// cavity expansion
 			while (nonStronglyDelaunayFacetsInCavity.size() != 0)	
 			{
@@ -1509,16 +1514,20 @@ void CDTGenerator::recoverConstraintFacets()
 				nonStronglyDelaunayFacetsInCavity.pop_back();
 					
 				LCC::Dart_handle exteriorCellSharingNonDelaunayFacet = cavityLCC.info<0>(nonStronglyDelaunayFace);  
-				
+				cout << "Hi" << endl;
 				//// Explore all faces of this cell
 				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++)			
 				{
 					size_t facetLocation;
+					cout << "Before isFacetInCavity!!" << endl;
 					if (isFacetInCavity(facetInCellHandle, cdtMesh, correspondingFacetInCavity, cavityLCC)) 
+					{
+						cout << "Inside if!!" << endl;
 						remove_cell<LCCWithDartInfo, 2>(cavityLCC, correspondingFacetInCavity);
-						
+					}		
 					else
 					{
+						cout << "Inside else!!" << endl;
 						CGALPoint p[3];
 						size_t i = 0;
 						for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>(facetInCellEndHandle).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 2>(facetInCellEndHandle).end(); pIter != pIterEnd; pIter++)
@@ -1529,12 +1538,15 @@ void CDTGenerator::recoverConstraintFacets()
 					}
 					
 				}
+				cout << "Bye!!" << endl;
 				
 			}
-			
+			cout << "Cavity expanded, if required!!" << endl;
+		
 			
 		}while (nonStronglyDelaunayFacetsInCavity.size() != 0);
-
+		cout << "Cavity verification complete!!" << endl;
+		cout << "Cavity retetrahedralization started!!" << endl;
 		// CAVITY RETETRAHEDRALIZATION		
 		vector<pair<CGALPoint, LCC::Dart_handle> > cavityVertices;
 		
@@ -1558,11 +1570,11 @@ void CDTGenerator::recoverConstraintFacets()
 			else
 				continue;
 		}
-		
-	
+			
 		cdtMesh.sew3_same_facets();
-		
+		cout << "Cavity retetrahedralization complete!!" << endl;
 	}
+
 	cout << "Constraint facets recovered!!" << endl;
 
 }
