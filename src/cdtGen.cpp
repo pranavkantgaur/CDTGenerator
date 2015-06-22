@@ -1291,6 +1291,9 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC& lcc, LC
 	CGALPoint p[3];
 	cout << "Inside facetsHaveSameGeometry!!" << endl;
 	size_t i = 0;
+	//lcc.one_dart_per_incident_cell<0, 2>(fHandle).end();
+        //lcc.one_dart_per_incident_cell<0, 2>(fHandle).begin();
+	//cout << "Size is: " << lcc.one_dart_per_incident_cell<0, 2>(lcc.beta<2>(fHandle)).size() << endl; 
 
 	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = lcc.one_dart_per_incident_cell<0, 2>(fHandle).begin(),  pIterEnd = lcc.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
 		p[i++] = lcc.point(pIter);
@@ -1518,7 +1521,10 @@ void CDTGenerator::recoverConstraintFacets()
 				//// Explore all faces of this cell
 				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++)			
 				{
-					size_t facetLocation;
+					cout << "About to segfault?" << endl;
+					LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>(facetInCellHandle).end();
+					cout << "Nothing happened!!" << endl;
+					/*size_t facetLocation;
 					cout << "Before isFacetInCavity!!" << endl;
 					if (isFacetInCavity(facetInCellHandle, cdtMesh, correspondingFacetInCavity, cavityLCC)) 
 					{
@@ -1537,7 +1543,7 @@ void CDTGenerator::recoverConstraintFacets()
 						sew2CellsWithDartInfoFromEdge(cavityLCC);
 					}
 					
-				}
+			*/	}
 				cout << "Bye!!" << endl;
 				
 			}
