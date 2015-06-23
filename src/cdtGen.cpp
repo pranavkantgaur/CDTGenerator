@@ -1521,10 +1521,10 @@ void CDTGenerator::recoverConstraintFacets()
 				//// Explore all faces of this cell
 				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++)			
 				{
-					cout << "About to segfault?" << endl;
+				/*	cout << "About to segfault?" << endl;
 					LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>(facetInCellHandle).end();
 					cout << "Nothing happened!!" << endl;
-					/*size_t facetLocation;
+				*/	size_t facetLocation;
 					cout << "Before isFacetInCavity!!" << endl;
 					if (isFacetInCavity(facetInCellHandle, cdtMesh, correspondingFacetInCavity, cavityLCC)) 
 					{
@@ -1543,7 +1543,7 @@ void CDTGenerator::recoverConstraintFacets()
 						sew2CellsWithDartInfoFromEdge(cavityLCC);
 					}
 					
-			*/	}
+				}
 				cout << "Bye!!" << endl;
 				
 			}
