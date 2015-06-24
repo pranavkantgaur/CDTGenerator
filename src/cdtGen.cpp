@@ -1519,10 +1519,9 @@ void CDTGenerator::recoverConstraintFacets()
 				LCC::Dart_handle exteriorCellSharingNonDelaunayFacet = cavityLCC.info<0>(nonStronglyDelaunayFace);  
 				cout << "Hi" << endl;
 				//// Explore all faces of this cell
-				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++)			
-				{
+				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++)						   {	
 				/*	cout << "About to segfault?" << endl;
-					LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>(facetInCellHandle).end();
+					LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>(facetInCellHandle).begin();
 					cout << "Nothing happened!!" << endl;
 				*/	size_t facetLocation;
 					cout << "Before isFacetInCavity!!" << endl;
@@ -1586,6 +1585,80 @@ void CDTGenerator::recoverConstraintFacets()
 }
 
 
+/*! \fn bool CDTGenerator::rayIntersectsPLCFacet(CGALRay randomRay, LCC::Dart_handle fHandle)
+ *  \brief Tests whether input ray intersects the PLC facet. 
+ *  \param [in] randomRay Random ray 
+ *  \param [in] fHandle Dart handle to the facet. 
+ *  \return True if input ray intersects the facet of PLC.
+ */
+bool CDTGenerator::rayIntersectsPLCFacets(CGALRay randomRay, LCC::Dart_handle fHandle)
+{
+	// represent facet in triangle_3 form 
+	CGALPoint p[3];
+	size_t i = 0;
+	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>(fHandle).begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
+		p[i++] = plc.point(pIter);
+
+	CGALTriangle triangle = CGALTriangle(p[0], p[1], p[2]);
+
+	bool result = do_intersect(randomRay, triangle); 
+	
+	return result;
+}
+
+
+/*! \fn bool CDTGenerator::isCellOutsidePLC(LCC::Dart_handle cellHandle)
+ *  \brief Tests whether input cell is outside PLC
+ *  \param [in] cellHandle Dart handle for the input cell.
+ *  \return True if the input cell is outside PLC.
+ */
+bool CDTGenerator::isCellOutsidePLC(LCC::Dart_handle cellHandle)
+{
+	size_t i = 0;
+	CGALPoint p[4];
+	for (LCC::One_dart_per_cell_range<0>::iterator pIter = cdtMesh.one_dart_per_cell<0>().begin(), pIterEnd = cdtMesh.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
+		p[i++] = cdtMesh.point(pIter); 
+
+	CGALPoint circumcenter1 = circumcenter(p[0], p[1], p[2], p[3]);
+
+	Random r1 = Random(), r2 = Random(), r3 = Random(); // system time serves as seed.
+	CGALPoint randomEndpoint(r1.get_bits<15>(), r2.get_bits<15>(), r3.get_bits<15>()); 
+	CGALRay randomRay = CGALRay(circumcenter1, randomEndpoint);
+	size_t nIntersections = 0;
+	for (LCC::One_dart_per_cell_range<2>::iterator fHandle = cdtMesh.one_dart_per_cell<2>().begin(), fHandleEnd = cdtMesh.one_dart_per_cell<2>().end(); fHandle != fHandleEnd; fHandle++)
+	{
+		if (rayIntersectsPLCFacets(randomRay, fHandle))
+			nIntersections++;
+		else 
+			continue;
+	}
+	
+	return (nIntersections % 2) ? false : true;
+}
+
+
+/*! \fn void CDTGenerator::removeExteriorTetrahedrons()
+ *  \brief Removes tetrahedrons from cdtMesh which are exterior wrt. input PLC.
+ */
+void CDTGenerator::removeExteriorTetrahedrons()
+{
+	// Ray-LCC intersection approach, if even number of intersections, then outside else inside. 
+	vector<LCC::Dart_handle> exteriorCellsList;
+
+	//// For each 3-cell
+	for (LCC::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(), cellIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cellIter != cellIterEnd; cellIter++)
+	{
+		//// Test if is it exterior cell
+		if (isCellOutsidePLC(cellIter))
+			exteriorCellsList.push_back(cellIter);
+	}
+	//// remove cells marked as exterior
+	for (vector<LCC::Dart_handle>::iterator cellsToBeRemovedIter = exteriorCellsList.begin(), cellsToBeRemovedIterEnd = exteriorCellsList.end(); cellsToBeRemovedIter != cellsToBeRemovedIterEnd; cellsToBeRemovedIter++)
+		remove_cell<LCC, 3>(cdtMesh, *cellsToBeRemovedIter);			
+
+}
+
+
 /*! \fn void CDTGenerator::generate()
     \brief Public interface for CDTGenerator class.
  */
@@ -1596,6 +1669,7 @@ void CDTGenerator::generate()
 	recoverConstraintSegments();
 //	removeLocalDegeneracies();
 	recoverConstraintFacets();
+	removeExteriorTetrahedrons(); // removes tetrahedrons from cdtMesh which are outside input PLC
 
 }
 

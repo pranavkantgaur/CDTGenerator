@@ -156,4 +156,8 @@ class CDTGenerator
 	
 		bool isTetInsideCavity(Delaunay::Cell_handle, LCCWithDartInfo&);
 		bool rayIntersectsFacet(CGALRay, LCCWithDartInfo::Dart_handle, LCCWithDartInfo&);
+		bool rayIntersectsPLCFacets(CGALRay, LCC::Dart_handle);
+		bool isCellOutsidePLC(LCC::Dart_handle);
+		void removeExteriorTetrahedrons();
+
 };
