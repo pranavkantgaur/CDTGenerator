@@ -1287,26 +1287,25 @@ bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle d, LC
  */
 bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC& lcc, LCCWithDartInfo::Dart_handle facetInCavity, LCCWithDartInfo& cavityLCC)
 {
-	LCC alcc;
+
 	CGALPoint p[3];
 	cout << "Inside facetsHaveSameGeometry!!" << endl;
 	size_t i = 0;
-	//lcc.one_dart_per_incident_cell<0, 2>(fHandle).end();
-        //lcc.one_dart_per_incident_cell<0, 2>(fHandle).begin();
-	//cout << "Size is: " << lcc.one_dart_per_incident_cell<0, 2>(lcc.beta<2>(fHandle)).size() << endl; 
 
-	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = lcc.one_dart_per_incident_cell<0, 2>(fHandle).begin(),  pIterEnd = lcc.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
-		p[i++] = lcc.point(pIter);
+	//for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pHandleBegin = lcc.one_dart_per_incident_cell<0, 2>(fHandle).begin(),  pHandleEnd = lcc.one_dart_per_incident_cell<0, 2>(fHandle).end(); pHandleBegin != pHandleEnd; pHandleBegin++)
+	for (LCC::Dart_of_orbit_range<1>::iterator pHandleBegin = lcc.darts_of_orbit<1>(fHandle).begin(), pHandleEnd = lcc.darts_of_orbit<1>(fHandle).end(); pHandleBegin != pHandleEnd; pHandleBegin++)	
+		p[i++] = lcc.point(pHandleBegin);
 	
-	LCC::Dart_handle d1 = alcc.make_triangle(p[0], p[1], p[2]);
+	LCC::Dart_handle d1 = lcc.make_triangle(p[0], p[1], p[2]);
 
 	i = 0;
 	for (LCCWithDartInfo::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cavityLCC.one_dart_per_incident_cell<0, 2>(facetInCavity).begin(),  pIterEnd = cavityLCC.one_dart_per_incident_cell<0, 2>(facetInCavity).end(); pIter != pIterEnd; pIter++)
 		p[i++] = cavityLCC.point(pIter);
+
 	
-	LCC::Dart_handle d2 = alcc.make_triangle(p[0], p[1], p[2]);
+	LCC::Dart_handle d2 = lcc.make_triangle(p[0], p[1], p[2]);
 	cout << "Nothing here!!" << endl;
-	if (alcc.are_facets_same_geometry(d1, d2))
+	if (lcc.are_facets_same_geometry(d1, d2))
 		return true;
 	else
 		return false;
@@ -1421,7 +1420,7 @@ void CDTGenerator::recoverConstraintFacets()
 	LCCWithDartInfo::Dart_handle cavityFaceHandle;
 
 	computeMissingConstraintFacets(missingConstraintFacets); // list missing constraint facets
-	DartHandle d = import_from_triangulation_3(cdtMesh, DT); 
+	DartHandle d = import_from_triangulation_3(cdtMesh, DT); // initialization of cdtMesh  
 	
 	// Remove infinite cells
 	int infiniteVertexMark = cdtMesh.get_new_mark();
@@ -1517,22 +1516,17 @@ void CDTGenerator::recoverConstraintFacets()
 				nonStronglyDelaunayFacetsInCavity.pop_back();
 					
 				LCC::Dart_handle exteriorCellSharingNonDelaunayFacet = cavityLCC.info<0>(nonStronglyDelaunayFace);  
-				cout << "Hi" << endl;
+		
 				//// Explore all faces of this cell
 				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++)						   {	
-				/*	cout << "About to segfault?" << endl;
-					LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>(facetInCellHandle).begin();
-					cout << "Nothing happened!!" << endl;
-				*/	size_t facetLocation;
+					size_t facetLocation;
 					cout << "Before isFacetInCavity!!" << endl;
 					if (isFacetInCavity(facetInCellHandle, cdtMesh, correspondingFacetInCavity, cavityLCC)) 
 					{
-						cout << "Inside if!!" << endl;
 						remove_cell<LCCWithDartInfo, 2>(cavityLCC, correspondingFacetInCavity);
 					}		
 					else
 					{
-						cout << "Inside else!!" << endl;
 						CGALPoint p[3];
 						size_t i = 0;
 						for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>(facetInCellEndHandle).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 2>(facetInCellEndHandle).end(); pIter != pIterEnd; pIter++)
@@ -1543,7 +1537,7 @@ void CDTGenerator::recoverConstraintFacets()
 					}
 					
 				}
-				cout << "Bye!!" << endl;
+				
 				
 			}
 			cout << "Cavity expanded, if required!!" << endl;
