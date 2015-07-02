@@ -128,6 +128,8 @@ class CDTGenerator
 		void formMissingSegmentsQueue();//vector<DartHandle>&);
 		void computeDelaunayTetrahedralization(int);
 		void writePLYOutput(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, string); 
+		void writePLYOutput(LCC::Dart_handle, LCC&, string); 
+
 		void readPLCInput();
 
 		bool areGeometricallySameSegments(DartHandle, DartHandle, LCC&);

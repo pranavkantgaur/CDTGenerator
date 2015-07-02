@@ -125,6 +125,8 @@ bool TestRecoverConstraintFacets::runTest()
 	// count number of constraint facets recovered in output mesh(LCC) after recovery execution of recovery algorithm.
 	cout << "Number of constraint facets already present: " << nConstraintFacetsAlreadyPresent << endl;
 	cout << "Number of constraint facets recovered: " << nConstraintFacetsRecovered << endl;
+	
+	return (nConstraintFacetsAlreadyPresent == nConstraintFacetsRecovered) ? true : false;
 }
 
 
