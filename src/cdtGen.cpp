@@ -1202,19 +1202,19 @@ bool CDTGenerator::areFacetTetIntersecting(DartHandle tetHandle, DartHandle face
 	CGALTriangle tri;
 	CGALTetrahedron tet;
 	
-	CGALPoint p[4];
+	CGALPoint p1[3], p2[4];
 
 	size_t i = 0;
 	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>(facetHandle).begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>(facetHandle).end(); pIter != pIterEnd; pIter++)
-		p[i++] = plc.point(pIter);
+		p1[i++] = plc.point(pIter);
 
-	tri = CGALTriangle(p[0], p[1], p[2]);
+	tri = CGALTriangle(p1[0], p1[1], p1[2]);
 
 	i = 0;
 	for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 3>(tetHandle).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 3>(tetHandle).end(); pIter != pIterEnd; pIter++)
-		p[i++] = plc.point(pIter);
+		p2[i++] = plc.point(pIter);
 
-	tet = CGALTetrahedron(p[0], p[1], p[2], p[3]);
+	tet = CGALTetrahedron(p2[0], p2[1], p2[2], p2[3]);
 
 	if (do_intersect(tet, tri))
 		return true;
@@ -1585,19 +1585,27 @@ void CDTGenerator::recoverConstraintFacets()
  *  \param [in] fHandle Dart handle to the facet. 
  *  \return True if input ray intersects the facet of PLC.
  */
-bool CDTGenerator::rayIntersectsPLCFacets(CGALRay randomRay, LCC::Dart_handle fHandle)
+void CDTGenerator::countRayPLCFacetIntersections(CGALRay randomRay, LCC::Dart_handle fHandle, size_t &nIntersections)
 {
 	// represent facet in triangle_3 form 
-	CGALPoint p[3];
+	CGALPoint p[4];
 	size_t i = 0;
 	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>(fHandle).begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
-		p[i++] = plc.point(pIter);
-
-	CGALTriangle triangle = CGALTriangle(p[0], p[1], p[2]);
-
-	bool result = do_intersect(randomRay, triangle); 
+		p[i++] == plc.point(pIter);
 	
-	return result;
+	CGALTriangle triangle;
+	bool result;
+
+	triangle = CGALTriangle(p[0], p[1], p[2]);
+        if (do_intersect(randomRay, triangle))
+	       nIntersections++;
+
+	if (i == 4) // 2 triangles
+	{
+		triangle = CGALTriangle(p[0], p[2], p[3]);
+		if (do_intersect(randomRay, triangle))
+			nIntersections++;			
+	}
 }
 
 
@@ -1610,7 +1618,7 @@ bool CDTGenerator::isCellOutsidePLC(LCC::Dart_handle cellHandle)
 {
 	size_t i = 0;
 	CGALPoint p[4];
-	for (LCC::One_dart_per_cell_range<0>::iterator pIter = cdtMesh.one_dart_per_cell<0>().begin(), pIterEnd = cdtMesh.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
+	for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 3>(cellHandle).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 3>(cellHandle).end(); pIter != pIterEnd; pIter++)
 		p[i++] = cdtMesh.point(pIter); 
 
 	CGALPoint circumcenter1 = circumcenter(p[0], p[1], p[2], p[3]);
@@ -1619,14 +1627,9 @@ bool CDTGenerator::isCellOutsidePLC(LCC::Dart_handle cellHandle)
 	CGALPoint randomEndpoint(r1.get_bits<15>(), r2.get_bits<15>(), r3.get_bits<15>()); 
 	CGALRay randomRay = CGALRay(circumcenter1, randomEndpoint);
 	size_t nIntersections = 0;
-	for (LCC::One_dart_per_cell_range<2>::iterator fHandle = cdtMesh.one_dart_per_cell<2>().begin(), fHandleEnd = cdtMesh.one_dart_per_cell<2>().end(); fHandle != fHandleEnd; fHandle++)
-	{
-		if (rayIntersectsPLCFacets(randomRay, fHandle))
-			nIntersections++;
-		else 
-			continue;
-	}
-	
+	for (LCC::One_dart_per_cell_range<2>::iterator fHandle = plc.one_dart_per_cell<2>().begin(), fHandleEnd = plc.one_dart_per_cell<2>().end(); fHandle != fHandleEnd; fHandle++)
+		countRayPLCFacetIntersections(randomRay, fHandle, nIntersections);
+		
 	return (nIntersections % 2) ? false : true;
 }
 
