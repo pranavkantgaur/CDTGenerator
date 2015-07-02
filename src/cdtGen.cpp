@@ -314,7 +314,7 @@ bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, const LCCWithIn
 
 	if (cell_dimension == 2)
 	{
-		for (LCCWithIntInfo::One_dart_per_incident_cell_const_range<0, 2>::const_iterator pIter = lcc.one_dart_per_incident_cell<0, 2>(adart).begin(), pIterEnd = lcc.one_dart_per_incident_cell<0, 2>(adart).end(); pIter != pIterEnd; pIter++)
+		for (LCCWithIntInfo::Dart_of_orbit_const_range<1>::const_iterator pIter = lcc.darts_of_orbit<1>(adart).begin(), pIterEnd = lcc.darts_of_orbit<1>(adart).end(); pIter != pIterEnd; pIter++)
 		{
 			if (lcc.is_marked(pIter, infiniteVertexMark)) 
 			{
@@ -365,7 +365,7 @@ bool CDTGenerator::isInfinite(LCC::Dart_handle adart, const LCC& lcc, int infini
 
 	if (cell_dimension == 2)
 	{
-		for (LCC::One_dart_per_incident_cell_const_range<0, 2>::const_iterator pIter = lcc.one_dart_per_incident_cell<0, 2>(adart).begin(), pIterEnd = lcc.one_dart_per_incident_cell<0, 2>(adart).end(); pIter != pIterEnd; pIter++)
+		for (LCC::Dart_of_orbit_const_range<1>::const_iterator pIter = lcc.darts_of_orbit<1>(adart).begin(), pIterEnd = lcc.darts_of_orbit<1>(adart).end(); pIter != pIterEnd; pIter++)
 		{
 			if (lcc.is_marked(pIter, infiniteVertexMark)) 
 			{
@@ -1205,8 +1205,13 @@ bool CDTGenerator::areFacetTetIntersecting(DartHandle tetHandle, DartHandle face
 	CGALPoint p1[3], p2[4];
 
 	size_t i = 0;
+<<<<<<< HEAD
 	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>(facetHandle).begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>(facetHandle).end(); pIter != pIterEnd; pIter++)
 		p1[i++] = plc.point(pIter);
+=======
+	for (LCC::Dart_of_orbit_range<1>::iterator pIter = plc.darts_of_orbit<1>(facetHandle).begin(), pIterEnd = plc.darts_of_orbit<1>(facetHandle).end(); pIter != pIterEnd; pIter++)
+		p[i++] = plc.point(pIter);
+>>>>>>> 310d63561c7d1790efb847c30c3166b5b8cf13e8
 
 	tri = CGALTriangle(p1[0], p1[1], p1[2]);
 
@@ -1292,19 +1297,18 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC& lcc, LC
 	cout << "Inside facetsHaveSameGeometry!!" << endl;
 	size_t i = 0;
 
-	//for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pHandleBegin = lcc.one_dart_per_incident_cell<0, 2>(fHandle).begin(),  pHandleEnd = lcc.one_dart_per_incident_cell<0, 2>(fHandle).end(); pHandleBegin != pHandleEnd; pHandleBegin++)
+	//for (LCC::Dart_of_orbit_range<1>::iterator pHandleBegin = lcc.darts_of_orbit<1>(fHandle).begin(),  pHandleEnd = lcc.darts_of_orbit<1>(fHandle).end(); pHandleBegin != pHandleEnd; pHandleBegin++)
 	for (LCC::Dart_of_orbit_range<1>::iterator pHandleBegin = lcc.darts_of_orbit<1>(fHandle).begin(), pHandleEnd = lcc.darts_of_orbit<1>(fHandle).end(); pHandleBegin != pHandleEnd; pHandleBegin++)	
 		p[i++] = lcc.point(pHandleBegin);
 	
 	LCC::Dart_handle d1 = lcc.make_triangle(p[0], p[1], p[2]);
 
 	i = 0;
-	for (LCCWithDartInfo::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cavityLCC.one_dart_per_incident_cell<0, 2>(facetInCavity).begin(),  pIterEnd = cavityLCC.one_dart_per_incident_cell<0, 2>(facetInCavity).end(); pIter != pIterEnd; pIter++)
+	for (LCCWithDartInfo::Dart_of_orbit_range<1>::iterator pIter = cavityLCC.darts_of_orbit<1>(facetInCavity).begin(),  pIterEnd = cavityLCC.darts_of_orbit<1>(facetInCavity).end(); pIter != pIterEnd; pIter++)
 		p[i++] = cavityLCC.point(pIter);
 
 	
 	LCC::Dart_handle d2 = lcc.make_triangle(p[0], p[1], p[2]);
-	cout << "Nothing here!!" << endl;
 	if (lcc.are_facets_same_geometry(d1, d2))
 		return true;
 	else
@@ -1343,7 +1347,7 @@ bool CDTGenerator::rayIntersectsFacet(CGALRay ray, LCCWithDartInfo::Dart_handle 
 	// represent facet in triangle_3 form 
 	CGALPoint p[3];
 	size_t i = 0;
-	for (LCCWithDartInfo::One_dart_per_incident_cell_range<0, 2>::iterator pIter = lcc.one_dart_per_incident_cell<0, 2>(fHandle).begin(), pIterEnd = lcc.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
+	for (LCCWithDartInfo::Dart_of_orbit_range<1>::iterator pIter = lcc.darts_of_orbit<1>(fHandle).begin(), pIterEnd = lcc.darts_of_orbit<1>(fHandle).end(); pIter != pIterEnd; pIter++)
 		p[i++] = lcc.point(pIter);
 
 	CGALTriangle triangle = CGALTriangle(p[0], p[1], p[2]);
@@ -1477,11 +1481,11 @@ void CDTGenerator::recoverConstraintFacets()
 				CGALPoint p[3];
 
 				size_t i = 0;
-				for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>(fHandle).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
+				for (LCC::Dart_of_orbit_range<1>::iterator pIter = cdtMesh.darts_of_orbit<1>(fHandle).begin(), pIterEnd = cdtMesh.darts_of_orbit<1>(fHandle).end(); pIter != pIterEnd; pIter++)
 					p[i++] = cdtMesh.point(pIter);
 				
 				cavityFaceHandle = cavityLCC.make_triangle(p[0], p[1], p[2]);
-				for (LCCWithDartInfo::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cavityLCC.one_dart_per_incident_cell<0, 2>(cavityFaceHandle).begin(), pIterEnd = cavityLCC.one_dart_per_incident_cell<0, 2>(cavityFaceHandle).end(); pIter != pIterEnd; pIter++)	
+				for (LCCWithDartInfo::Dart_of_orbit_range<1>::iterator pIter = cavityLCC.darts_of_orbit<1>(cavityFaceHandle).begin(), pIterEnd = cavityLCC.darts_of_orbit<1>(cavityFaceHandle).end(); pIter != pIterEnd; pIter++)	
 					cavityLCC.info<0>(pIter) = fHandle;// handle to that facet in original mesh 				
 			}
 		cdtMesh.unmark_all(partOfIntersectingTetMark); 
@@ -1529,7 +1533,7 @@ void CDTGenerator::recoverConstraintFacets()
 					{
 						CGALPoint p[3];
 						size_t i = 0;
-						for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>(facetInCellEndHandle).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 2>(facetInCellEndHandle).end(); pIter != pIterEnd; pIter++)
+						for (LCC::Dart_of_orbit_range<1>::iterator pIter = cdtMesh.darts_of_orbit<1>(facetInCellEndHandle).begin(), pIterEnd = cdtMesh.darts_of_orbit<1>(facetInCellEndHandle).end(); pIter != pIterEnd; pIter++)
 							p[i++] = cdtMesh.point(pIter);
 				
 						cavityLCC.make_triangle(p[0], p[1], p[2]);
@@ -1590,6 +1594,7 @@ void CDTGenerator::countRayPLCFacetIntersections(CGALRay randomRay, LCC::Dart_ha
 	// represent facet in triangle_3 form 
 	CGALPoint p[4];
 	size_t i = 0;
+
 	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>(fHandle).begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
 		p[i++] == plc.point(pIter);
 	
