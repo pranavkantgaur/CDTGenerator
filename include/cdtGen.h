@@ -127,6 +127,7 @@ class CDTGenerator
 		size_t computeCircumradius(CGALPoint&, CGALPoint&, CGALPoint&);
 		void formMissingSegmentsQueue();//vector<DartHandle>&);
 		void computeDelaunayTetrahedralization(int);
+		void copyLCCToLCCWithIntInfo(LCC &, LCCWithIntInfo &);
 		void writePLYOutput(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, string); 
 		void writePLYOutput(LCC::Dart_handle, LCC&, string); 
 
