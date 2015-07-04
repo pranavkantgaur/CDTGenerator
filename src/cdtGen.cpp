@@ -1802,11 +1802,17 @@ void CDTGenerator::removeExteriorTetrahedrons()
 			exteriorCellsList.push_back(cellIter);
 	}
 	//// remove cells marked as exterior
-//	for (vector<LCC::Dart_handle>::iterator cellsToBeRemovedIter = exteriorCellsList.begin(), cellsToBeRemovedIterEnd = exteriorCellsList.end(); cellsToBeRemovedIter != cellsToBeRemovedIterEnd; cellsToBeRemovedIter++)
-//		remove_cell<LCC, 3>(cdtMesh, *cellsToBeRemovedIter);			
+	for (vector<LCC::Dart_handle>::iterator cellsToBeRemovedIter = exteriorCellsList.begin(), cellsToBeRemovedIterEnd = exteriorCellsList.end(); cellsToBeRemovedIter != cellsToBeRemovedIterEnd; cellsToBeRemovedIter++)
+		remove_cell<LCC, 3>(cdtMesh, *cellsToBeRemovedIter);			
 
+	//DEBUG
+	size_t nCells = 0;
+	for (LCC::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(), cellIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cellIter != cellIterEnd; cellIter++)
+		nCells++;
+
+	cout << "Number of cells remaining after removal of exterior tets: " << nCells << endl;
 	// write mesh to PLY file
-	writePLYOutput(NULL, cdtMesh, "../../data/outputMesh.ply");
+//	writePLYOutput(NULL, cdtMesh, "../../data/outputMesh.ply");
 }
 
 
