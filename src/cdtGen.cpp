@@ -1749,7 +1749,7 @@ void CDTGenerator::countRayPLCFacetIntersections(CGALRay randomRay, LCC::Dart_ha
 	bool result;
 
 	triangle = CGALTriangle(p[0], p[1], p[2]);
-        if (do_intersect(randomRay, triangle))
+        if (do_intersect(randomRay, triangle)) // NOTE: It is intersections of triangle and ray...ray 
 	       nIntersections++;
 
 	if (i == 4) // 2 triangles
@@ -1758,6 +1758,7 @@ void CDTGenerator::countRayPLCFacetIntersections(CGALRay randomRay, LCC::Dart_ha
 		if (do_intersect(randomRay, triangle))
 			nIntersections++;			
 	}
+	cout << "Number of intersections in countRay function: " << nIntersections << endl;
 }
 
 
@@ -1775,15 +1776,36 @@ bool CDTGenerator::isCellOutsidePLC(LCC::Dart_handle cellHandle)
 
 	CGALPoint circumcenter1 = circumcenter(p[0], p[1], p[2], p[3]);
 
-	Random r1 = Random(), r2 = Random(), r3 = Random(); // system time serves as seed.
-	CGALPoint randomEndpoint(r1.get_bits<15>(), r2.get_bits<15>(), r3.get_bits<15>()); 
-	CGALRay randomRay = CGALRay(circumcenter1, randomEndpoint);
+	// use barycenteric coordinates of cdtMesh as the other endpoint of random ray.
+	CGALPoint cdtMeshBarycenter;	
+	float x = 0.0, y = 0.0, z = 0.0;
+	size_t nPoints = 0;
+	for (LCC::One_dart_per_cell_range<0>::iterator pIter = cdtMesh.one_dart_per_cell<0>().begin(), pIterEnd = cdtMesh.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
+	{
+		x += cdtMesh.point(pIter).x();
+		y += cdtMesh.point(pIter).y();
+		z += cdtMesh.point(pIter).z();
+		nPoints++;
+	}
+
+	x /= nPoints;
+	y /= nPoints;
+	z /= nPoints;
+
+	cdtMeshBarycenter = CGALPoint(x, y, z);
+	CGALRay randomRay = CGALRay(circumcenter1, cdtMeshBarycenter);
+
+	cout << "random point is: " << cdtMeshBarycenter << endl;
+	cout << "circumcenter point is: " << circumcenter1 << endl;
+
 	size_t nIntersections = 0;
 	for (LCC::One_dart_per_cell_range<2>::iterator fHandle = plc.one_dart_per_cell<2>().begin(), fHandleEnd = plc.one_dart_per_cell<2>().end(); fHandle != fHandleEnd; fHandle++)
 		countRayPLCFacetIntersections(randomRay, fHandle, nIntersections);
 		
-	return (nIntersections % 2) ? false : true;
+	cout << "number of interections: " << nIntersections << endl;
+	return (nIntersections % 2 == 0) ? true : false;
 }
+
 
 
 /*! \fn void CDTGenerator::removeExteriorTetrahedrons()
@@ -1801,12 +1823,25 @@ void CDTGenerator::removeExteriorTetrahedrons()
 		if (isCellOutsidePLC(cellIter))
 			exteriorCellsList.push_back(cellIter);
 	}
+	
+	size_t nCells = 0;
+	for (LCC::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(), cellIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cellIter != cellIterEnd; cellIter++)
+		nCells++;
+	
+	cout << "Number of cells before removal: " << nCells << endl;
+	
 	//// remove cells marked as exterior
-//	for (vector<LCC::Dart_handle>::iterator cellsToBeRemovedIter = exteriorCellsList.begin(), cellsToBeRemovedIterEnd = exteriorCellsList.end(); cellsToBeRemovedIter != cellsToBeRemovedIterEnd; cellsToBeRemovedIter++)
-//		remove_cell<LCC, 3>(cdtMesh, *cellsToBeRemovedIter);			
+	for (vector<LCC::Dart_handle>::iterator cellsToBeRemovedIter = exteriorCellsList.begin(), cellsToBeRemovedIterEnd = exteriorCellsList.end(); cellsToBeRemovedIter != cellsToBeRemovedIterEnd; cellsToBeRemovedIter++)
+		remove_cell<LCC, 3>(cdtMesh, *cellsToBeRemovedIter);			
 
+	cout << "Number of cells to be removed: " << exteriorCellsList.size() << endl;
+	//nCells = 0;
+	//for (LCC::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(), cellIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cellIter != cellIterEnd; cellIter++)
+	//	nCells++;
+	
+	//cout << "Number of cells after removal: " << nCells << endl;
 	// write mesh to PLY file
-	writePLYOutput(NULL, cdtMesh, "../../data/outputMesh.ply");
+	//writePLYOutput(NULL, cdtMesh, "../../data/outputMesh.ply");
 }
 
 
