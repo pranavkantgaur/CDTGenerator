@@ -1780,17 +1780,35 @@ bool CDTGenerator::isCellOutsidePLC(LCC::Dart_handle cellHandle)
 	CGALPoint cdtMeshBarycenter;	
 	float x = 0.0, y = 0.0, z = 0.0;
 	size_t nPoints = 0;
-	for (LCC::One_dart_per_cell_range<0>::iterator pIter = cdtMesh.one_dart_per_cell<0>().begin(), pIterEnd = cdtMesh.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
+	float totalVolume = 0.0;
+
+	// compute total volume of lcc
+	for (LCC::One_dart_per_cell_range<3>::iterator cIter = cdtMesh.one_dart_per_cell<3>().begin(), cIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cIter != cIterEnd; cIter++)
 	{
-		x += cdtMesh.point(pIter).x();
-		y += cdtMesh.point(pIter).y();
-		z += cdtMesh.point(pIter).z();
-		nPoints++;
+		i = 0;
+		for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 3>(cIter).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 3>(cIter).end(); pIter != pIterEnd; pIter++)
+			p[i++] = cdtMesh.point(pIter);
+		
+		totalVolume += volume(p[0], p[1], p[2], p[3]);
 	}
 
-	x /= nPoints;
-	y /= nPoints;
-	z /= nPoints;
+	// assign weight to the centroid of each tet inside lcc
+	CGALPoint tetCentroid;
+	float tetVolume, tetWeight;
+	for (LCC::One_dart_per_cell_range<3>::iterator cIter = cdtMesh.one_dart_per_cell<3>().begin(), cIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cIter != cIterEnd; cIter++)
+	{
+		i = 0;
+		for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 3>(cIter).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 3>(cIter).end(); pIter != pIterEnd; pIter++)
+			p[i++] = cdtMesh.point(pIter);
+		
+		tetCentroid = centroid(p[0], p[1], p[2], p[3]);
+		tetVolume = volume(p[0], p[1], p[2], p[3]);
+		tetWeight = tetVolume / totalVolume; 
+	
+		x += tetWeight * tetCentroid.x();
+		y += tetWeight * tetCentroid.y();
+		z += tetWeight * tetCentroid.z();
+	}
 
 	cdtMeshBarycenter = CGALPoint(x, y, z);
 	CGALRay randomRay = CGALRay(circumcenter1, cdtMeshBarycenter);
