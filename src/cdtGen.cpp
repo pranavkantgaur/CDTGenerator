@@ -1743,24 +1743,35 @@ void CDTGenerator::countRayPLCFacetIntersections(CGALRay randomRay, LCC::Dart_ha
 	size_t i = 0;
 
 	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>(fHandle).begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
-		p[i++] == plc.point(pIter);
-	
+	{
+		p[i++] = plc.point(pIter);
+//		cout << "Point: " << plc.point(pIter) << endl;
+//		cout << "Inside array: " << p[i - 1] << endl;
+	}
 	CGALTriangle triangle;
 	bool result;
 
 	triangle = CGALTriangle(p[0], p[1], p[2]);
-        if (do_intersect(randomRay, triangle)) 
+	
+//	cout << "Coordinates of triangle: " << p[0] << endl << p[1] << endl << p[2] << endl;
+//	cout << "Source point of the ray is: " << randomRay.source() << endl;
+
+	if (do_intersect(randomRay, triangle)) 
 	{
 		cout << "Intersects!!" << endl; 
 		nIntersections++;
 	}
 	if (i == 4) // facet has 2 triangles
 	{
-		cout << "Intersects!!" << endl;
 		triangle = CGALTriangle(p[0], p[2], p[3]);
 		if (do_intersect(randomRay, triangle))
+		{
 			nIntersections++;			
+			cout << "Intersects!!" << endl;
+		}
 	}
+	//	cout << "Source point of the ray is: " << randomRay.source() << endl;
+
 }
 
 
@@ -1806,10 +1817,10 @@ bool CDTGenerator::isCellOutsidePLC(LCC::Dart_handle cellHandle)
 
 	size_t nIntersections = 0;
 	for (LCC::One_dart_per_cell_range<2>::iterator fHandle = plc.one_dart_per_cell<2>().begin(), fHandleEnd = plc.one_dart_per_cell<2>().end(); fHandle != fHandleEnd; fHandle++)
-		if (cdtMesh.beta<2>(fHandle) == NULL) // boundary facet
-			countRayPLCFacetIntersections(randomRay, fHandle, nIntersections);
+		//if (cdtMesh.beta<2>(fHandle) == NULL) // boundary facet
+		countRayPLCFacetIntersections(randomRay, fHandle, nIntersections);
 		
-	cout << "Number of intersections: " << nIntersections << endl;
+	cout << "Total number of intersections: " << nIntersections << endl;
 	return (nIntersections % 2 == 0) ? true : false;
 }
 
