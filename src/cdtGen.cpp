@@ -1746,28 +1746,38 @@ void CDTGenerator::countRayPLCFacetIntersections(CGALRay randomRay, LCC::Dart_ha
 	{
 		p[i++] = plc.point(pIter);
 //		cout << "Point: " << plc.point(pIter) << endl;
-//		cout << "Inside array: " << p[i - 1] << endl;
+		cout << "Point: " << p[i - 1] << endl;
 	}
 	CGALTriangle triangle;
 	bool result;
 
 	triangle = CGALTriangle(p[0], p[1], p[2]);
-	
-//	cout << "Coordinates of triangle: " << p[0] << endl << p[1] << endl << p[2] << endl;
-//	cout << "Source point of the ray is: " << randomRay.source() << endl;
-
-	if (do_intersect(randomRay, triangle)) 
+	if (triangle.is_degenerate())
 	{
-		cout << "Intersects!!" << endl; 
-		nIntersections++;
+		cout << "Degenerate triangle 1...discarding!!" << endl;
+	}
+	else
+	{
+		if (do_intersect(randomRay, triangle)) 
+		{
+			cout << "Intersects!!" << endl; 
+			nIntersections++;
+		}
 	}
 	if (i == 4) // facet has 2 triangles
 	{
 		triangle = CGALTriangle(p[0], p[2], p[3]);
-		if (do_intersect(randomRay, triangle))
+		if (triangle.is_degenerate())
 		{
-			nIntersections++;			
-			cout << "Intersects!!" << endl;
+			cout << "Degenerate triangle 2...discarding!!" << endl;
+		}
+		else
+		{
+			if (do_intersect(randomRay, triangle))
+			{
+				nIntersections++;			
+				cout << "Intersects!!" << endl;
+			}
 		}
 	}
 	//	cout << "Source point of the ray is: " << randomRay.source() << endl;
