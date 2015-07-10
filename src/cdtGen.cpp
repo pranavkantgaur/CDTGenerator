@@ -1140,6 +1140,19 @@ void CDTGenerator::recoverConstraintSegments()
 		i++;
 	}
 
+
+	////TEST
+	cout << "Printing plc points after segment recovery: " << endl;
+	for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
+	{
+		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>(fIter).begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>(fIter).end(); pIter != pIterEnd; pIter++)
+			cout << plc.point(pIter) << " "; 
+		cout << endl;
+	}
+	exit(0);
+
+
+
 	return;
 }
 
