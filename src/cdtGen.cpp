@@ -1140,6 +1140,19 @@ void CDTGenerator::recoverConstraintSegments()
 		i++;
 	}
 
+
+	////TEST
+	cout << "Printing plc points after segment recovery: " << endl;
+	for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
+	{
+		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>(fIter).begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>(fIter).end(); pIter != pIterEnd; pIter++)
+			cout << plc.point(pIter) << " "; 
+		cout << endl;
+	}
+	exit(0);
+
+
+
 	return;
 }
 
@@ -1743,21 +1756,45 @@ void CDTGenerator::countRayPLCFacetIntersections(CGALRay randomRay, LCC::Dart_ha
 	size_t i = 0;
 
 	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>(fHandle).begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
-		p[i++] == plc.point(pIter);
-	
+	{
+		p[i++] = plc.point(pIter);
+//		cout << "Point: " << plc.point(pIter) << endl;
+		cout << "Point: " << p[i - 1] << endl;
+	}
 	CGALTriangle triangle;
 	bool result;
 
 	triangle = CGALTriangle(p[0], p[1], p[2]);
-        if (do_intersect(randomRay, triangle))
-	       nIntersections++;
-
-	if (i == 4) // 2 triangles
+	if (triangle.is_degenerate())
+	{
+		cout << "Degenerate triangle 1...discarding!!" << endl;
+	}
+	else
+	{
+		if (do_intersect(randomRay, triangle)) 
+		{
+			cout << "Intersects!!" << endl; 
+			nIntersections++;
+		}
+	}
+	if (i == 4) // facet has 2 triangles
 	{
 		triangle = CGALTriangle(p[0], p[2], p[3]);
-		if (do_intersect(randomRay, triangle))
-			nIntersections++;			
+		if (triangle.is_degenerate())
+		{
+			cout << "Degenerate triangle 2...discarding!!" << endl;
+		}
+		else
+		{
+			if (do_intersect(randomRay, triangle))
+			{
+				nIntersections++;			
+				cout << "Intersects!!" << endl;
+			}
+		}
 	}
+	//	cout << "Source point of the ray is: " << randomRay.source() << endl;
+
 }
 
 
@@ -1768,22 +1805,48 @@ void CDTGenerator::countRayPLCFacetIntersections(CGALRay randomRay, LCC::Dart_ha
  */
 bool CDTGenerator::isCellOutsidePLC(LCC::Dart_handle cellHandle)
 {
+	// endpoint 1
 	size_t i = 0;
 	CGALPoint p[4];
 	for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 3>(cellHandle).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 3>(cellHandle).end(); pIter != pIterEnd; pIter++)
 		p[i++] = cdtMesh.point(pIter); 
 
-	CGALPoint circumcenter1 = circumcenter(p[0], p[1], p[2], p[3]);
+	CGALPoint testTetCentroid = centroid(p[0], p[1], p[2], p[3]);
 
-	Random r1 = Random(), r2 = Random(), r3 = Random(); // system time serves as seed.
-	CGALPoint randomEndpoint(r1.get_bits<15>(), r2.get_bits<15>(), r3.get_bits<15>()); 
-	CGALRay randomRay = CGALRay(circumcenter1, randomEndpoint);
+	CGALPoint plcCentroid;	
+	float x = 0.0, y = 0.0, z = 0.0;
+	size_t nPoints = 0;
+
+	// endpoint 2
+	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
+	{
+		x += plc.point(pIter).x();
+		y += plc.point(pIter).y();
+		z += plc.point(pIter).z();
+		nPoints++;
+	}
+	plcCentroid = CGALPoint(x / nPoints, y / nPoints, z / nPoints);
+
+	// compute random ray
+	CGALRay randomRay = CGALRay(testTetCentroid, plcCentroid);
+	 
+	if (randomRay.is_degenerate())
+	{
+		cout << "Generated ray is degenerate!!";
+		exit(0);
+	}
+	cout << "Centroid of plc is:  " << plcCentroid << endl;
+	cout << "Centroid of test tet is:  " << testTetCentroid << endl;
+
 	size_t nIntersections = 0;
 	for (LCC::One_dart_per_cell_range<2>::iterator fHandle = plc.one_dart_per_cell<2>().begin(), fHandleEnd = plc.one_dart_per_cell<2>().end(); fHandle != fHandleEnd; fHandle++)
+		//if (cdtMesh.beta<2>(fHandle) == NULL) // boundary facet
 		countRayPLCFacetIntersections(randomRay, fHandle, nIntersections);
 		
-	return (nIntersections % 2) ? false : true;
+	cout << "Total number of intersections: " << nIntersections << endl;
+	return (nIntersections % 2 == 0) ? true : false;
 }
+
 
 
 /*! \fn void CDTGenerator::removeExteriorTetrahedrons()
@@ -1801,18 +1864,25 @@ void CDTGenerator::removeExteriorTetrahedrons()
 		if (isCellOutsidePLC(cellIter))
 			exteriorCellsList.push_back(cellIter);
 	}
+	
+	size_t nCells = 0;
+	for (LCC::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(), cellIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cellIter != cellIterEnd; cellIter++)
+		nCells++;
+	
+	cout << "Number of cells before removal: " << nCells << endl;
+	
 	//// remove cells marked as exterior
 	for (vector<LCC::Dart_handle>::iterator cellsToBeRemovedIter = exteriorCellsList.begin(), cellsToBeRemovedIterEnd = exteriorCellsList.end(); cellsToBeRemovedIter != cellsToBeRemovedIterEnd; cellsToBeRemovedIter++)
 		remove_cell<LCC, 3>(cdtMesh, *cellsToBeRemovedIter);			
 
-	//DEBUG
-	size_t nCells = 0;
-	for (LCC::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(), cellIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cellIter != cellIterEnd; cellIter++)
-		nCells++;
-
-	cout << "Number of cells remaining after removal of exterior tets: " << nCells << endl;
+	cout << "Number of cells to be removed: " << exteriorCellsList.size() << endl;
+	//nCells = 0;
+	//for (LCC::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(), cellIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cellIter != cellIterEnd; cellIter++)
+	//	nCells++;
+	
+	//cout << "Number of cells after removal: " << nCells << endl;
 	// write mesh to PLY file
-//	writePLYOutput(NULL, cdtMesh, "../../data/outputMesh.ply");
+	//writePLYOutput(NULL, cdtMesh, "../../data/outputMesh.ply");
 }
 
 
