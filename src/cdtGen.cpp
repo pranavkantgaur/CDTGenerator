@@ -808,14 +808,12 @@ float CDTGenerator::dotProduct(DartHandle segment1Handle, DartHandle segment2Han
 	segment2Vertex[0] = plc.point(segment2Handle);
 	segment2Vertex[1] = plc.point(plc.beta(segment2Handle, 1));
 
-	CGALPoint vector1 = CGALPoint(segment1Vertex[0].x() - segment1Vertex[1].x(), segment1Vertex[0].y() - segment1Vertex[1].y(), segment1Vertex[0].z() - segment1Vertex[1].z());
-	CGALPoint vector2 = CGALPoint(segment2Vertex[0].x() - segment2Vertex[1].x(), segment2Vertex[0].y() - segment2Vertex[1].y(), segment2Vertex[0].z() - segment2Vertex[1].z());
-
+	CGALPoint vector1 = CGALPoint(fabs(segment1Vertex[0].x() - segment1Vertex[1].x()), fabs(segment1Vertex[0].y() - segment1Vertex[1].y()), fabs(segment1Vertex[0].z() - segment1Vertex[1].z()));
+	CGALPoint vector2 = CGALPoint(fabs(segment2Vertex[0].x() - segment2Vertex[1].x()), fabs(segment2Vertex[0].y() - segment2Vertex[1].y()), fabs(segment2Vertex[0].z() - segment2Vertex[1].z()));
 
 	float v1Dotv2 = vector1.x() * vector2.x() + vector1.y() * vector2.y() + vector1.z() * vector2.z();
 
 	return v1Dotv2;
-
 }
 
 
@@ -865,11 +863,11 @@ bool CDTGenerator::isVertexAcute(DartHandle inputPointHandle)
 	// Determine segment-pair(involving A) 
 	vector<DartHandle> incidentOnInputPoint;
 
-	 
+	// determine all segments incident on input vertex 
 	for (LCC::One_dart_per_incident_cell_range<1, 0>::iterator incidentSegmentIter = plc.one_dart_per_incident_cell<1, 0>(inputPointHandle).begin(), incidentSegmentIterEnd = plc.one_dart_per_incident_cell<1, 0>(inputPointHandle).end(); incidentSegmentIter != incidentSegmentIterEnd;incidentSegmentIter++)
 		incidentOnInputPoint.push_back(incidentSegmentIter);
 
-	// Compute angle between all possible pairs(NAIVE SOLUTION)
+	// Compute angle between all possible pairs(TODO: NAIVE SOLUTION)
 	for (vector<DartHandle>::iterator segIter1 = incidentOnInputPoint.begin(); segIter1 != incidentOnInputPoint.end(); segIter1++) 
 		for (vector<DartHandle>::iterator segIter2 = incidentOnInputPoint.begin(); *segIter1 != *segIter2 && segIter2 != incidentOnInputPoint.end(); segIter2++)
 			if (computeAngleBetweenSegments(*segIter1, *segIter2) < 90.0f)
@@ -928,9 +926,11 @@ float CDTGenerator::computeSegmentLength(CGALPoint &A, CGALPoint &B)
 void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
 {
 
-	// update PLC
-//	plc.insert_point_in_cell<1>(missingSegmentHandle, v);
-	plc.insert_point_in_cell<2>(missingSegmentHandle, v);
+	// TODO: update PLC 
+	//// remove all 2-cells containing this edge
+	//// for each removed triangle (A, B, C): add triangles as: (A, B, C) + v => (A, B, V) + (A, V, C)
+	//// stich triangles sharing common edge
+		
 	// update DT
 	computeDelaunayTetrahedralization(missingSegmentQueue.size()); 
 }
@@ -950,10 +950,14 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 	CGALPoint sphereCenter;
 	float sphereRadius;
 	size_t segmentType;
+
+	// determine segment type
 	segmentType = determineSegmentType(missingSegmentHandle);
 
+	// compute reference point
 	computeReferencePoint(&refPoint, missingSegmentHandle);
 	
+	// endpoints of missing segment	
 	CGALPoint A = plc.point(missingSegmentHandle);
 	CGALPoint B = plc.point(plc.beta(missingSegmentHandle, 1));
 	
@@ -962,12 +966,13 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 
 	float AP, PB, AB;
 
-	CGALPoint v;
+	CGALPoint v; // steiner point
 
 	if (segmentType == 1)
 	{
 		AP = computeSegmentLength(A, refPoint);
 		AB = computeSegmentLength(A, B);
+		PB = computeSegmentLength(refPoint, B);
 		
 		if (AP < 0.5f * AB)
 		{
@@ -987,6 +992,7 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 			sphereRadius = 0.5 * AB; 
 		}	
 
+		// Compute coordinates of steiner point:
 		CGALSphericalPoint sphericalSphereCenter = CGALSphericalPoint(sphereCenter.x(), sphereCenter.y(), sphereCenter.z());
 		CGALSphericalSphere s = CGALSphericalSphere(sphericalSphereCenter, pow(sphereRadius, 2));
 
@@ -1013,34 +1019,30 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 
 	else if (segmentType == 2)
 	{
+		// identify the acute vertex out of A,B or one of their parents
 		DartHandle acuteParentHandle; 
-		DartHandle ApB[1]; 
+		DartHandle ApB[2]; 
 		float vbLength;
 		DartHandle AHandle = missingSegmentHandle;
 		DartHandle BHandle = plc.beta(missingSegmentHandle, 1);
 
-		if (isVertexAcute(AHandle) && !isVertexAcute(BHandle))
+		if (isVertexAcute(AHandle) && !isVertexAcute(BHandle)) // if A is acute but B is not
 		{
 			acuteParentHandle = AHandle;
 			cout << "A is acute!!" << endl;
-			cout << "Point A: " << plc.point(AHandle) << endl;
-		        cout << "Point B: " << plc.point(BHandle) << endl;	
 		}
-		else if (isVertexAcute(BHandle) && !isVertexAcute(AHandle))
+		else if (isVertexAcute(BHandle) && !isVertexAcute(AHandle)) // if B is acute but A is not
 		{
+			cout << "B is acute!!" << endl;
 			acuteParentHandle = BHandle;
-			// swap A <-> B 
-			CGALPoint t;
-			t = A;
-			A = B;
-			B = t;
-			cout << "Point A: " << A << endl;
-			cout << "Point B: " << B << endl;
+			BHandle = AHandle;
+			AHandle = acuteParentHandle;
 		}
 		
-		
-		// Segment calculations
-		
+		cout << "Point A: " << plc.point(AHandle) << endl;
+	        cout << "Point B: " << plc.point(BHandle) << endl;	
+	
+		// Segment calculations		
 		ApB[0] = acuteParentHandle;
 		ApB[1] = BHandle;
 			
@@ -1055,14 +1057,15 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 		
 		CGALPoint acuteParentLinearField(plc.point(acuteParentHandle).x(), plc.point(acuteParentHandle).y(), plc.point(acuteParentHandle).z());
 	
-		float ApRefPointLength = computeSegmentLength(acuteParentLinearField, refPoint);
+		float ARefPointLength = computeSegmentLength(acuteParentLinearField, refPoint);
 
-		CGALSphericalSphere s(acuteParent, pow(ApRefPointLength, 2));
+		CGALSphericalSphere s(acuteParent, pow(ARefPointLength, 2));
 
 		vector<Object> intersections;
 		cout << "Case 2!!" << endl;
 		cout << "Endpoint 1: " << p1 << endl;
 		cout << "Endpoint 2: " << p2 << endl;
+		
 		intersection(lineArc, s, back_inserter(intersections));
 		cout << "Case 2 ends!!" << endl;
 	
@@ -1080,7 +1083,9 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 		float vrefpointLength = computeSegmentLength(v, refPoint);
 		
 		float acuteparentALength;
-			
+		
+		vbLength = computeSegmentLength(v, plc.point(BHandle)); 
+
 		if (vbLength < vrefpointLength) // v was rejected
 		{
 			CGALSphericalPoint sphereCenter(acuteParent);
@@ -1138,21 +1143,21 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 */
 void CDTGenerator::recoverConstraintSegments()
 {
-//	vector<DartHandle> missingSegmentQueue;
 	DartHandle missingSegment;
 
-	formMissingSegmentsQueue();//missingSegmentQueue);
-	int i = 0;
-	while (missingSegmentQueue.size() != 0)
+	do
 	{
-		cout << "Segment recovery iteration: #" << i << endl;
-		missingSegment = missingSegmentQueue.back();
-		missingSegmentQueue.pop_back();
-		splitMissingSegment(missingSegment);
 		formMissingSegmentsQueue();
-		i++;
-	}
-
+		size_t i = 0;
+		while (missingSegmentQueue.size() != 0)
+		{
+			cout << "Segment recovery iteration: #" << i << endl;
+			missingSegment = missingSegmentQueue.back();
+			missingSegmentQueue.pop_back();
+			splitMissingSegment(missingSegment);
+			i++;
+		}
+	}while (missingSegmentQueue.size() != 0);
 
 	////TEST
 	cout << "Printing plc points after segment recovery: " << endl;
@@ -1162,10 +1167,7 @@ void CDTGenerator::recoverConstraintSegments()
 			cout << plc.point(pIter) << " "; 
 		cout << endl;
 	}
-	exit(0);
-
-
-
+	
 	return;
 }
 
@@ -1908,8 +1910,8 @@ void CDTGenerator::generate()
 	computeDelaunayTetrahedralization(-1);
 	recoverConstraintSegments();
 //	removeLocalDegeneracies();
-	recoverConstraintFacets();
-	removeExteriorTetrahedrons(); // removes tetrahedrons from cdtMesh which are outside input PLC
+//	recoverConstraintFacets();
+//	removeExteriorTetrahedrons(); // removes tetrahedrons from cdtMesh which are outside input PLC
 
 }
 
