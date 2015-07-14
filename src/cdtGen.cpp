@@ -929,6 +929,13 @@ void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
 	//// remove all 2-cells containing this edge
 	//// for each removed triangle (A, B, C): add triangles as: (A, B, C) + v => (A, B, v) + (A, v, C)
 	//// stitch triangles sharing common edge
+	
+	cout << "DEBUG(Before plc update) !!" << endl;
+	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
+		cout << plc.point(pIter) << endl;
+ 	cout << "ENDS!!" << endl;
+
+	
 	vector<LCC::Dart_handle> incidentFacets;
 	for (LCC::One_dart_per_incident_cell_range<2, 1>::iterator fIter = plc.one_dart_per_incident_cell<2, 1>(missingSegmentHandle).begin(), fIterEnd = plc.one_dart_per_incident_cell<2, 1>(missingSegmentHandle).end(); fIter != fIterEnd; fIter++)
 		incidentFacets.push_back(fIter);
@@ -950,14 +957,19 @@ void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
 				cout << "C: " << C << endl;
 			}
 		}
+		cout << "v: " << v << endl;
 		plc.make_triangle(A, B, v);
 		plc.make_triangle(A, v, C);
 		remove_cell<LCC, 2>(plc, *facetIter); // removes (A, B, C)
+		sew2CellsFromEdge(plc);
 	}	
 	
-	// sew newly created triangles
-	sew2CellsFromEdge(plc);
+	cout << "DEBUG(After plc update) !!" << endl;
+	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
+		cout << plc.point(pIter) << endl;
+ 	cout << "ENDS!!" << endl;
 
+	
 	// update DT
 	computeDelaunayTetrahedralization(missingSegmentQueue.size()); 
 }
@@ -1157,7 +1169,11 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 	}
 
 	// update plc and DT
-	updatePLCAndDT(v, missingSegmentHandle);
+/*	cout << "DEBUG(Before plc update) !!" << endl;
+	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
+		cout << plc.point(pIter) << endl;
+ 	cout << "ENDS!!" << endl;
+*/	updatePLCAndDT(v, missingSegmentHandle);
 	cout << "Going outside segment splitting function!!" << endl;
 	return;
 }
@@ -1170,6 +1186,11 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 */
 void CDTGenerator::recoverConstraintSegments()
 {
+
+	cout << "DEBUG(Before segment recovery)!!" << endl;
+	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
+		cout << plc.point(pIter) << endl;
+
 	DartHandle missingSegment;
 
 	do
@@ -1190,10 +1211,14 @@ void CDTGenerator::recoverConstraintSegments()
 	cout << "Printing plc points after segment recovery: " << endl;
 	for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
 	{
-		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>(fIter).begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>(fIter).end(); pIter != pIterEnd; pIter++)
+		for (LCC::Dart_of_orbit_range<1>::iterator pIter = plc.darts_of_orbit<1>(fIter).begin(), pIterEnd = plc.darts_of_orbit<1>(fIter).end(); pIter != pIterEnd; pIter++)
 			cout << plc.point(pIter) << " "; 
 		cout << endl;
 	}
+
+	cout << "DEBUG(After segment recovery)!!" << endl;
+	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
+		cout << plc.point(pIter) << endl;
 	
 	return;
 }
