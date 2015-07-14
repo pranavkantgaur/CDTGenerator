@@ -918,19 +918,46 @@ float CDTGenerator::computeSegmentLength(CGALPoint &A, CGALPoint &B)
 
 
 /*! \fn void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
-   /brief Updates PLC and Delaunay triangulation after insertion of a new vertex into a constraint segment.
-
-   /param [in] v New vertex to be inserted into a constraint segment of PLC
-   /param [ih] missignSegmentHandle DartHandle of constraint segment which will be split after inserting new vertex  
+    /brief Updates PLC and Delaunay triangulation after insertion of a new vertex into a constraint segment.
+    /param [in] v New vertex to be inserted into a constraint segment of PLC
+    /param [ih] missignSegmentHandle DartHandle of constraint segment which will be split after inserting new vertex  
 */
 void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
 {
 
 	// TODO: update PLC 
 	//// remove all 2-cells containing this edge
-	//// for each removed triangle (A, B, C): add triangles as: (A, B, C) + v => (A, B, V) + (A, V, C)
-	//// stich triangles sharing common edge
-		
+	//// for each removed triangle (A, B, C): add triangles as: (A, B, C) + v => (A, B, v) + (A, v, C)
+	//// stitch triangles sharing common edge
+	vector<LCC::Dart_handle> incidentFacets;
+	for (LCC::One_dart_per_incident_cell_range<2, 1>::iterator fIter = plc.one_dart_per_incident_cell<2, 1>(missingSegmentHandle).begin(), fIterEnd = plc.one_dart_per_incident_cell<2, 1>(missingSegmentHandle).end(); fIter != fIterEnd; fIter++)
+		incidentFacets.push_back(fIter);
+
+	CGALPoint A, B, C;
+	for (vector<LCC::Dart_handle>::iterator facetIter = incidentFacets.begin(), facetIterEnd = incidentFacets.end(); facetIter != facetIterEnd; facetIter++)
+	{
+		for (LCC::One_dart_per_incident_cell_range<1, 2>::iterator sIter = plc.one_dart_per_incident_cell<1, 2>(*facetIter).begin(), sIterEnd = plc.one_dart_per_incident_cell<1, 2>(*facetIter).end(); sIter != sIterEnd; sIter++)	
+		{
+			if (areGeometricallySameSegments(sIter, missingSegmentHandle, plc))
+			{
+				A = plc.point(plc.beta<1, 1>(sIter));
+				B = plc.point(sIter);
+				C = plc.point(plc.beta<1>(sIter));
+
+				cout << "Geometrically identical segment found!!" << endl;
+				cout << "A: " << A << endl;
+				cout << "B: " << B << endl;
+				cout << "C: " << C << endl;
+			}
+		}
+		plc.make_triangle(A, B, v);
+		plc.make_triangle(A, v, C);
+		remove_cell<LCC, 2>(plc, *facetIter); // removes (A, B, C)
+	}	
+	
+	// sew newly created triangles
+	sew2CellsFromEdge(plc);
+
 	// update DT
 	computeDelaunayTetrahedralization(missingSegmentQueue.size()); 
 }
@@ -1910,8 +1937,8 @@ void CDTGenerator::generate()
 	computeDelaunayTetrahedralization(-1);
 	recoverConstraintSegments();
 //	removeLocalDegeneracies();
-//	recoverConstraintFacets();
-//	removeExteriorTetrahedrons(); // removes tetrahedrons from cdtMesh which are outside input PLC
+	recoverConstraintFacets();
+	removeExteriorTetrahedrons(); // removes tetrahedrons from cdtMesh which are outside input PLC
 
 }
 
