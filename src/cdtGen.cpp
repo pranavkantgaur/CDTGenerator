@@ -952,12 +952,16 @@ void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
 				C = plc.point(plc.beta<1>(sIter));
 
 				cout << "Geometrically identical segment found!!" << endl;
-				cout << "A: " << A << endl;
-				cout << "B: " << B << endl;
-				cout << "C: " << C << endl;
+				//cout << "A: " << A << endl;
+				//cout << "B: " << B << endl;
+				//cout << "C: " << C << endl;
 			}
 		}
 		cout << "v: " << v << endl;
+		cout << "A: " << A << endl;
+		cout << "B: " << B << endl;
+		cout << "C: " << C << endl;
+
 		plc.make_triangle(A, B, v);
 		plc.make_triangle(A, v, C);
 		remove_cell<LCC, 2>(plc, *facetIter); // removes (A, B, C)
