@@ -68,7 +68,10 @@ bool CDTGenerator::areGeometricallySameSegments(DartHandle d1, DartHandle d2, LC
 	if (lcc.point(d1) == lcc.point(lcc.beta(d2, 1)))
 		if (lcc.point(lcc.beta(d1, 1)) == lcc.point(d2))
 			return true;
-
+	if (lcc.point(d1) == lcc.point(d2))
+		if (lcc.point(lcc.beta(d1, 1)) == lcc.point(lcc.beta(d2, 1)))
+			return true;
+	else
 		return false;
 } 
 
@@ -930,12 +933,11 @@ void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
 	//// for each removed triangle (A, B, C): add triangles as: (A, B, C) + v => (A, B, v) + (A, v, C)
 	//// stitch triangles sharing common edge
 	
-	cout << "DEBUG(Before plc update) !!" << endl;
+/*	cout << "DEBUG(Before plc update) !!" << endl;
 	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
 		cout << plc.point(pIter) << endl;
  	cout << "ENDS!!" << endl;
-
-	
+*/	
 	vector<LCC::Dart_handle> incidentFacets;
 	for (LCC::One_dart_per_incident_cell_range<2, 1>::iterator fIter = plc.one_dart_per_incident_cell<2, 1>(missingSegmentHandle).begin(), fIterEnd = plc.one_dart_per_incident_cell<2, 1>(missingSegmentHandle).end(); fIter != fIterEnd; fIter++)
 		incidentFacets.push_back(fIter);
@@ -945,34 +947,32 @@ void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
 	{
 		for (LCC::One_dart_per_incident_cell_range<1, 2>::iterator sIter = plc.one_dart_per_incident_cell<1, 2>(*facetIter).begin(), sIterEnd = plc.one_dart_per_incident_cell<1, 2>(*facetIter).end(); sIter != sIterEnd; sIter++)	
 		{
+
 			if (areGeometricallySameSegments(sIter, missingSegmentHandle, plc))
 			{
 				A = plc.point(plc.beta<1, 1>(sIter));
 				B = plc.point(sIter);
 				C = plc.point(plc.beta<1>(sIter));
-
-				cout << "Geometrically identical segment found!!" << endl;
-				//cout << "A: " << A << endl;
-				//cout << "B: " << B << endl;
-				//cout << "C: " << C << endl;
+				plc.make_triangle(A, B, v);
+				plc.make_triangle(A, v, C);
 			}
+			
 		}
-		cout << "v: " << v << endl;
-		cout << "A: " << A << endl;
-		cout << "B: " << B << endl;
-		cout << "C: " << C << endl;
+			remove_cell<LCC, 2>(plc, *facetIter); 
+			sew2CellsFromEdge(plc);
 
-		plc.make_triangle(A, B, v);
-		plc.make_triangle(A, v, C);
-		remove_cell<LCC, 2>(plc, *facetIter); // removes (A, B, C)
-		sew2CellsFromEdge(plc);
+	/*		cout << "Geometrically identical segment found!!" << endl;
+			cout << "v: " << endl;
+			cout << "A: " << A << endl;
+			cout << "B: " << B << endl;
+			cout << "C: " << C << endl;*/
 	}	
 	
-	cout << "DEBUG(After plc update) !!" << endl;
+	/*cout << "DEBUG(After plc update) !!" << endl;
 	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
 		cout << plc.point(pIter) << endl;
  	cout << "ENDS!!" << endl;
-
+	*/
 	
 	// update DT
 	computeDelaunayTetrahedralization(missingSegmentQueue.size()); 
@@ -1004,8 +1004,8 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 	CGALPoint A = plc.point(missingSegmentHandle);
 	CGALPoint B = plc.point(plc.beta(missingSegmentHandle, 1));
 	
-	cout << "Point A: " << A << endl;
-	cout << "Point B: " << B << endl;
+//	cout << "Point A: " << A << endl;
+//	cout << "Point B: " << B << endl;
 
 	float AP, PB, AB;
 
@@ -1045,9 +1045,9 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 		CGALSphericalSegment seg(p1, p2);
 		CGALSphericalLineArc lineArc(seg);
 		vector<Object> intersections; 
-		cout << "Case 1!!" << endl;		
+//		cout << "Case 1!!" << endl;		
 		intersection(lineArc, s, back_inserter(intersections));
-		cout << "Case 1 ends!!" << endl;
+//		cout << "Case 1 ends!!" << endl;
 		if (intersections.size() > 0)
 		{	v = object_cast<CGALPoint>(intersections.back());
 			intersections.pop_back();
@@ -1072,18 +1072,18 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 		if (isVertexAcute(AHandle) && !isVertexAcute(BHandle)) // if A is acute but B is not
 		{
 			acuteParentHandle = AHandle;
-			cout << "A is acute!!" << endl;
+//			cout << "A is acute!!" << endl;
 		}
 		else if (isVertexAcute(BHandle) && !isVertexAcute(AHandle)) // if B is acute but A is not
 		{
-			cout << "B is acute!!" << endl;
+//			cout << "B is acute!!" << endl;
 			acuteParentHandle = BHandle;
 			BHandle = AHandle;
 			AHandle = acuteParentHandle;
 		}
 		
-		cout << "Point A: " << plc.point(AHandle) << endl;
-	        cout << "Point B: " << plc.point(BHandle) << endl;	
+//		cout << "Point A: " << plc.point(AHandle) << endl;
+//	        cout << "Point B: " << plc.point(BHandle) << endl;	
 	
 		// Segment calculations		
 		ApB[0] = acuteParentHandle;
@@ -1105,12 +1105,12 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 		CGALSphericalSphere s(acuteParent, pow(ARefPointLength, 2));
 
 		vector<Object> intersections;
-		cout << "Case 2!!" << endl;
-		cout << "Endpoint 1: " << p1 << endl;
-		cout << "Endpoint 2: " << p2 << endl;
+//		cout << "Case 2!!" << endl;
+//		cout << "Endpoint 1: " << p1 << endl;
+//		cout << "Endpoint 2: " << p2 << endl;
 		
 		intersection(lineArc, s, back_inserter(intersections));
-		cout << "Case 2 ends!!" << endl;
+//		cout << "Case 2 ends!!" << endl;
 	
 		if (intersections.size() > 0)
 		{	
@@ -1134,18 +1134,18 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 			CGALSphericalPoint sphereCenter(acuteParent);
 			size_t avLength = computeSegmentLength(plc.point(AHandle), v);
 			if (vrefpointLength < 0.5 * avLength)
-				{
+			{
 					CGALPoint temp(acuteParentLinearField.x(), acuteParentLinearField.y(), acuteParentLinearField.z());
 					acuteparentALength = computeSegmentLength(temp, plc.point(AHandle));
 					sphereRadius = acuteparentALength + avLength - vrefpointLength;	
-				}
+			}
 			else
 				sphereRadius = acuteparentALength + 0.5 * avLength;
 		        
 			s = CGALSphericalSphere(sphereCenter, pow(sphereRadius, 2));
-			cout << "Case 3!!" << endl;
+//			cout << "Case 3!!" << endl;
 			intersection(lineArc, s, back_inserter(intersections));
-			cout << "Case 3 ends!!" << endl;
+//			cout << "Case 3 ends!!" << endl;
 			if (intersections.size() > 0)
 			{
 				v = object_cast<CGALPoint>(intersections.back());
@@ -1161,7 +1161,7 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 
 	else if (segmentType == 3) // meaning both A & B are acute
 	{
-		cout << "Segment is of type 3!!" << endl;
+		//cout << "Segment is of type 3!!" << endl;
 		CGALPoint newPoint;
 		
 		float x = (A.x() + B.x()) / 2.0;
@@ -1178,7 +1178,7 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 		cout << plc.point(pIter) << endl;
  	cout << "ENDS!!" << endl;
 */	updatePLCAndDT(v, missingSegmentHandle);
-	cout << "Going outside segment splitting function!!" << endl;
+//	cout << "Going outside segment splitting function!!" << endl;
 	return;
 }
 
