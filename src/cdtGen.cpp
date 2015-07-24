@@ -140,6 +140,7 @@ void CDTGenerator::sew2CellsFromEdge(LCC &lcc)
 			k++;	
 		}
 
+	lcc.free_mark(sewedMark);
 }
 
 
@@ -1191,10 +1192,11 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 void CDTGenerator::recoverConstraintSegments()
 {
 
+	/*
 	cout << "DEBUG(Before segment recovery)!!" << endl;
 	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
 		cout << plc.point(pIter) << endl;
-
+*/
 	DartHandle missingSegment;
 
 	do
@@ -1211,7 +1213,7 @@ void CDTGenerator::recoverConstraintSegments()
 		}
 	}while (missingSegmentQueue.size() != 0);
 
-	////TEST
+/*	////TEST
 	cout << "Printing plc points after segment recovery: " << endl;
 	for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
 	{
@@ -1223,7 +1225,7 @@ void CDTGenerator::recoverConstraintSegments()
 	cout << "DEBUG(After segment recovery)!!" << endl;
 	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
 		cout << plc.point(pIter) << endl;
-	
+*/	
 	return;
 }
 
