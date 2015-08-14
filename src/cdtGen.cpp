@@ -772,8 +772,7 @@ void CDTGenerator::computeReferencePoint(CGALPoint *refPoint, DartHandle missing
 			if (encroachingCandidateDistance <= sqrt(smallestCircumsphere.squared_radius())) // encroaching vertex
 				circumradiusMap.push_back(computeCircumradius(A, B, candidatePoint));
 			else // not encroaching
-				circumradiusMap.push_back(INVALID_VALUE);
-		
+				circumradiusMap.push_back(INVALID_VALUE);		
 		}
 		else
 			continue; // skip
@@ -783,13 +782,21 @@ void CDTGenerator::computeReferencePoint(CGALPoint *refPoint, DartHandle missing
 	float maxCircumradius = INVALID_VALUE;
 	size_t vertexId = 0;
 
-	for (LCC::One_dart_per_cell_range<0>::iterator pointIter = plc.one_dart_per_cell<0>().begin(), pointIterEnd = plc.one_dart_per_cell<0>().end(); pointIter != pointIterEnd; pointIter++, vertexId++)
-		if (circumradiusMap[vertexId] != INVALID_VALUE)
-			if (maxCircumradius < circumradiusMap[vertexId])
+	for (LCC::One_dart_per_cell_range<0>::iterator pointIter = plc.one_dart_per_cell<0>().begin(), pointIterEnd = plc.one_dart_per_cell<0>().end(); pointIter != pointIterEnd; pointIter++)
+		{
+			if (plc.point(pointIter) != A && plc.point(pointIter) != B)
 			{
-				maxCircumradius = circumradiusMap[vertexId];
-				refPoint = &(plc.point(pointIter));
-			}	
+				if (circumradiusMap[vertexId] != INVALID_VALUE)
+					if (maxCircumradius < circumradiusMap[vertexId])
+						{
+							maxCircumradius = circumradiusMap[vertexId];
+							refPoint = &(plc.point(pointIter));
+						}					
+				vertexId++;
+			}
+			else
+				continue;
+		}
 
 	return;
 }
