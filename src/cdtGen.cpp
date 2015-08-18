@@ -329,7 +329,6 @@ bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, const LCCWithIn
 				break;
 			}
 		}
-	
 	}
 
 	if (cell_dimension == 3)
@@ -656,7 +655,6 @@ void CDTGenerator::writePLYOutput(LCCWithIntInfo::Dart_handle dartToInfiniteVert
 	ply_close(lccOutputPLY);			
 
 }
-
 
 
 /*! \fn void CDTGenerator::computeDelaunayTetrahedralization()
@@ -1548,22 +1546,22 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC& lcc, LC
 //	cout << "Done-1!!" << endl;
 	for (LCC::Dart_of_orbit_range<1>::iterator pHandleBegin = lcc.darts_of_orbit<1>(fHandle).begin(), pHandleEnd = lcc.darts_of_orbit<1>(fHandle).end(); pHandleBegin != pHandleEnd; pHandleBegin++)	
 		p[i++] = lcc.point(pHandleBegin);
-//	cout << "Done0!!" << endl;
+	cout << "Done0!!" << endl;
 
 	LCC::Dart_handle d1 = lcc.make_triangle(p[0], p[1], p[2]);
-//	cout << "Done1!!" << endl;
+	cout << "Done1!!" << endl;
 
 	i = 0;
 	for (LCCWithDartInfo::Dart_of_orbit_range<1>::iterator pIter = cavityLCC.darts_of_orbit<1>(facetInCavity).begin(),  pIterEnd = cavityLCC.darts_of_orbit<1>(facetInCavity).end(); pIter != pIterEnd; pIter++)
 		p[i++] = cavityLCC.point(pIter);
 
-//	cout << "Done2!!" << endl;
+	cout << "Done2!!" << endl;
 
-/*	LCC::Dart_handle d2 = lcc.make_triangle(p[0], p[1], p[2]);
+	LCC::Dart_handle d2 = lcc.make_triangle(p[0], p[1], p[2]);
 	if (lcc.are_facets_same_geometry(d1, d2))
 		return true;
 	else
-*/		return false;
+		return false;
 }
 
 
@@ -1583,9 +1581,10 @@ bool CDTGenerator::isFacetInCavity(LCC::Dart_handle fHandle, LCC& lcc, LCCWithDa
 	{
 		if (facetsHaveSameGeometry(fHandle, lcc, fIter, cavityLCC))
 			return true;
-	//	cout << "iteration id: " << i++ << endl;
+		cout << "iteration id: " << i++ << endl;
 	}
-//	cout << "Out!!!" << endl;
+	
+	cout << "Out!!!" << endl;
 	return false;
 }
 
@@ -1642,6 +1641,15 @@ bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo& 
 	
 	return (nIntersections % 2) ? false : true;
 }
+
+/*! \fn void CDTGenerator::cellAlreadyNotRemoved()
+ *  \brief Tests whether cell is removed already
+*/
+/*bool CDTGenerator::cellAlreadyNotRemoved()
+{
+
+}
+*/
 
 
 /*! \fn void CDTGenerator::recoverConstraintFacets()
@@ -1700,6 +1708,7 @@ void CDTGenerator::recoverConstraintFacets()
 
 	cout << "Infinite cells removed!!" << endl;
 
+	// FACET RECOVERY STARTS...
 	while (missingConstraintFacets.size() != 0)
 	{
 		DartHandle missingFacetHandle = missingConstraintFacets.back(); // test for each missing facet
@@ -1723,12 +1732,12 @@ void CDTGenerator::recoverConstraintFacets()
 		{
 			for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator faceIter = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).begin(), faceIterEnd = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).end(); faceIter != faceIterEnd; faceIter++)
 			{
-				cdtMesh.mark(faceIter, partOfIntersectingTetMark);
-				if (cdtMesh.beta<3>(faceIter) != cdtMesh.null_dart_handle)
-					cdtMesh.mark(cdtMesh.beta<3>(faceIter), partOfIntersectingTetMark);
+				cdtMesh.mark(faceIter, partOfIntersectingTetMark); // mark each face of the intersecting tet
+				if (cdtMesh.beta<3>(faceIter) != cdtMesh.null_dart_handle) // is not a boundary face
+					cdtMesh.mark(cdtMesh.beta<3>(faceIter), partOfIntersectingTetMark); // mark neighbor face as well 
 			}
 		}
-		cout << "Initial cavity created!!" << endl;	
+		cout << "Creating initial cavity..." << endl;	
 		//// add marked faces to cavityLCC
 		for (LCC::Dart_range::iterator fHandle = cdtMesh.darts().begin(), fHandleEnd = cdtMesh.darts().end(); fHandle != fHandleEnd; fHandle++)
 			if (cdtMesh.is_marked(fHandle, partOfIntersectingTetMark))
@@ -1739,21 +1748,22 @@ void CDTGenerator::recoverConstraintFacets()
 				for (LCC::Dart_of_orbit_range<1>::iterator pIter = cdtMesh.darts_of_orbit<1>(fHandle).begin(), pIterEnd = cdtMesh.darts_of_orbit<1>(fHandle).end(); pIter != pIterEnd; pIter++)
 					p[i++] = cdtMesh.point(pIter);
 				
-				cavityFaceHandle = cavityLCC.make_triangle(p[0], p[1], p[2]);
+				cavityFaceHandle = cavityLCC.make_triangle(p[0], p[1], p[2]); 
 				for (LCCWithDartInfo::Dart_of_orbit_range<1>::iterator pIter = cavityLCC.darts_of_orbit<1>(cavityFaceHandle).begin(), pIterEnd = cavityLCC.darts_of_orbit<1>(cavityFaceHandle).end(); pIter != pIterEnd; pIter++)	
 					cavityLCC.info<0>(pIter) = fHandle;// handle to that facet in original mesh 				
 			}
-		cdtMesh.free_mark(partOfIntersectingTetMark); 
-
+		cdtMesh.free_mark(partOfIntersectingTetMark);
+		
 		//// remove intersecting tets from cdtMesh
 		for (vector<LCC::Dart_handle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
 			remove_cell<LCC, 3>(cdtMesh, *tetIter);
 		cout << "Intersecting tets removed from mesh!!" << endl;
 
 		//// sew 2-cells at boundaries
-		sew2CellsWithDartInfoFromEdge(cavityLCC); // cavity is created
-		
-		cout << "Cavity verification started!!" << endl;
+		sew2CellsWithDartInfoFromEdge(cavityLCC); // stiching faces...
+		cout << "Cavity created!!" << endl;
+
+		cout << "Cavity verification started..." << endl;
 		// CAVITY VERIFICATION/EXPANSION:
 		//// create queue of non strongly Delaunay faces in cavityLCC
 		vector<LCCWithDartInfo::Dart_handle> nonStronglyDelaunayFacetsInCavity;
@@ -1788,7 +1798,9 @@ void CDTGenerator::recoverConstraintFacets()
 					cout << "Before isFacetInCavity!!" << endl;
 					if (isFacetInCavity(facetInCellHandle, cdtMesh, correspondingFacetInCavity, cavityLCC)) 
 					{
-						remove_cell<LCCWithDartInfo, 2>(cavityLCC, correspondingFacetInCavity);
+						// Add a check to make sure removak is not happing 2 times for same cell
+					//	if (cellNotAlreadyRemoved(facetInCellHandle, cavityLCC))
+							remove_cell<LCCWithDartInfo, 2>(cavityLCC, correspondingFacetInCavity);
 					}	
 					else
 					{
@@ -1996,7 +2008,7 @@ void CDTGenerator::generate()
 	recoverConstraintSegments();
 //	removeLocalDegeneracies();
 	recoverConstraintFacets();
-	removeExteriorTetrahedrons(); // removes tetrahedrons from cdtMesh which are outside input PLC
+//	removeExteriorTetrahedrons(); // removes tetrahedrons from cdtMesh which are outside input PLC
 
 }
 
