@@ -1466,8 +1466,8 @@ bool CDTGenerator::areFacetTetIntersecting(DartHandle tetHandle, DartHandle face
  */
 void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFacetList)
 {
-	// test which facets are non present in Delaunay triangulation 
-	// add them to missing list vector
+	// test which facets are not present in Delaunay triangulation 
+	// add them to the missing facet list vector
 	Delaunay::Vertex_handle v1, v2, v3;
 	Delaunay::Cell_handle c;
 	int i, j, k;
@@ -1480,7 +1480,7 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
 					if (DT.is_facet(v1, v2, v3, c, i, j, k))
 						continue;
 		else
-			missingFacetList.push_back(fIter);
+			missingFacetList.push_back(fIter); // facet is indeed missing from current output mesh.
 	}
 }
 
@@ -1705,7 +1705,7 @@ void CDTGenerator::recoverConstraintFacets()
 			for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator faceIter = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).begin(), faceIterEnd = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).end(); faceIter != faceIterEnd; faceIter++)
 			{
 				cdtMesh.mark(faceIter, partOfIntersectingTetMark);
-				if (cdtMesh.beta<3>(faceIter) != cdtMesh.null_dart_handle)
+				if (cdtMesh.beta<3>(faceIter) != cdtMesh.null_dart_handle) // since a face is shared by 2 3-cells
 					cdtMesh.mark(cdtMesh.beta<3>(faceIter), partOfIntersectingTetMark);
 			}
 		}
