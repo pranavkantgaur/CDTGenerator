@@ -1530,26 +1530,21 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC& lcc, LC
 	cout << "Inside facetsHaveSameGeometry!!" << endl;
 	size_t i = 0;
 
-	//for (LCC::Dart_of_orbit_range<1>::iterator pHandleBegin = lcc.darts_of_orbit<1>(fHandle).begin(),  pHandleEnd = lcc.darts_of_orbit<1>(fHandle).end(); pHandleBegin != pHandleEnd; pHandleBegin++)
-//	cout << "Done-1!!" << endl;
 	for (LCC::Dart_of_orbit_range<1>::iterator pHandleBegin = lcc.darts_of_orbit<1>(fHandle).begin(), pHandleEnd = lcc.darts_of_orbit<1>(fHandle).end(); pHandleBegin != pHandleEnd; pHandleBegin++)	
 		p[i++] = lcc.point(pHandleBegin);
-//	cout << "Done0!!" << endl;
 
 	LCC::Dart_handle d1 = lcc.make_triangle(p[0], p[1], p[2]);
-//	cout << "Done1!!" << endl;
 
 	i = 0;
 	for (LCCWithDartInfo::Dart_of_orbit_range<1>::iterator pIter = cavityLCC.darts_of_orbit<1>(facetInCavity).begin(),  pIterEnd = cavityLCC.darts_of_orbit<1>(facetInCavity).end(); pIter != pIterEnd; pIter++)
 		p[i++] = cavityLCC.point(pIter);
 
-//	cout << "Done2!!" << endl;
 
-/*	LCC::Dart_handle d2 = lcc.make_triangle(p[0], p[1], p[2]);
+	LCC::Dart_handle d2 = lcc.make_triangle(p[0], p[1], p[2]);
 	if (lcc.are_facets_same_geometry(d1, d2))
 		return true;
 	else
-*/		return false;
+		return false;
 }
 
 
@@ -1572,9 +1567,7 @@ bool CDTGenerator::isFacetInCavity(LCC::Dart_handle fHandle, LCC& lcc, LCCWithDa
 			correspondingFacetInCavity = fIter;
 			return true;
 		}
-	//	cout << "iteration id: " << i++ << endl;
 	}
-//	cout << "Out!!!" << endl;
 	return false;
 }
 
@@ -1628,7 +1621,6 @@ bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo& 
 		else 
 			continue;
 	}
-	
 	return (nIntersections % 2) ? false : true;
 }
 
@@ -1769,10 +1761,6 @@ void CDTGenerator::recoverConstraintFacets()
 				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++) 
 				{	
 					cout << "Iteration: " << i++ << endl;
-					if (i == 2)
-					{
-						cout << "Batman begins!!" << endl;
-					}
 					size_t facetLocation;
 					cout << "Before isFacetInCavity!!" << endl;
 					if (isFacetInCavity(facetInCellHandle, cdtMesh, correspondingFacetInCavity, cavityLCC)) 
@@ -1784,6 +1772,7 @@ void CDTGenerator::recoverConstraintFacets()
 							cout << "Dart returned by isFacetInCavity is NULL!!";
 							exit(0);
 						}
+					
 					}	
 					else
 					{
@@ -1797,7 +1786,6 @@ void CDTGenerator::recoverConstraintFacets()
 						sew2CellsWithDartInfoFromEdge(cavityLCC);
 						//cout << "After sewing!!" << endl;
 					}
-					cout << "For ends!!" << endl;
 				}
 			}
 			cout << "Cavity expanded, if required!!" << endl;
