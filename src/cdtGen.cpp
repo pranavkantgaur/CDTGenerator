@@ -193,7 +193,7 @@ void CDTGenerator::sew2CellsWithDartInfoFromEdge(LCCWithDartInfo &lcc)
 			lcc.sew<2>(dIter->first, dIter->second);
 			k++;	
 		}
-
+	lcc.free_mark(sewedMark);
 }
 
 
@@ -1531,21 +1531,25 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC& lcc, LC
 	size_t i = 0;
 
 	//for (LCC::Dart_of_orbit_range<1>::iterator pHandleBegin = lcc.darts_of_orbit<1>(fHandle).begin(),  pHandleEnd = lcc.darts_of_orbit<1>(fHandle).end(); pHandleBegin != pHandleEnd; pHandleBegin++)
+//	cout << "Done-1!!" << endl;
 	for (LCC::Dart_of_orbit_range<1>::iterator pHandleBegin = lcc.darts_of_orbit<1>(fHandle).begin(), pHandleEnd = lcc.darts_of_orbit<1>(fHandle).end(); pHandleBegin != pHandleEnd; pHandleBegin++)	
 		p[i++] = lcc.point(pHandleBegin);
-	
+//	cout << "Done0!!" << endl;
+
 	LCC::Dart_handle d1 = lcc.make_triangle(p[0], p[1], p[2]);
+//	cout << "Done1!!" << endl;
 
 	i = 0;
 	for (LCCWithDartInfo::Dart_of_orbit_range<1>::iterator pIter = cavityLCC.darts_of_orbit<1>(facetInCavity).begin(),  pIterEnd = cavityLCC.darts_of_orbit<1>(facetInCavity).end(); pIter != pIterEnd; pIter++)
 		p[i++] = cavityLCC.point(pIter);
 
-	
-	LCC::Dart_handle d2 = lcc.make_triangle(p[0], p[1], p[2]);
+//	cout << "Done2!!" << endl;
+
+/*	LCC::Dart_handle d2 = lcc.make_triangle(p[0], p[1], p[2]);
 	if (lcc.are_facets_same_geometry(d1, d2))
 		return true;
 	else
-		return false;
+*/		return false;
 }
 
 
@@ -1560,10 +1564,14 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC& lcc, LC
 bool CDTGenerator::isFacetInCavity(LCC::Dart_handle fHandle, LCC& lcc, LCCWithDartInfo::Dart_handle& correspondingFacetInCavity, LCCWithDartInfo& cavityLCC)
 {
 	cout << "Inside isFacetInCavity!!" << endl;
+	size_t i = 0;
 	for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator fIter = cavityLCC.one_dart_per_cell<2>().begin(), fIterEnd = cavityLCC.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
+	{
 		if (facetsHaveSameGeometry(fHandle, lcc, fIter, cavityLCC))
 			return true;
-	
+	//	cout << "iteration id: " << i++ << endl;
+	}
+//	cout << "Out!!!" << endl;
 	return false;
 }
 
@@ -1671,15 +1679,11 @@ void CDTGenerator::recoverConstraintFacets()
 		else 
 			continue;
 	}
-	cdtMesh.unmark_all(infiniteVertexMark);
+	cdtMesh.free_mark(infiniteVertexMark);
 
 	for (vector<LCC::Dart_handle>::iterator cellIter = cellsToBeRemoved.begin(), cellIterEnd = cellsToBeRemoved.end(); cellIter != cellIterEnd; cellIter++)
 		remove_cell<LCC, 3>(cdtMesh, *cellIter); // infinite cells removed from cdtMesh
 
-	int partOfIntersectingTetMark = cdtMesh.get_new_mark();
-	
-	if (partOfIntersectingTetMark == -1)
-		exit(0);
 	cout << "Infinite cells removed!!" << endl;
 
 	while (missingConstraintFacets.size() != 0)
@@ -1695,7 +1699,11 @@ void CDTGenerator::recoverConstraintFacets()
 				intersectingTets.push_back(cIter);
 		}
 	
-			
+		int partOfIntersectingTetMark = cdtMesh.get_new_mark();
+	
+		if (partOfIntersectingTetMark == -1)
+			exit(0);
+	
 		// INITIAL CAVITY CREATION:(target is to remove intersecting cells and to create cavity using their faces)
 		for (vector<DartHandle>::iterator intersectingTetIter = intersectingTets.begin(), intersectingTetIterEnd = intersectingTets.end(); intersectingTetIter != intersectingTetIterEnd; intersectingTetIter++)
 		{
@@ -1721,7 +1729,7 @@ void CDTGenerator::recoverConstraintFacets()
 				for (LCCWithDartInfo::Dart_of_orbit_range<1>::iterator pIter = cavityLCC.darts_of_orbit<1>(cavityFaceHandle).begin(), pIterEnd = cavityLCC.darts_of_orbit<1>(cavityFaceHandle).end(); pIter != pIterEnd; pIter++)	
 					cavityLCC.info<0>(pIter) = fHandle;// handle to that facet in original mesh 				
 			}
-		cdtMesh.unmark_all(partOfIntersectingTetMark); 
+		cdtMesh.free_mark(partOfIntersectingTetMark); 
 
 		//// remove intersecting tets from cdtMesh
 		for (vector<LCC::Dart_handle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
@@ -1753,17 +1761,29 @@ void CDTGenerator::recoverConstraintFacets()
 				nonStronglyDelaunayFacetsInCavity.pop_back();
 					
 				LCC::Dart_handle exteriorCellSharingNonDelaunayFacet = cavityLCC.info<0>(nonStronglyDelaunayFace);  
-		
 				//// Explore all faces of this cell
-				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++)						   {	
+				size_t i = 0;
+				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++) 
+				{	
+					cout << "Iteration: " << i++ << endl;
+					if (i == 2)
+					{
+						cout << "Batman begins!!" << endl;
+					}
+					if (i == 3)
+					{
+						cout << "Batman ends!!" << endl;
+						exit(0);
+					}
 					size_t facetLocation;
 					cout << "Before isFacetInCavity!!" << endl;
 					if (isFacetInCavity(facetInCellHandle, cdtMesh, correspondingFacetInCavity, cavityLCC)) 
 					{
 						remove_cell<LCCWithDartInfo, 2>(cavityLCC, correspondingFacetInCavity);
-					}		
+					}	
 					else
 					{
+						//cout << "In else!!" << endl;
 						CGALPoint p[3];
 						size_t i = 0;
 						for (LCC::Dart_of_orbit_range<1>::iterator pIter = cdtMesh.darts_of_orbit<1>(facetInCellEndHandle).begin(), pIterEnd = cdtMesh.darts_of_orbit<1>(facetInCellEndHandle).end(); pIter != pIterEnd; pIter++)
@@ -1771,14 +1791,12 @@ void CDTGenerator::recoverConstraintFacets()
 				
 						cavityLCC.make_triangle(p[0], p[1], p[2]);
 						sew2CellsWithDartInfoFromEdge(cavityLCC);
+						//cout << "After sewing!!" << endl;
 					}
-					
+					cout << "For ends!!" << endl;
 				}
-				
-				
 			}
 			cout << "Cavity expanded, if required!!" << endl;
-		
 			
 		}while (nonStronglyDelaunayFacetsInCavity.size() != 0);
 		cout << "Cavity verification complete!!" << endl;
