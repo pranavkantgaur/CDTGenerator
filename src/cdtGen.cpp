@@ -1568,7 +1568,10 @@ bool CDTGenerator::isFacetInCavity(LCC::Dart_handle fHandle, LCC& lcc, LCCWithDa
 	for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator fIter = cavityLCC.one_dart_per_cell<2>().begin(), fIterEnd = cavityLCC.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
 	{
 		if (facetsHaveSameGeometry(fHandle, lcc, fIter, cavityLCC))
+		{
+			correspondingFacetInCavity = fIter;
 			return true;
+		}
 	//	cout << "iteration id: " << i++ << endl;
 	}
 //	cout << "Out!!!" << endl;
@@ -1770,16 +1773,17 @@ void CDTGenerator::recoverConstraintFacets()
 					{
 						cout << "Batman begins!!" << endl;
 					}
-					if (i == 3)
-					{
-						cout << "Batman ends!!" << endl;
-						exit(0);
-					}
 					size_t facetLocation;
 					cout << "Before isFacetInCavity!!" << endl;
 					if (isFacetInCavity(facetInCellHandle, cdtMesh, correspondingFacetInCavity, cavityLCC)) 
 					{
-						remove_cell<LCCWithDartInfo, 2>(cavityLCC, correspondingFacetInCavity);
+						if (correspondingFacetInCavity != cavityLCC.null_dart_handle)
+							remove_cell<LCCWithDartInfo, 2>(cavityLCC, correspondingFacetInCavity);
+						else
+						{
+							cout << "Dart returned by isFacetInCavity is NULL!!";
+							exit(0);
+						}
 					}	
 					else
 					{
