@@ -1686,7 +1686,7 @@ void CDTGenerator::recoverConstraintFacets()
 		DartHandle missingFacetHandle = missingConstraintFacets.back(); // test for each missing facet
 		missingConstraintFacets.pop_back();
 		
-		// compute cells intersecting this facet:
+		// compute cells intersecting THIS facet:
 		intersectingTets.clear();
 		for (LCC::One_dart_per_cell_range<3>::iterator cIter = cdtMesh.one_dart_per_cell<3>().begin(), cIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cIter != cIterEnd; cIter++)
 		{
@@ -1699,8 +1699,39 @@ void CDTGenerator::recoverConstraintFacets()
 		if (partOfIntersectingTetMark == -1)
 			exit(0);
 	
-		// INITIAL CAVITY CREATION:(target is to remove intersecting cells and to create cavity using their faces)
-		for (vector<DartHandle>::iterator intersectingTetIter = intersectingTets.begin(), intersectingTetIterEnd = intersectingTets.end(); intersectingTetIter != intersectingTetIterEnd; intersectingTetIter++)
+		// Mark boundary facets of intersecting tets
+		LCCWithDartInfo tempLCC; 
+		LCCWithDartInfo::Dart_handle d;
+		for (vector<LCC::Dart_handle>::iterator intersectingTetIter = intersectingTets.begin(); intersectingTetIterEnd = intersectingTets.end(); intersectingTetIter != intersectingTetIterEnd; intersectingTetIter++)
+		{
+			d = tempLCC.make_tetrahedron();
+			// idetify the identical facets in the tet from cdtMesh and corresponding tet in tempLCC
+			for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter1 = cdtMesh.one_dart_per_incident_cell<2, 3>(intersectingTetIter).begin(), fIterEnd1 = cdtMesh.one_dart_per_incident_cell<2, 3>(intersectingTetIter).end(); fIter1 != fIterEnd1; fIter1++)
+				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter2 = cdtMesh.one_dart_per_incident_cell<2, 3>(intersectingTetIter).begin(), fIterEnd2 = cdtMesh.one_dart_per_incident_cell<2, 3>(intersectingTetIter).end(); fIter2 != fIterEnd2; fIter2++)
+ 					if (areGeometricallySameFacets(fIter1, cdtMesh, fIter2, tempLCC)) 
+						tempLCC.info<0>(fIter2) = fIter1;  // TODO: Is there any more efficient way that this to get dart to facet in cdtMesh and assign it to geometrically same facet in tempLCC??
+		}
+		tempLCC.sew3_same_facets();
+
+		// mark faces which are at boundary
+		int boundaryFacetMark = tempLCC.get_new_mark(); 
+		if (boundaryFacetMark == -1)
+		{
+			cout << "BoundaryFacetMark: Free mark not available";
+			exit(0);
+		}	
+
+		// copy the boundary facet to cavityLCC
+		for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter = tempLCC.one_dart_per_incident_cell<2, 3>().begin(), fIterEnd = tempLCC.one_dart_per_incident_cell<2, 3>().end(); fIter != fIterEnd; fIterEnd++)
+		{
+			if (tempLCC.beta<3>(fIter) == tempLCC.null_dart_handle) // test for getting boundary facet
+			{
+				d = cavityLCC.make_triangle(tempLCC.point(fIter), tempLCC.point(tempLCC.beta<1>(fIter), tempLCC.point(tempLCC.beta<1, 1>(fIter));
+				cavityLCC.info(d) = tempLCC.info(fIter); // stores handle to the facet in original mesh	
+			}
+		}
+		
+		/*	for (vector<DartHandle>::iterator intersectingTetIter = intersectingTets.begin(), intersectingTetIterEnd = intersectingTets.end(); intersectingTetIter != intersectingTetIterEnd; intersectingTetIter++)
 		{
 			for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator faceIter = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).begin(), faceIterEnd = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).end(); faceIter != faceIterEnd; faceIter++)
 			{
@@ -1709,7 +1740,7 @@ void CDTGenerator::recoverConstraintFacets()
 					cdtMesh.mark(cdtMesh.beta<3>(faceIter), partOfIntersectingTetMark);
 			}
 		}
-		cout << "Initial cavity created!!" << endl;	
+	
 		//// add marked faces to cavityLCC
 		for (LCC::Dart_range::iterator fHandle = cdtMesh.darts().begin(), fHandleEnd = cdtMesh.darts().end(); fHandle != fHandleEnd; fHandle++)
 			if (cdtMesh.is_marked(fHandle, partOfIntersectingTetMark))
@@ -1725,10 +1756,13 @@ void CDTGenerator::recoverConstraintFacets()
 					cavityLCC.info<0>(pIter) = fHandle;// handle to that facet in original mesh 				
 			}
 		cdtMesh.free_mark(partOfIntersectingTetMark); 
-
+*/
+		// Add only those faces which are on boundary
+		 
+		 
 		//// remove intersecting tets from cdtMesh
 		for (vector<LCC::Dart_handle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
-			remove_cell<LCC, 3>(cdtMesh, *tetIter);
+			remove_cell<LCC, 3>(cdtMesh, *tetIter); // TODO: shouldn't it be at the end?
 		cout << "Intersecting tets removed from mesh!!" << endl;
 
 		//// sew 2-cells at boundaries
