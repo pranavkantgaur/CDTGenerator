@@ -1709,7 +1709,7 @@ void CDTGenerator::recoverConstraintFacets()
 			for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter1 = cdtMesh.one_dart_per_incident_cell<2, 3>(intersectingTetIter).begin(), fIterEnd1 = cdtMesh.one_dart_per_incident_cell<2, 3>(intersectingTetIter).end(); fIter1 != fIterEnd1; fIter1++)
 				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter2 = cdtMesh.one_dart_per_incident_cell<2, 3>(intersectingTetIter).begin(), fIterEnd2 = cdtMesh.one_dart_per_incident_cell<2, 3>(intersectingTetIter).end(); fIter2 != fIterEnd2; fIter2++)
  					if (areGeometricallySameFacets(fIter1, cdtMesh, fIter2, tempLCC)) 
-						tempLCC.info<0>(fIter2) = fIter1;  // TODO: Is there any more efficient way that this to get dart to facet in cdtMesh and assign it to geometrically same facet in tempLCC??
+						tempLCC.info<0>(fIter2) = fIter1;  // TODO: Is there any more efficient way than this to get dart to facet in cdtMesh and assign it to geometrically same facet in tempLCC??
 		}
 		tempLCC.sew3_same_facets();
 
@@ -1721,7 +1721,7 @@ void CDTGenerator::recoverConstraintFacets()
 			exit(0);
 		}	
 
-		// copy the boundary facet to cavityLCC
+		// copy the boundary facet to cavityLCC(adds only those facets which are on boundary)
 		for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter = tempLCC.one_dart_per_incident_cell<2, 3>().begin(), fIterEnd = tempLCC.one_dart_per_incident_cell<2, 3>().end(); fIter != fIterEnd; fIterEnd++)
 		{
 			if (tempLCC.beta<3>(fIter) == tempLCC.null_dart_handle) // test for getting boundary facet
@@ -1757,13 +1757,6 @@ void CDTGenerator::recoverConstraintFacets()
 			}
 		cdtMesh.free_mark(partOfIntersectingTetMark); 
 */
-		// Add only those faces which are on boundary
-		 
-		 
-		//// remove intersecting tets from cdtMesh
-		for (vector<LCC::Dart_handle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
-			remove_cell<LCC, 3>(cdtMesh, *tetIter); // TODO: shouldn't it be at the end?
-		cout << "Intersecting tets removed from mesh!!" << endl;
 
 		//// sew 2-cells at boundaries
 		sew2CellsWithDartInfoFromEdge(cavityLCC); // cavity is created
@@ -1774,22 +1767,23 @@ void CDTGenerator::recoverConstraintFacets()
 		vector<LCCWithDartInfo::Dart_handle> nonStronglyDelaunayFacetsInCavity;
 		LCCWithDartInfo::Dart_handle correspondingFacetInCavity;
 
-		do
-		{
+		//do
+		//{
 			//// initialize vector
 			for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator nonStrongFaceIter = cavityLCC.one_dart_per_cell<2>().begin(), nonStrongFaceIterEnd = cavityLCC.one_dart_per_cell<2>().end(); nonStrongFaceIter != nonStrongFaceIterEnd; nonStrongFaceIter++)	
 				if (isNonStronglyDelaunayFacet(nonStrongFaceIter, cavityLCC))  
-					nonStronglyDelaunayFacetsInCavity.push_back(nonStrongFaceIter); // handle to facets in cavityLCC
+					nonStronglyDelaunayFacetsInCavity.push_back(nonStrongFaceIter); // handle to non strongly Delauny facets in cavityLCC
 				else 
 					continue;	
-			cout << "Found non-strongly Delaunay facets in cavity!!" << endl;
-			//// cavity expansion
+			
+			//cout << "Found non-strongly Delaunay facets in cavity!!" << endl;
+			//// cavity expansion(cavity will be exapanded only from facets which are not strongly Delaunay)
 			while (nonStronglyDelaunayFacetsInCavity.size() != 0)	
 			{
 				LCCWithDartInfo::Dart_handle nonStronglyDelaunayFace = nonStronglyDelaunayFacetsInCavity.back();
-				nonStronglyDelaunayFacetsInCavity.pop_back();
+				nonStronglyDelaunayFacetsInCavity.pop_back(); // visit a non strongly Delaunay facet
 					
-				LCC::Dart_handle exteriorCellSharingNonDelaunayFacet = cavityLCC.info<0>(nonStronglyDelaunayFace);  
+				LCC::Dart_handle exteriorCellSharingNonDelaunayFacet = cavityLCC.beta<3>(cavityLCC.info<0>(nonStronglyDelaunayFace));  
 				//// Explore all faces of this cell
 				size_t i = 0;
 				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++) 
@@ -1821,10 +1815,14 @@ void CDTGenerator::recoverConstraintFacets()
 						//cout << "After sewing!!" << endl;
 					}
 				}
+				nonStronglyDelaunayFacetsInCavity.clear();
+				for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator nonStrongFaceIter = cavityLCC.one_dart_per_cell<2>().begin(), nonStrongFaceIterEnd = cavityLCC.one_dart_per_cell<2>().end(); nonStrongFaceIter != nonStrongFaceIterEnd; nonStrongFaceIter++)	
+					if (isNonStronglyDelaunayFacet(nonStrongFaceIter, cavityLCC))  
+						nonStronglyDelaunayFacetsInCavity.push_back(nonStrongFaceIter); // handle to non strongly Delauny facets in cavityLCC
 			}
 			cout << "Cavity expanded, if required!!" << endl;
 			
-		}while (nonStronglyDelaunayFacetsInCavity.size() != 0);
+		//}while (nonStronglyDelaunayFacetsInCavity.size() != 0);
 		cout << "Cavity verification complete!!" << endl;
 		cout << "Cavity retetrahedralization started!!" << endl;
 		// CAVITY RETETRAHEDRALIZATION		
@@ -1835,7 +1833,13 @@ void CDTGenerator::recoverConstraintFacets()
 	
 		Delaunay cavityDelaunay;
 		cavityDelaunay.insert(cavityVertices.begin(), cavityVertices.end()); // DT of cavity vertices
-	
+		
+		//// remove intersecting tets from cdtMesh(make way for new tets)
+		for (vector<LCC::Dart_handle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
+			remove_cell<LCC, 3>(cdtMesh, *tetIter); 
+		cout << "Intersecting tets removed from mesh!!" << endl;
+
+		
 		// mark each cell of DT as either inside/outside cavity
 		for (Delaunay::Finite_cells_iterator cIter = cavityDelaunay.finite_cells_begin(), cIterEnd = cavityDelaunay.finite_cells_end(); cIter != cIterEnd; cIter++)
 		{
