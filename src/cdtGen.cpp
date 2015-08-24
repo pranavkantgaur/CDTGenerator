@@ -1707,27 +1707,19 @@ void CDTGenerator::recoverConstraintFacets()
 			d = tempLCC.make_tetrahedron();
 			// idetify the identical facets in the tet from cdtMesh and corresponding tet in tempLCC
 			for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter1 = cdtMesh.one_dart_per_incident_cell<2, 3>(intersectingTetIter).begin(), fIterEnd1 = cdtMesh.one_dart_per_incident_cell<2, 3>(intersectingTetIter).end(); fIter1 != fIterEnd1; fIter1++)
-				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter2 = cdtMesh.one_dart_per_incident_cell<2, 3>(intersectingTetIter).begin(), fIterEnd2 = cdtMesh.one_dart_per_incident_cell<2, 3>(intersectingTetIter).end(); fIter2 != fIterEnd2; fIter2++)
+				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter2 = tempLCC.one_dart_per_incident_cell<2, 3>(d).begin(), fIterEnd2 = tempLCC.one_dart_per_incident_cell<2, 3>(d).end(); fIter2 != fIterEnd2; fIter2++)
  					if (areGeometricallySameFacets(fIter1, cdtMesh, fIter2, tempLCC)) 
-						tempLCC.info<0>(fIter2) = fIter1;  // TODO: Is there any more efficient way than this to get dart to facet in cdtMesh and assign it to geometrically same facet in tempLCC??
+						tempLCC.info<0>(fIter2) = fIter1;  // TODO: more efficient possible?
 		}
 		tempLCC.sew3_same_facets();
-
-		// mark faces which are at boundary
-		int boundaryFacetMark = tempLCC.get_new_mark(); 
-		if (boundaryFacetMark == -1)
-		{
-			cout << "BoundaryFacetMark: Free mark not available";
-			exit(0);
-		}	
 
 		// copy the boundary facet to cavityLCC(adds only those facets which are on boundary)
 		for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter = tempLCC.one_dart_per_incident_cell<2, 3>().begin(), fIterEnd = tempLCC.one_dart_per_incident_cell<2, 3>().end(); fIter != fIterEnd; fIterEnd++)
 		{
-			if (tempLCC.beta<3>(fIter) == tempLCC.null_dart_handle) // test for getting boundary facet
+			if (tempLCC.beta<3>(fIter) == tempLCC.null_dart_handle) // boundary facet
 			{
 				d = cavityLCC.make_triangle(tempLCC.point(fIter), tempLCC.point(tempLCC.beta<1>(fIter), tempLCC.point(tempLCC.beta<1, 1>(fIter));
-				cavityLCC.info(d) = tempLCC.info(fIter); // stores handle to the facet in original mesh	
+				cavityLCC.info<0>(d) = tempLCC.info<0>(fIter); // stores handle to the facet in original mesh	
 			}
 		}
 		
@@ -1800,7 +1792,6 @@ void CDTGenerator::recoverConstraintFacets()
 							cout << "Dart returned by isFacetInCavity is NULL!!";
 							exit(0);
 						}
-					
 					}	
 					else
 					{
@@ -1815,6 +1806,7 @@ void CDTGenerator::recoverConstraintFacets()
 						//cout << "After sewing!!" << endl;
 					}
 				}
+				// recompute list of non strongly Delaunay facets in cavityLCC
 				nonStronglyDelaunayFacetsInCavity.clear();
 				for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator nonStrongFaceIter = cavityLCC.one_dart_per_cell<2>().begin(), nonStrongFaceIterEnd = cavityLCC.one_dart_per_cell<2>().end(); nonStrongFaceIter != nonStrongFaceIterEnd; nonStrongFaceIter++)	
 					if (isNonStronglyDelaunayFacet(nonStrongFaceIter, cavityLCC))  
@@ -1854,13 +1846,10 @@ void CDTGenerator::recoverConstraintFacets()
 			else
 				continue;
 		}
-			
 		cdtMesh.sew3_same_facets();
 		cout << "Cavity retetrahedralization complete!!" << endl;
 	}
-
 	cout << "Constraint facets recovered!!" << endl;
-
 }
 
 
