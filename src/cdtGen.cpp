@@ -1523,12 +1523,15 @@ bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle d, LC
  *  \param [in] cavityLCC LCC representation of cavity
  *  \return True if input facets have same geometry.   
  */
+static size_t callID = 0;
 bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC& lcc, LCCWithDartInfo::Dart_handle facetInCavity, LCCWithDartInfo& cavityLCC)
 {
 
 	CGALPoint p[3];
 	cout << "Inside facetsHaveSameGeometry!!" << endl;
 	size_t i = 0;
+	callID++; //DEBUG statement
+	cout << "Call number: " << callID << endl;
 
 	for (LCC::Dart_of_orbit_range<1>::iterator pHandleBegin = lcc.darts_of_orbit<1>(fHandle).begin(), pHandleEnd = lcc.darts_of_orbit<1>(fHandle).end(); pHandleBegin != pHandleEnd; pHandleBegin++)	
 		p[i++] = lcc.point(pHandleBegin);
@@ -1603,7 +1606,6 @@ bool CDTGenerator::rayIntersectsFacet(CGALRay ray, LCCWithDartInfo::Dart_handle 
  */
 bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo& cavityLCC)
 {
-
 	CGALPoint circumcenter1 = circumcenter(ch->vertex(0)->point(), ch->vertex(1)->point(), ch->vertex(2)->point(), ch->vertex(3)->point());
 
 	// generate a random ray from circumcenter
@@ -1702,25 +1704,41 @@ void CDTGenerator::recoverConstraintFacets()
 		// Mark boundary facets of intersecting tets
 		LCCWithDartInfo tempLCC; 
 		LCCWithDartInfo::Dart_handle d;
-		for (vector<LCC::Dart_handle>::iterator intersectingTetIter = intersectingTets.begin(); intersectingTetIterEnd = intersectingTets.end(); intersectingTetIter != intersectingTetIterEnd; intersectingTetIter++)
+		CGALPoint p[4];
+		size_t i = 0;
+		for (vector<LCC::Dart_handle>::iterator intersectingTetIter = intersectingTets.begin(), intersectingTetIterEnd = intersectingTets.end(); intersectingTetIter != intersectingTetIterEnd; intersectingTetIter++)
 		{
-			d = tempLCC.make_tetrahedron();
+			// collect points of tet from cdtMesh
+			i = 0; 
+			for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 3>(*intersectingTetIter).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 3>(*intersectingTetIter).end(); pIter != pIterEnd; pIter++)
+				p[i++] = cdtMesh.point(pIter);
+
+			//create identical tet in tempLCC	
+			d = tempLCC.make_tetrahedron(p[0], p[1], p[2], p[3]);
+/*
 			// idetify the identical facets in the tet from cdtMesh and corresponding tet in tempLCC
-			for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter1 = cdtMesh.one_dart_per_incident_cell<2, 3>(intersectingTetIter).begin(), fIterEnd1 = cdtMesh.one_dart_per_incident_cell<2, 3>(intersectingTetIter).end(); fIter1 != fIterEnd1; fIter1++)
-				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter2 = tempLCC.one_dart_per_incident_cell<2, 3>(d).begin(), fIterEnd2 = tempLCC.one_dart_per_incident_cell<2, 3>(d).end(); fIter2 != fIterEnd2; fIter2++)
- 					if (areGeometricallySameFacets(fIter1, cdtMesh, fIter2, tempLCC)) 
+			for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter1 = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).begin(), fIterEnd1 = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).end(); fIter1 != fIterEnd1; fIter1++)
+			{
+				for (LCCWithDartInfo::One_dart_per_incident_cell_range<2, 3>::iterator fIter2 = tempLCC.one_dart_per_incident_cell<2, 3>(d).begin(), fIterEnd2 = tempLCC.one_dart_per_incident_cell<2, 3>(d).end(); fIter2 != fIterEnd2; fIter2++)				{
+					if (facetsHaveSameGeometry(fIter1, cdtMesh, fIter2, tempLCC)) 
 						tempLCC.info<0>(fIter2) = fIter1;  // TODO: more efficient possible?
-		}
+					else
+						continue;						
+				}
+			}
+	*/	}
 		tempLCC.sew3_same_facets();
 
 		// copy the boundary facet to cavityLCC(adds only those facets which are on boundary)
-		for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter = tempLCC.one_dart_per_incident_cell<2, 3>().begin(), fIterEnd = tempLCC.one_dart_per_incident_cell<2, 3>().end(); fIter != fIterEnd; fIterEnd++)
+		for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator fIter = tempLCC.one_dart_per_cell<2>().begin(), fIterEnd = tempLCC.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIterEnd++)
 		{
 			if (tempLCC.beta<3>(fIter) == tempLCC.null_dart_handle) // boundary facet
 			{
-				d = cavityLCC.make_triangle(tempLCC.point(fIter), tempLCC.point(tempLCC.beta<1>(fIter), tempLCC.point(tempLCC.beta<1, 1>(fIter));
+				d = cavityLCC.make_triangle(tempLCC.point(fIter), tempLCC.point(tempLCC.beta<1>(fIter)), tempLCC.point(tempLCC.beta<1, 1>(fIter)));
 				cavityLCC.info<0>(d) = tempLCC.info<0>(fIter); // stores handle to the facet in original mesh	
 			}
+			else
+				continue;
 		}
 		
 		/*	for (vector<DartHandle>::iterator intersectingTetIter = intersectingTets.begin(), intersectingTetIterEnd = intersectingTets.end(); intersectingTetIter != intersectingTetIterEnd; intersectingTetIter++)
@@ -1775,7 +1793,7 @@ void CDTGenerator::recoverConstraintFacets()
 				LCCWithDartInfo::Dart_handle nonStronglyDelaunayFace = nonStronglyDelaunayFacetsInCavity.back();
 				nonStronglyDelaunayFacetsInCavity.pop_back(); // visit a non strongly Delaunay facet
 					
-				LCC::Dart_handle exteriorCellSharingNonDelaunayFacet = cavityLCC.beta<3>(cavityLCC.info<0>(nonStronglyDelaunayFace));  
+				LCC::Dart_handle exteriorCellSharingNonDelaunayFacet = cdtMesh.beta<3>(cavityLCC.info<0>(nonStronglyDelaunayFace));  
 				//// Explore all faces of this cell
 				size_t i = 0;
 				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++) 
