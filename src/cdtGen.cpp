@@ -260,6 +260,9 @@ void CDTGenerator::readPLCInput()
 */
 void CDTGenerator::markInfiniteVertexDart(LCCWithIntInfo::Dart_handle d, LCCWithIntInfo &lcc, int infiniteVertexMark)
 {
+	if (infiniteVertexMark == INVALID_VALUE)
+		return;
+
 	if (!lcc.is_marked(d, infiniteVertexMark))
 	{
 		lcc.mark(d, infiniteVertexMark);
@@ -283,6 +286,9 @@ void CDTGenerator::markInfiniteVertexDart(LCCWithIntInfo::Dart_handle d, LCCWith
 */
 void CDTGenerator::markInfiniteVertexDart(LCC::Dart_handle d, LCC &lcc, int infiniteVertexMark)
 {
+	if (infiniteVertexMark == INVALID_VALUE)
+		return;
+
 	if (!lcc.is_marked(d, infiniteVertexMark))
 	{
 		lcc.mark(d, infiniteVertexMark);
