@@ -5,12 +5,12 @@
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
     <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
-    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-dark.css" media="screen">
     <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
-    <title>Constrained Delaunay Tetrahedralization Generator by pranavkantgaur</title>
+    <title>Constrained Delaunay Tetrahedralization Generator by HarshitJn</title>
   </head>
 
   <body>
@@ -23,9 +23,9 @@
         </header>
 
         <section id="downloads" class="clearfix">
-          <a href="https://github.com/pranavkantgaur/CDTGenerator/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
-          <a href="https://github.com/pranavkantgaur/CDTGenerator/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
-          <a href="https://github.com/pranavkantgaur/CDTGenerator" id="view-on-github" class="button"><span>View on GitHub</span></a>
+          <a href="https://github.com/HarshitJn/CDTGenerator/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/HarshitJn/CDTGenerator/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/HarshitJn/CDTGenerator" id="view-on-github" class="button"><span>View on GitHub</span></a>
         </section>
 
         <hr>
@@ -36,14 +36,42 @@
 
 <p>This project is an implementation of the paper "Meshing piecewise linear complex using CDT" by Hang Si et. al. Constrained Delaunay tetrahedralization attempts to retain Delunay property for cells while ensuring preservation of constraint vertices, segments and facets. </p>
 
+<h1>
+<a id="terminology" class="anchor" href="#terminology" aria-hidden="true"><span class="octicon octicon-link"></span></a>Terminology</h1>
+
+<p>Delaunay: Let V be the set of vertices of X(a PLC). Let σ be any simplex formed by vertices of V . σ is delaunay if there exists a circumsphere of σ that encloses no vertex of V.</p>
+
+<p>Edge Protected: X is edge-protected if every segment of X is strongly delaunay.</p>
+
+<p>Delaunay tetrahedralization: A Delaunay tetrahedralization D of V is a tetrahedralization such that all simplices of D are delaunay.</p>
+
+<p>Contrained Delaunay: A tetrahedron t formed by vertices of X is constrained delaunay if its circumsphere encloses no vertex of X which is visible from any point in the relative interior of t.</p>
+
+<p>Constrained tetrahedralization: A tetrahedralization T is a constrained tetrahedralization of X if T and X have exactly the same vertices, and the tetrahedra in T cover the convex hull of V . every segment of X is an edge of T , every facet of X is a union of triangular faces of T .</p>
+
+<p>CDT: A constrained tetrahedralization T of X is said to be a constrained delaunay tetrahedralization (CDT) of X if each tetrahedron of T is constrained delaunay.</p>
+
+<p>Local Degenracy: Let D be the delaunay tetrahedralization of the vertices of X, t a tetrahedron in D and t' an adjacent tetrahedron of t (sharing a face with t), V the set of vertices of t, t'. If all vertices of V lie on a common sphere, V is called a local degeneracy of X.</p>
+
+<h1>
+<a id="the-two-alternatives" class="anchor" href="#the-two-alternatives" aria-hidden="true"><span class="octicon octicon-link"></span></a>The Two alternatives</h1>
+
+<p>The paper highlights two ways to get to be sure that a CDT exists.The implementation is done using the second alternative because using second alternative the facet recovery(last step) can be carried out efficiently.</p>
+
+<p>First Way: If X is edge protected ,then X has a CDT.  </p>
+
+<p>Second Way: If D(delaunay tetrahedralization) contains no local degeneracy and contains all segments of X, then the CDT of X exists.</p>
+
 <h2>
 <a id="algorithm-overview" class="anchor" href="#algorithm-overview" aria-hidden="true"><span class="octicon octicon-link"></span></a>Algorithm overview</h2>
 
-<p>Algorithm is based on <a href="www.cs.berkeley.edu/%7Ejrs/papers/cdt.pdf">Shewchuck's theorem</a> which states that: 'If a PLC <em>X</em> is <em>edge protected</em> and there are no cospherical 5-points in vertex set of <em>X</em> then CDT of X exists'. This algorithm first transforms the input <em>Piecewise linear complex</em>(or PLC) to a PLC which is edge protected and then removes any degenerate point set and then tranformed PLC is guarnateed to have CDT. Precisely,<br>
+<p>Algorithm is based on <a href="www.cs.berkeley.edu/%7Ejrs/papers/cdt.pdf">Shewchuck's theorem</a> which states that: 'If a PLC <em>X</em> is <em>edge protected</em> and there are no cospherical 5-points in vertex set of <em>X</em> then CDT of X exists'.</p>
+
+<p>This algorithm first transforms the input <em>Piecewise linear complex</em>(or PLC) to a PLC which is edge protected and then removes any degenerate point set and then tranformed PLC is guarnateed to have CDT. Precisely,<br>
 1. Computes initial Delaunay tetrahedralization<br>
-2. Makes segments <em>strongly delaunay</em><br>
-3. Removes <em>local</em> degeneracies<br>
-4. Recovers facets using <em>cavity retetrahedralization</em> </p>
+2. Makes segments <em>strongly delaunay</em>. This is done by recovering the missing segments of the PLC in the new Delaunay tetrahedralization.<br>
+3. Removes <em>local</em> degeneracies. This is done by either perturbing vertices or inserting new vertices.<br>
+4. Recovers facets using <em>cavity retetrahedralization</em>  </p>
 
 <h1>
 <a id="dependencies" class="anchor" href="#dependencies" aria-hidden="true"><span class="octicon octicon-link"></span></a>Dependencies</h1>
@@ -62,8 +90,8 @@
         </section>
 
         <footer>
-          Constrained Delaunay Tetrahedralization Generator is maintained by <a href="https://github.com/pranavkantgaur">pranavkantgaur</a><br>
-          This page was generated by <a href="http://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.
+          Constrained Delaunay Tetrahedralization Generator is maintained by <a href="https://github.com/HarshitJn">HarshitJn</a><br>
+          This page was generated by <a href="https://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.
         </footer>
 
         
