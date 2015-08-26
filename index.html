@@ -41,7 +41,7 @@
 
 <p>Delaunay: Let V be the set of vertices of X(a PLC). Let σ be any simplex formed by vertices of V . σ is delaunay if there exists a circumsphere of σ that encloses no vertex of V.</p>
 
-<p>Strongly Delaunay: Let σ be a simplex of X(a PLC), σ is strongly delaunay if there exists a circumsphere of σ that passes through and encloses no other vertices of X.</p>
+<p>Strongly Delaunay: Let σ be a simplex of X, σ is strongly delaunay if there exists a circumsphere of σ that passes through and encloses no other vertices of X.</p>
 
 <p>Edge Protected: X is edge-protected if every segment of X is strongly delaunay.</p>
 
@@ -60,15 +60,15 @@
 <p>Subfaces: If T is a CDT of X(a PCL). A facet of X is represented by a set of coplanar triangular faces of T. These faces are called subfaces for distinguishing them from other faces of T .</p>
 
 <h1>
-<a id="the-two-alternatives" class="anchor" href="#the-two-alternatives" aria-hidden="true"><span class="octicon octicon-link"></span></a>The Two alternatives</h1>
+<a id="theory" class="anchor" href="#theory" aria-hidden="true"><span class="octicon octicon-link"></span></a>Theory</h1>
 
 <p>The paper highlights two ways to get to be sure that a CDT exists.</p>
 
-<p>First Way: If X is edge protected ,then X has a CDT. </p>
+<p>Shewchuk's theorem: If X is edge protected ,then X has a CDT. </p>
 
-<p>Second Way: If D(delaunay tetrahedralization) contains no local degeneracy and contains all segments of X, then the CDT of X exists.Under this, first the given PLC is converted to its delaunay tetrahedralisation followed by making all segments strongly delaunay. The resultant may have local degeneracies which are removed next. But some subfaces might be missing in the new resultant which are recovered using facet recovery algorithm. </p>
+<p>Hang Si's theorem: If D(delaunay tetrahedralization) contains no local degeneracy and contains all segments of X, then the CDT of X exists.According to this theorem, first the given PLC is converted to its delaunay tetrahedralisation followed by making all segments strongly delaunay. The resultant may have local degeneracies which are removed next. But some subfaces might be missing in the new resultant which are recovered using facet recovery algorithm. </p>
 
-<p>The implementation is done using the second alternative because using second alternative the facet recovery(last step) can be carried out efficiently.</p>
+<p>The implementation is done using the Hang Si's theorem because using this theorem, the facet recovery(last step) can be carried out efficiently.</p>
 
 <h2>
 <a id="algorithm-overview" class="anchor" href="#algorithm-overview" aria-hidden="true"><span class="octicon octicon-link"></span></a>Algorithm overview</h2>
