@@ -260,6 +260,9 @@ void CDTGenerator::readPLCInput()
 */
 void CDTGenerator::markInfiniteVertexDart(LCCWithIntInfo::Dart_handle d, LCCWithIntInfo &lcc, int infiniteVertexMark)
 {
+	if (infiniteVertexMark == INVALID_VALUE)
+		return;
+
 	if (!lcc.is_marked(d, infiniteVertexMark))
 	{
 		lcc.mark(d, infiniteVertexMark);
@@ -283,6 +286,9 @@ void CDTGenerator::markInfiniteVertexDart(LCCWithIntInfo::Dart_handle d, LCCWith
 */
 void CDTGenerator::markInfiniteVertexDart(LCC::Dart_handle d, LCC &lcc, int infiniteVertexMark)
 {
+	if (infiniteVertexMark == INVALID_VALUE)
+		return;
+
 	if (!lcc.is_marked(d, infiniteVertexMark))
 	{
 		lcc.mark(d, infiniteVertexMark);
@@ -449,10 +455,13 @@ void CDTGenerator::writePLYOutput(LCC::Dart_handle dartToInfiniteVertex, LCC &lc
 	{
 		// mark all darts defining infinite vertex
 		infiniteVertexMark = lccWithIntInfo.get_new_mark();
+		if (infiniteVertexMark == -1)
+		{
+			cout << "No free darts :(";
+			exit(0);
+		}
 	}
 	
-	if (infiniteVertexMark == -1)
-		exit(0);
 	
 	// Marking all darts associated with infinite vertices
 	markInfiniteVertexDart(NULL, lccWithIntInfo, infiniteVertexMark);
@@ -486,7 +495,7 @@ void CDTGenerator::writePLYOutput(LCC::Dart_handle dartToInfiniteVertex, LCC &lc
 	size_t pointId = 0;
 	for (LCCWithIntInfo::One_dart_per_cell_range<0>::iterator pointIter = lccWithIntInfo.one_dart_per_cell<0>().begin(), pointIterEnd = lccWithIntInfo.one_dart_per_cell<0>().end(); pointIter != pointIterEnd; pointIter++)
 	{
-		if (!isInfinite(pointIter, lcc, infiniteVertexMark, 0))
+		if (!isInfinite(pointIter, lccWithIntInfo, infiniteVertexMark, 0))
 		{
 			CGALPoint pt = lccWithIntInfo.point(pointIter); 
 			ply_write(lccOutputPLY, pt.x());
@@ -540,7 +549,8 @@ void CDTGenerator::writePLYOutput(LCC::Dart_handle dartToInfiniteVertex, LCC &lc
 
 	
 //	cout << "Output file written successfully!" << endl;
-	lccWithIntInfo.free_mark(infiniteVertexMark);
+	if (infiniteVertexMark != INVALID_VALUE)
+		lccWithIntInfo.free_mark(infiniteVertexMark);
 	ply_close(lccOutputPLY);			
 
 }
@@ -1863,11 +1873,8 @@ void CDTGenerator::countRayPLCFacetIntersections(CGALRay randomRay, LCC::Dart_ha
 	size_t i = 0;
 
 	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>(fHandle).begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
-	{
 		p[i++] = plc.point(pIter);
-//		cout << "Point: " << plc.point(pIter) << endl;
-//		cout << "Point: " << p[i - 1] << endl;
-	}
+	
 	CGALTriangle triangle;
 	bool result;
 
@@ -1880,7 +1887,7 @@ void CDTGenerator::countRayPLCFacetIntersections(CGALRay randomRay, LCC::Dart_ha
 	{
 		if (do_intersect(randomRay, triangle)) 
 		{
-			cout << "Intersects!!" << endl; 
+	//		cout << "Valid ray-triangle intersection!!" << endl; 
 			nIntersections++;
 		}
 	}
@@ -1896,12 +1903,10 @@ void CDTGenerator::countRayPLCFacetIntersections(CGALRay randomRay, LCC::Dart_ha
 			if (do_intersect(randomRay, triangle))
 			{
 				nIntersections++;			
-				cout << "Intersects!!" << endl;
+	//			cout << "Valid ray-triangle intersection!!" << endl;
 			}
 		}
 	}
-	//	cout << "Source point of the ray is: " << randomRay.source() << endl;
-
 }
 
 
@@ -1942,15 +1947,15 @@ bool CDTGenerator::isCellOutsidePLC(LCC::Dart_handle cellHandle)
 		cout << "Generated ray is degenerate!!";
 		exit(0);
 	}
-	cout << "Centroid of plc is:  " << plcCentroid << endl;
-	cout << "Centroid of test tet is:  " << testTetCentroid << endl;
+//	cout << "Centroid of plc is:  " << plcCentroid << endl;
+//	cout << "Centroid of test tet is:  " << testTetCentroid << endl;
 
 	size_t nIntersections = 0;
 	for (LCC::One_dart_per_cell_range<2>::iterator fHandle = plc.one_dart_per_cell<2>().begin(), fHandleEnd = plc.one_dart_per_cell<2>().end(); fHandle != fHandleEnd; fHandle++)
 		//if (cdtMesh.beta<2>(fHandle) == NULL) // boundary facet
 		countRayPLCFacetIntersections(randomRay, fHandle, nIntersections);
 		
-	cout << "Total number of intersections: " << nIntersections << endl;
+//	cout << "Total number of intersections: " << nIntersections << endl;
 	return (nIntersections % 2 == 0) ? true : false;
 }
 
@@ -1961,6 +1966,7 @@ bool CDTGenerator::isCellOutsidePLC(LCC::Dart_handle cellHandle)
  */
 void CDTGenerator::removeExteriorTetrahedrons()
 {
+	cout << "Removing exterior tetrahedrons from output mesh..." << endl;
 	// Ray-LCC intersection approach, if even number of intersections, then outside else inside. 
 	vector<LCC::Dart_handle> exteriorCellsList;
 
@@ -1983,13 +1989,14 @@ void CDTGenerator::removeExteriorTetrahedrons()
 		remove_cell<LCC, 3>(cdtMesh, *cellsToBeRemovedIter);			
 
 	cout << "Number of cells to be removed: " << exteriorCellsList.size() << endl;
-	//nCells = 0;
-	//for (LCC::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(), cellIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cellIter != cellIterEnd; cellIter++)
-	//	nCells++;
+	nCells = 0;
+	for (LCC::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(), cellIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cellIter != cellIterEnd; cellIter++)
+		nCells++;
 	
-	//cout << "Number of cells after removal: " << nCells << endl;
+	cout << "Number of cells after removal: " << nCells << endl;
 	// write mesh to PLY file
-	//writePLYOutput(NULL, cdtMesh, "../../data/outputMesh.ply");
+	writePLYOutput(NULL, cdtMesh, "../../data/outputMesh.ply");
+	cout << "Exterior tetrahedrons removed successfully...output mesh saved in outputMesh.ply!!";
 }
 
 
