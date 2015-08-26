@@ -495,7 +495,7 @@ void CDTGenerator::writePLYOutput(LCC::Dart_handle dartToInfiniteVertex, LCC &lc
 	size_t pointId = 0;
 	for (LCCWithIntInfo::One_dart_per_cell_range<0>::iterator pointIter = lccWithIntInfo.one_dart_per_cell<0>().begin(), pointIterEnd = lccWithIntInfo.one_dart_per_cell<0>().end(); pointIter != pointIterEnd; pointIter++)
 	{
-		if (!isInfinite(pointIter, lcc, infiniteVertexMark, 0))
+		if (!isInfinite(pointIter, lccWithIntInfo, infiniteVertexMark, 0))
 		{
 			CGALPoint pt = lccWithIntInfo.point(pointIter); 
 			ply_write(lccOutputPLY, pt.x());
@@ -549,7 +549,8 @@ void CDTGenerator::writePLYOutput(LCC::Dart_handle dartToInfiniteVertex, LCC &lc
 
 	
 //	cout << "Output file written successfully!" << endl;
-	lccWithIntInfo.free_mark(infiniteVertexMark);
+	if (infiniteVertexMark != INVALID_VALUE)
+		lccWithIntInfo.free_mark(infiniteVertexMark);
 	ply_close(lccOutputPLY);			
 
 }
