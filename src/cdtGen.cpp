@@ -260,6 +260,9 @@ void CDTGenerator::readPLCInput()
 */
 void CDTGenerator::markInfiniteVertexDart(LCCWithIntInfo::Dart_handle d, LCCWithIntInfo &lcc, int infiniteVertexMark)
 {
+	if (infiniteVertexMark == INVALID_VALUE)
+		return;
+
 	if (!lcc.is_marked(d, infiniteVertexMark))
 	{
 		lcc.mark(d, infiniteVertexMark);
@@ -283,6 +286,9 @@ void CDTGenerator::markInfiniteVertexDart(LCCWithIntInfo::Dart_handle d, LCCWith
 */
 void CDTGenerator::markInfiniteVertexDart(LCC::Dart_handle d, LCC &lcc, int infiniteVertexMark)
 {
+	if (infiniteVertexMark == INVALID_VALUE)
+		return;
+
 	if (!lcc.is_marked(d, infiniteVertexMark))
 	{
 		lcc.mark(d, infiniteVertexMark);
@@ -449,10 +455,13 @@ void CDTGenerator::writePLYOutput(LCC::Dart_handle dartToInfiniteVertex, LCC &lc
 	{
 		// mark all darts defining infinite vertex
 		infiniteVertexMark = lccWithIntInfo.get_new_mark();
+		if (infiniteVertexMark == -1)
+		{
+			cout << "No free darts :(";
+			exit(0);
+		}
 	}
 	
-	if (infiniteVertexMark == -1)
-		exit(0);
 	
 	// Marking all darts associated with infinite vertices
 	markInfiniteVertexDart(NULL, lccWithIntInfo, infiniteVertexMark);
@@ -486,7 +495,7 @@ void CDTGenerator::writePLYOutput(LCC::Dart_handle dartToInfiniteVertex, LCC &lc
 	size_t pointId = 0;
 	for (LCCWithIntInfo::One_dart_per_cell_range<0>::iterator pointIter = lccWithIntInfo.one_dart_per_cell<0>().begin(), pointIterEnd = lccWithIntInfo.one_dart_per_cell<0>().end(); pointIter != pointIterEnd; pointIter++)
 	{
-		if (!isInfinite(pointIter, lcc, infiniteVertexMark, 0))
+		if (!isInfinite(pointIter, lccWithIntInfo, infiniteVertexMark, 0))
 		{
 			CGALPoint pt = lccWithIntInfo.point(pointIter); 
 			ply_write(lccOutputPLY, pt.x());
@@ -540,7 +549,8 @@ void CDTGenerator::writePLYOutput(LCC::Dart_handle dartToInfiniteVertex, LCC &lc
 
 	
 //	cout << "Output file written successfully!" << endl;
-	lccWithIntInfo.free_mark(infiniteVertexMark);
+	if (infiniteVertexMark != INVALID_VALUE)
+		lccWithIntInfo.free_mark(infiniteVertexMark);
 	ply_close(lccOutputPLY);			
 
 }
@@ -710,7 +720,7 @@ void CDTGenerator::formMissingSegmentsQueue()
 					missingSegmentQueue.push_back(segmentIter);
 	}
 
-	cout << "\nTotal number of missing constraint segments:" << missingSegmentQueue.size() << endl;
+//	cout << "\nTotal number of missing constraint segments:" << missingSegmentQueue.size() << endl;
 
 
 	return;
@@ -989,7 +999,7 @@ void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
 */
 void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 {
-	cout << "Inside segment splitting function!!" << endl;
+//	cout << "Inside segment splitting function!!" << endl;
 	CGALPoint vb, refPoint;
 	CGALPoint sphereCenter;
 	float sphereRadius;
@@ -1198,7 +1208,7 @@ void CDTGenerator::recoverConstraintSegments()
 		cout << plc.point(pIter) << endl;
 */
 	DartHandle missingSegment;
-
+	cout << "Constraint segment recovery starts..." << endl;
 	do
 	{
 		formMissingSegmentsQueue();
@@ -1450,16 +1460,16 @@ bool CDTGenerator::areFacetTetIntersecting(DartHandle tetHandle, DartHandle face
 
 	i = 0;
 	for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 3>(tetHandle).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 3>(tetHandle).end(); pIter != pIterEnd; pIter++)
-		p2[i++] = plc.point(pIter);
+		p2[i++] = cdtMesh.point(pIter);
 
 	tet = CGALTetrahedron(p2[0], p2[1], p2[2], p2[3]);
 
-	if (!(tri.is_degenerate() || tet.is_degenerate())) // sanity check 
+	if (tet.is_degenerate())
 	{
-		//TODO: What to do...should we remove this from cdtMesh?
-		//cout << "Degenerate tet or tri !!";
+		//cout << "Degenerate tetrahedron in cdtMesh!!" << endl;
 		return false;
 	}
+
 	if (do_intersect(tet, tri))
 		return true;
 	else
@@ -1534,10 +1544,10 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC& lcc, LC
 {
 
 	CGALPoint p[3];
-	cout << "Inside facetsHaveSameGeometry!!" << endl;
+//	cout << "Inside facetsHaveSameGeometry!!" << endl;
 	size_t i = 0;
 	callID++; //DEBUG statement
-	cout << "Call number: " << callID << endl;
+//	cout << "Call number: " << callID << endl;
 
 	for (LCC::Dart_of_orbit_range<1>::iterator pHandleBegin = lcc.darts_of_orbit<1>(fHandle).begin(), pHandleEnd = lcc.darts_of_orbit<1>(fHandle).end(); pHandleBegin != pHandleEnd; pHandleBegin++)	
 		p[i++] = lcc.point(pHandleBegin);
@@ -1567,7 +1577,7 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC& lcc, LC
  */
 bool CDTGenerator::isFacetInCavity(LCC::Dart_handle fHandle, LCC& lcc, LCCWithDartInfo::Dart_handle& correspondingFacetInCavity, LCCWithDartInfo& cavityLCC)
 {
-	cout << "Inside isFacetInCavity!!" << endl;
+//	cout << "Inside isFacetInCavity!!" << endl;
 	size_t i = 0;
 	for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator fIter = cavityLCC.one_dart_per_cell<2>().begin(), fIterEnd = cavityLCC.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
 	{
@@ -1661,7 +1671,7 @@ void CDTGenerator::recoverConstraintFacets()
 	//			Label it as inside/outside cavityLCC
 	//		Sew all 'inside' tetrahedrons back to the hole creating in cdtMesh(LCC representation of output)
 
-		cout << "Facet recovery starts..." << endl;	
+		cout << "Constraint facet recovery starts..." << endl;	
 		vector <DartHandle> missingConstraintFacets;
 		vector <DartHandle> intersectingTets;
 		LCCWithDartInfo cavityLCC;
@@ -1669,7 +1679,7 @@ void CDTGenerator::recoverConstraintFacets()
 
 		computeMissingConstraintFacets(missingConstraintFacets); // list missing constraint facets
 		DartHandle d = import_from_triangulation_3(cdtMesh, DT); // initialization of cdtMesh  
-	
+		
 		// Remove infinite cells
 		int infiniteVertexMark = cdtMesh.get_new_mark();
 		markInfiniteVertexDart(d, cdtMesh, infiniteVertexMark);		
@@ -1687,8 +1697,8 @@ void CDTGenerator::recoverConstraintFacets()
 		for (vector<LCC::Dart_handle>::iterator cellIter = cellsToBeRemoved.begin(), cellIterEnd = cellsToBeRemoved.end(); cellIter != cellIterEnd; cellIter++)
 			remove_cell<LCC, 3>(cdtMesh, *cellIter); // infinite cells removed from cdtMesh
 
-		cout << "Infinite cells removed!!" << endl;
-
+//		cout << "Infinite cells removed!!" << endl;
+		size_t faceRecoveryID = 0;
 		while (missingConstraintFacets.size() != 0)
 		{
 			DartHandle missingFacetHandle = missingConstraintFacets.back(); // test for each missing facet
@@ -1753,7 +1763,7 @@ void CDTGenerator::recoverConstraintFacets()
 			//// sew 2-cells at boundaries
 			sew2CellsWithDartInfoFromEdge(cavityLCC); // cavity is created
 		
-			cout << "Cavity verification started!!" << endl;
+//			cout << "Cavity verification started!!" << endl;
 			// CAVITY VERIFICATION/EXPANSION:
 			//// create queue of non strongly Delaunay faces in cavityLCC
 			vector<LCCWithDartInfo::Dart_handle> nonStronglyDelaunayFacetsInCavity;
@@ -1779,9 +1789,9 @@ void CDTGenerator::recoverConstraintFacets()
 				size_t i = 0;
 				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++) 
 				{	
-					cout << "Iteration: " << i++ << endl;
+					//cout << "Iteration: " << i++ << endl;
 					size_t facetLocation;
-					cout << "Before isFacetInCavity!!" << endl;
+					//cout << "Before isFacetInCavity!!" << endl;
 					if (isFacetInCavity(facetInCellHandle, cdtMesh, correspondingFacetInCavity, cavityLCC)) 
 					{
 						if (correspondingFacetInCavity != NULL)//cavityLCC.null_dart_handle)
@@ -1811,9 +1821,9 @@ void CDTGenerator::recoverConstraintFacets()
 					if (isNonStronglyDelaunayFacet(nonStrongFaceIter, cavityLCC))  
 						nonStronglyDelaunayFacetsInCavity.push_back(nonStrongFaceIter); // handle to non strongly Delauny facets in cavityLCC
 			}
-		cout << "Cavity expanded, if required!!" << endl;
-		cout << "Cavity verification complete!!" << endl;
-		cout << "Cavity retetrahedralization started!!" << endl;
+//		cout << "Cavity expanded, if required!!" << endl;
+//		cout << "Cavity verification complete!!" << endl;
+//		cout << "Cavity retetrahedralization started!!" << endl;
 		// CAVITY RETETRAHEDRALIZATION		
 		vector<pair<CGALPoint, LCC::Dart_handle> > cavityVertices;
 	
@@ -1826,7 +1836,7 @@ void CDTGenerator::recoverConstraintFacets()
 		//// remove intersecting tets from cdtMesh(make way for new tets)
 		for (vector<LCC::Dart_handle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
 			remove_cell<LCC, 3>(cdtMesh, *tetIter); 
-		cout << "Intersecting tets removed from mesh!!" << endl;
+//		cout << "Intersecting tets removed from mesh!!" << endl;
 
 		
 		// mark each cell of DT as either inside/outside cavity
@@ -1844,7 +1854,9 @@ void CDTGenerator::recoverConstraintFacets()
 				continue;
 		}
 		cdtMesh.sew3_same_facets();
-		cout << "Cavity retetrahedralization complete!!" << endl;
+//		cout << "Cavity retetrahedralization complete!!" << endl;
+		cout << "Facet recovery iteration: #" << faceRecoveryID << endl;		
+		faceRecoveryID++;
 	}
 	cout << "Constraint facets recovered!!" << endl;
 }
@@ -1863,11 +1875,8 @@ void CDTGenerator::countRayPLCFacetIntersections(CGALRay randomRay, LCC::Dart_ha
 	size_t i = 0;
 
 	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>(fHandle).begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>(fHandle).end(); pIter != pIterEnd; pIter++)
-	{
 		p[i++] = plc.point(pIter);
-//		cout << "Point: " << plc.point(pIter) << endl;
-//		cout << "Point: " << p[i - 1] << endl;
-	}
+	
 	CGALTriangle triangle;
 	bool result;
 
@@ -1880,7 +1889,7 @@ void CDTGenerator::countRayPLCFacetIntersections(CGALRay randomRay, LCC::Dart_ha
 	{
 		if (do_intersect(randomRay, triangle)) 
 		{
-			cout << "Intersects!!" << endl; 
+	//		cout << "Valid ray-triangle intersection!!" << endl; 
 			nIntersections++;
 		}
 	}
@@ -1896,12 +1905,10 @@ void CDTGenerator::countRayPLCFacetIntersections(CGALRay randomRay, LCC::Dart_ha
 			if (do_intersect(randomRay, triangle))
 			{
 				nIntersections++;			
-				cout << "Intersects!!" << endl;
+	//			cout << "Valid ray-triangle intersection!!" << endl;
 			}
 		}
 	}
-	//	cout << "Source point of the ray is: " << randomRay.source() << endl;
-
 }
 
 
@@ -1942,15 +1949,15 @@ bool CDTGenerator::isCellOutsidePLC(LCC::Dart_handle cellHandle)
 		cout << "Generated ray is degenerate!!";
 		exit(0);
 	}
-	cout << "Centroid of plc is:  " << plcCentroid << endl;
-	cout << "Centroid of test tet is:  " << testTetCentroid << endl;
+//	cout << "Centroid of plc is:  " << plcCentroid << endl;
+//	cout << "Centroid of test tet is:  " << testTetCentroid << endl;
 
 	size_t nIntersections = 0;
 	for (LCC::One_dart_per_cell_range<2>::iterator fHandle = plc.one_dart_per_cell<2>().begin(), fHandleEnd = plc.one_dart_per_cell<2>().end(); fHandle != fHandleEnd; fHandle++)
 		//if (cdtMesh.beta<2>(fHandle) == NULL) // boundary facet
 		countRayPLCFacetIntersections(randomRay, fHandle, nIntersections);
 		
-	cout << "Total number of intersections: " << nIntersections << endl;
+//	cout << "Total number of intersections: " << nIntersections << endl;
 	return (nIntersections % 2 == 0) ? true : false;
 }
 
@@ -1961,6 +1968,7 @@ bool CDTGenerator::isCellOutsidePLC(LCC::Dart_handle cellHandle)
  */
 void CDTGenerator::removeExteriorTetrahedrons()
 {
+	cout << "Removing exterior tetrahedrons from output mesh..." << endl;
 	// Ray-LCC intersection approach, if even number of intersections, then outside else inside. 
 	vector<LCC::Dart_handle> exteriorCellsList;
 
@@ -1976,20 +1984,21 @@ void CDTGenerator::removeExteriorTetrahedrons()
 	for (LCC::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(), cellIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cellIter != cellIterEnd; cellIter++)
 		nCells++;
 	
-	cout << "Number of cells before removal: " << nCells << endl;
+//	cout << "Number of cells before removal: " << nCells << endl;
 	
 	//// remove cells marked as exterior
 	for (vector<LCC::Dart_handle>::iterator cellsToBeRemovedIter = exteriorCellsList.begin(), cellsToBeRemovedIterEnd = exteriorCellsList.end(); cellsToBeRemovedIter != cellsToBeRemovedIterEnd; cellsToBeRemovedIter++)
 		remove_cell<LCC, 3>(cdtMesh, *cellsToBeRemovedIter);			
 
-	cout << "Number of cells to be removed: " << exteriorCellsList.size() << endl;
-	//nCells = 0;
-	//for (LCC::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(), cellIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cellIter != cellIterEnd; cellIter++)
-	//	nCells++;
+//	cout << "Number of cells to be removed: " << exteriorCellsList.size() << endl;
+	nCells = 0;
+	for (LCC::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(), cellIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cellIter != cellIterEnd; cellIter++)
+		nCells++;
 	
-	//cout << "Number of cells after removal: " << nCells << endl;
+//	cout << "Number of cells after removal: " << nCells << endl;
 	// write mesh to PLY file
-	//writePLYOutput(NULL, cdtMesh, "../../data/outputMesh.ply");
+	writePLYOutput(NULL, cdtMesh, "../../data/outputMesh.ply");
+	cout << "Exterior tetrahedrons removed successfully...output mesh saved in outputMesh.ply!!" << endl;
 }
 
 
@@ -2002,6 +2011,7 @@ void CDTGenerator::generate()
 	computeDelaunayTetrahedralization(-1);
 	recoverConstraintSegments();
 //	removeLocalDegeneracies();
+	cout << "Skipping explicit local degeneracy removal, CGAL performs symbolic perturbation by default!!" << endl;
 	recoverConstraintFacets();
 	removeExteriorTetrahedrons(); // removes tetrahedrons from cdtMesh which are outside input PLC
 
