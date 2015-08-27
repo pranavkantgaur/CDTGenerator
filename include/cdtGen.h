@@ -120,8 +120,6 @@ class CDTGenerator
 		float computeSegmentLength(CGALPoint&, CGALPoint&);
 		size_t determineSegmentType(DartHandle);
 		bool isVertexAcute(DartHandle);
-		float computeAngleBetweenSegments(DartHandle, DartHandle);
-		float vectorMagnitude(DartHandle);
 		float dotProduct(DartHandle, DartHandle);
 		void computeReferencePoint(CGALPoint*, DartHandle);
 		size_t computeCircumradius(CGALPoint&, CGALPoint&, CGALPoint&);
