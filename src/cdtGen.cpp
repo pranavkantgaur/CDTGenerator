@@ -1040,7 +1040,8 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 		}
 	}
 
-	else if (segmentType == 2)
+
+	else if (segmentType == 2 || segmentType == 3 )
 	{
 		// A is acute
 		DartHandle acuteParentHandle; 
@@ -1049,99 +1050,20 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 		DartHandle AHandle = missingSegmentHandle;
 		DartHandle BHandle = plc.beta(missingSegmentHandle, 1);
 		
-		acuteParentHandle = AHandle;		
-		
-		// Segment calculations		
-		ApB[0] = acuteParentHandle;
-		ApB[1] = BHandle;
-			
-		CGALSphericalPoint p1(plc.point(ApB[0]).x(), plc.point(ApB[0]).y(), plc.point(ApB[0]).z());
-		CGALSphericalPoint p2(plc.point(ApB[1]).x(), plc.point(ApB[1]).y(), plc.point(ApB[1]).z());
-		
-		CGALSphericalSegment seg(p1, p2);
-		CGALSphericalLineArc lineArc(seg);
-		
-		/// Sphere calculations
-		CGALSphericalPoint acuteParent(plc.point(acuteParentHandle).x(), plc.point(acuteParentHandle).y(), plc.point(acuteParentHandle).z());
-		
-		CGALPoint acuteParentLinearField(plc.point(acuteParentHandle).x(), plc.point(acuteParentHandle).y(), plc.point(acuteParentHandle).z());
-	
-		float ARefPointLength = computeSegmentLength(acuteParentLinearField, refPoint);
-
-		CGALSphericalSphere s(acuteParent, pow(ARefPointLength, 2));
-
-		vector<Object> intersections;
-//		cout << "Case 2!!" << endl;
-//		cout << "Endpoint 1: " << p1 << endl;
-//		cout << "Endpoint 2: " << p2 << endl;
-		
-		intersection(lineArc, s, back_inserter(intersections));
-//		cout << "Case 2 ends!!" << endl;
-	
-		if (intersections.size() > 0)
-		{	
-			v = object_cast<CGALPoint>(intersections.back());
-			intersections.pop_back();
-		}
-		else
+		if (segmentType == 2 ) // if A is acute but B is not
 		{
-			cout << "\nCase 2: Sphere and segment do not intersect";
-			exit(0);
+			acuteParentHandle = AHandle;
+//			cout << "A is acute!!" << endl;
 		}
 		
-		float vrefpointLength = computeSegmentLength(v, refPoint);
-		
-		float acuteparentALength;
-		
-		vbLength = computeSegmentLength(v, plc.point(BHandle)); 
-
-		if (vbLength < vrefpointLength) // v was rejected
+		else if (segmentType == 3 ) // if B is acute but A is not
 		{
-			CGALSphericalPoint sphereCenter(acuteParent);
-			size_t avLength = computeSegmentLength(plc.point(AHandle), v);
-			if (vrefpointLength < 0.5 * avLength)
-			{
-					CGALPoint temp(acuteParentLinearField.x(), acuteParentLinearField.y(), acuteParentLinearField.z());
-					acuteparentALength = computeSegmentLength(temp, plc.point(AHandle));
-					sphereRadius = acuteparentALength + avLength - vrefpointLength;	
-			}
-			else
-				sphereRadius = acuteparentALength + 0.5 * avLength;
-		        
-			s = CGALSphericalSphere(sphereCenter, pow(sphereRadius, 2));
-//			cout << "Case 3!!" << endl;
-			intersection(lineArc, s, back_inserter(intersections));
-//			cout << "Case 3 ends!!" << endl;
-			if (intersections.size() > 0)
-			{
-				v = object_cast<CGALPoint>(intersections.back());
-				intersections.pop_back();
-			}
-			else
-			{
-				cout << "Case 3: Sphere and segment do not intersect";
-				exit(0);
-			}
+//			cout << "B is acute!!" << endl;
+			acuteParentHandle = BHandle;
+			BHandle = AHandle;
+			AHandle = acuteParentHandle;
 		}
-	}
-	
-	else if (segmentType == 3)
-	{
-		// B is acute
-		DartHandle acuteParentHandle; 
-		DartHandle ApB[2]; 
-		float vbLength;
-		DartHandle AHandle = missingSegmentHandle;
-		DartHandle BHandle = plc.beta(missingSegmentHandle, 1);
 
-		
-
-		//cout << "B is acute!!" << endl;
-		acuteParentHandle = BHandle;
-		BHandle = AHandle;
-		AHandle = acuteParentHandle;
-	
-		
 //		cout << "Point A: " << plc.point(AHandle) << endl;
 //	        cout << "Point B: " << plc.point(BHandle) << endl;	
 	
@@ -1218,7 +1140,7 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 			}
 		}
 	}
-
+	
 	else if (segmentType == 4) // meaning both A & B are acute
 	{
 		//cout << "Segment is of type 4!!" << endl;
@@ -2065,6 +1987,4 @@ void CDTGenerator::generate()
 	removeExteriorTetrahedrons(); // removes tetrahedrons from cdtMesh which are outside input PLC
 
 }
-
-
 
