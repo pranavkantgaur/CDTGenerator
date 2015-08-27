@@ -831,41 +831,6 @@ float CDTGenerator::dotProduct(DartHandle segment1Handle, DartHandle segment2Han
 }
 
 
-/*! \fn float CDTGenerator::vectorMagnitude(DartHandle inputSegmentHandle)
-    \brief Computes magnitue of input vector
-
-    \param [in] inputSegmentHandle DartHandle of input segment
-*/
-float CDTGenerator::vectorMagnitude(DartHandle inputSegmentHandle)
-{
-	CGALPoint segmentVertices[2];
-
-	segmentVertices[0] = plc.point(inputSegmentHandle);
-	segmentVertices[1] = plc.point(plc.beta(inputSegmentHandle, 1));	
-
-	CGALPoint vector = CGALPoint(segmentVertices[0].x() - segmentVertices[1].x(), segmentVertices[0].y() - segmentVertices[1].y(), segmentVertices[0].z() - segmentVertices[1].z());
-
-	float vectorMagnitude = sqrtf(powf(vector.x(), 2.0) + powf(vector.y(), 2.0) + powf(vector.z(), 2.0));
-
-	return vectorMagnitude;
-}
-
-
-/*! \fn float CDTGenerator::computeAngleBetweenSegments(DartHandle segment1Handle, DartHandle segment2Handle)
-    \brief Computes angle between vectors represented by input segments.
-
-    \param [in] segment1Handle DartHandle for first input segment
-    \param [in] segment2Handle DartHandle for second input segment
-*/
-float CDTGenerator::computeAngleBetweenSegments(DartHandle segment1Handle, DartHandle segment2Handle)
-{
-
-	float angle = acosf(dotProduct(segment1Handle, segment2Handle) / (vectorMagnitude(segment1Handle) * vectorMagnitude(segment2Handle)));
-
-	return (angle * 180.0f / Pi); // conversion to degrees
-}
-
-
 /*! \fn bool CDTGenerator::isVertexAcute(DartHandle inputPointHandle)
     \brief Tests whether input vertex is acute
 
@@ -884,7 +849,7 @@ bool CDTGenerator::isVertexAcute(DartHandle inputPointHandle)
 	// Compute angle between all possible pairs(TODO: NAIVE SOLUTION)
 	for (vector<DartHandle>::iterator segIter1 = incidentOnInputPoint.begin(); segIter1 != incidentOnInputPoint.end(); segIter1++) 
 		for (vector<DartHandle>::iterator segIter2 = incidentOnInputPoint.begin(); *segIter1 != *segIter2 && segIter2 != incidentOnInputPoint.end(); segIter2++)
-			if (computeAngleBetweenSegments(*segIter1, *segIter2) < 90.0f)
+			if (dotProduct(*segIter1, *segIter2) > 0 )
 				return true;
 
 	return false; 
@@ -894,7 +859,7 @@ bool CDTGenerator::isVertexAcute(DartHandle inputPointHandle)
 /*! \fn size_t CDTGenerator::determineSegmentType(DartHandle missingSegmentHandle)
     \brief Determines the input segment type
 
-    A segment is of _type-1_ if _none_ of its endpoints are _acute_. If _exactly_ one endpoint is acute than segment is of _type-2_.
+    A segment is of _type-1_ if _none_ of its endpoints are _acute_. If  endpoint A is acute than segment is of _type-2_. If  endpoint B is acute than segment is of _type-3_. If  both endpoints are acute than segment is of _type-4_
 
     \param [in] DartHandle for input constraint segment
 */
@@ -910,10 +875,14 @@ size_t CDTGenerator::determineSegmentType(DartHandle missingSegmentHandle)
 	if (!vertexAIsAcute && !vertexBIsAcute)	
 		return 1;
 	
-	else if (vertexAIsAcute != vertexBIsAcute) // effectively XOR
+	else if (vertexAIsAcute && !vertexBIsAcute) // only A is acute
 		return 2;
-	else
+	
+	else if (!vertexAIsAcute && vertexBIsAcute) // only B is acute
 		return 3;
+	
+	else
+		return 4;
 }
 
 
@@ -1073,25 +1042,105 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 
 	else if (segmentType == 2)
 	{
-		// identify the acute vertex out of A,B or one of their parents
+		// A is acute
+		DartHandle acuteParentHandle; 
+		DartHandle ApB[2]; 
+		float vbLength;
+		DartHandle AHandle = missingSegmentHandle;
+		DartHandle BHandle = plc.beta(missingSegmentHandle, 1);
+		
+		acuteParentHandle = AHandle;		
+		
+		// Segment calculations		
+		ApB[0] = acuteParentHandle;
+		ApB[1] = BHandle;
+			
+		CGALSphericalPoint p1(plc.point(ApB[0]).x(), plc.point(ApB[0]).y(), plc.point(ApB[0]).z());
+		CGALSphericalPoint p2(plc.point(ApB[1]).x(), plc.point(ApB[1]).y(), plc.point(ApB[1]).z());
+		
+		CGALSphericalSegment seg(p1, p2);
+		CGALSphericalLineArc lineArc(seg);
+		
+		/// Sphere calculations
+		CGALSphericalPoint acuteParent(plc.point(acuteParentHandle).x(), plc.point(acuteParentHandle).y(), plc.point(acuteParentHandle).z());
+		
+		CGALPoint acuteParentLinearField(plc.point(acuteParentHandle).x(), plc.point(acuteParentHandle).y(), plc.point(acuteParentHandle).z());
+	
+		float ARefPointLength = computeSegmentLength(acuteParentLinearField, refPoint);
+
+		CGALSphericalSphere s(acuteParent, pow(ARefPointLength, 2));
+
+		vector<Object> intersections;
+//		cout << "Case 2!!" << endl;
+//		cout << "Endpoint 1: " << p1 << endl;
+//		cout << "Endpoint 2: " << p2 << endl;
+		
+		intersection(lineArc, s, back_inserter(intersections));
+//		cout << "Case 2 ends!!" << endl;
+	
+		if (intersections.size() > 0)
+		{	
+			v = object_cast<CGALPoint>(intersections.back());
+			intersections.pop_back();
+		}
+		else
+		{
+			cout << "\nCase 2: Sphere and segment do not intersect";
+			exit(0);
+		}
+		
+		float vrefpointLength = computeSegmentLength(v, refPoint);
+		
+		float acuteparentALength;
+		
+		vbLength = computeSegmentLength(v, plc.point(BHandle)); 
+
+		if (vbLength < vrefpointLength) // v was rejected
+		{
+			CGALSphericalPoint sphereCenter(acuteParent);
+			size_t avLength = computeSegmentLength(plc.point(AHandle), v);
+			if (vrefpointLength < 0.5 * avLength)
+			{
+					CGALPoint temp(acuteParentLinearField.x(), acuteParentLinearField.y(), acuteParentLinearField.z());
+					acuteparentALength = computeSegmentLength(temp, plc.point(AHandle));
+					sphereRadius = acuteparentALength + avLength - vrefpointLength;	
+			}
+			else
+				sphereRadius = acuteparentALength + 0.5 * avLength;
+		        
+			s = CGALSphericalSphere(sphereCenter, pow(sphereRadius, 2));
+//			cout << "Case 3!!" << endl;
+			intersection(lineArc, s, back_inserter(intersections));
+//			cout << "Case 3 ends!!" << endl;
+			if (intersections.size() > 0)
+			{
+				v = object_cast<CGALPoint>(intersections.back());
+				intersections.pop_back();
+			}
+			else
+			{
+				cout << "Case 3: Sphere and segment do not intersect";
+				exit(0);
+			}
+		}
+	}
+	
+	else if (segmentType == 3)
+	{
+		// B is acute
 		DartHandle acuteParentHandle; 
 		DartHandle ApB[2]; 
 		float vbLength;
 		DartHandle AHandle = missingSegmentHandle;
 		DartHandle BHandle = plc.beta(missingSegmentHandle, 1);
 
-		if (isVertexAcute(AHandle) && !isVertexAcute(BHandle)) // if A is acute but B is not
-		{
-			acuteParentHandle = AHandle;
-//			cout << "A is acute!!" << endl;
-		}
-		else if (isVertexAcute(BHandle) && !isVertexAcute(AHandle)) // if B is acute but A is not
-		{
-//			cout << "B is acute!!" << endl;
-			acuteParentHandle = BHandle;
-			BHandle = AHandle;
-			AHandle = acuteParentHandle;
-		}
+		
+
+		//cout << "B is acute!!" << endl;
+		acuteParentHandle = BHandle;
+		BHandle = AHandle;
+		AHandle = acuteParentHandle;
+	
 		
 //		cout << "Point A: " << plc.point(AHandle) << endl;
 //	        cout << "Point B: " << plc.point(BHandle) << endl;	
@@ -1170,9 +1219,9 @@ void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
 		}
 	}
 
-	else if (segmentType == 3) // meaning both A & B are acute
+	else if (segmentType == 4) // meaning both A & B are acute
 	{
-		//cout << "Segment is of type 3!!" << endl;
+		//cout << "Segment is of type 4!!" << endl;
 		CGALPoint newPoint;
 		
 		float x = (A.x() + B.x()) / 2.0;
