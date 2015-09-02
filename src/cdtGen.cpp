@@ -63,7 +63,7 @@ static int face_cb(p_ply_argument argument)
     \param [in] d1 DartHandle for first segment
     \param [in] d2 DartHandle for second segment
 */
-bool CDTGenerator::areGeometricallySameSegments(DartHandle d1, DartHandle d2, LCC& lcc)
+bool CDTGenerator::areGeometricallySameSegments(DartHandle& d1, DartHandle& d2, LCC& lcc)
 {
 	if (lcc.point(d1) == lcc.point(lcc.beta(d2, 1)))
 		if (lcc.point(lcc.beta(d1, 1)) == lcc.point(d2))
@@ -81,7 +81,7 @@ bool CDTGenerator::areGeometricallySameSegments(DartHandle d1, DartHandle d2, LC
     \param [in] d1 DartHandle for first segment
     \param [in] d2 DartHandle for second segment
 */
-bool CDTGenerator::areGeometricallySameSegmentsWithDartInfo(LCCWithDartInfo::Dart_handle d1, LCCWithDartInfo::Dart_handle d2, LCCWithDartInfo &lcc)
+bool CDTGenerator::areGeometricallySameSegmentsWithDartInfo(LCCWithDartInfo::Dart_handle& d1, LCCWithDartInfo::Dart_handle& d2, LCCWithDartInfo &lcc)
 {
 	if (lcc.point(d1) == lcc.point(lcc.beta(d2, 1)))
 		if (lcc.point(lcc.beta(d1, 1)) == lcc.point(d2))
@@ -258,7 +258,7 @@ void CDTGenerator::readPLCInput()
 *   \param [in] lcc Linear cell complex to be marked.
 *   \param [in] infiniteVertexMark Mark representing a dart defining the infinite vertex.
 */
-void CDTGenerator::markInfiniteVertexDart(LCCWithIntInfo::Dart_handle d, LCCWithIntInfo &lcc, int infiniteVertexMark)
+void CDTGenerator::markInfiniteVertexDart(LCCWithIntInfo::Dart_handle d, LCCWithIntInfo& lcc, int infiniteVertexMark)
 {
 	if (infiniteVertexMark == INVALID_VALUE)
 		return;
@@ -312,7 +312,7 @@ void CDTGenerator::markInfiniteVertexDart(LCC::Dart_handle d, LCC &lcc, int infi
  *  \param [in] cell_dimension dimension of i-cell.
  *  \return True if input i-cell is infinite.
  */
-bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, const LCCWithIntInfo& lcc, int infiniteVertexMark, size_t cell_dimension)
+bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle& adart, const LCCWithIntInfo& lcc, int infiniteVertexMark, size_t cell_dimension)
 {
 	if (infiniteVertexMark == INVALID_VALUE)
 		return false;
@@ -363,7 +363,7 @@ bool CDTGenerator::isInfinite(LCCWithIntInfo::Dart_handle adart, const LCCWithIn
  *  \param [in] cell_dimension dimension of i-cell.
  *  \return True if input i-cell is infinite.
 */
-bool CDTGenerator::isInfinite(LCC::Dart_handle adart, const LCC& lcc, int infiniteVertexMark, size_t cell_dimension)
+bool CDTGenerator::isInfinite(LCC::Dart_handle& adart, const LCC& lcc, int infiniteVertexMark, size_t cell_dimension)
 {
 
 	if (infiniteVertexMark == INVALID_VALUE)
@@ -759,7 +759,7 @@ size_t CDTGenerator::computeCircumradius(CGALPoint &A, CGALPoint &B, CGALPoint &
     \param [out] refPoint Pointer to the computed reference point.
     \param [in] missingSegmentHandle Dart handle of missing constraint segment.
 */
-void CDTGenerator::computeReferencePoint(CGALPoint *refPoint, DartHandle missingSegmentHandle)
+void CDTGenerator::computeReferencePoint(CGALPoint* refPoint, DartHandle& missingSegmentHandle)
 {
 
 	CGALPoint &A = plc.point(missingSegmentHandle);
@@ -814,7 +814,7 @@ void CDTGenerator::computeReferencePoint(CGALPoint *refPoint, DartHandle missing
     \param [in] segment1Handle DartHandle for the first segment
     \param [in] segment2Handle DartHandle for the second segment
 */
-float CDTGenerator::dotProduct(DartHandle segment1Handle, DartHandle segment2Handle)
+float CDTGenerator::dotProduct(DartHandle& segment1Handle, DartHandle& segment2Handle)
 {
 	CGALPoint segment1Vertex[2];
 	CGALPoint segment2Vertex[2];
@@ -839,7 +839,7 @@ float CDTGenerator::dotProduct(DartHandle segment1Handle, DartHandle segment2Han
 
     \param [in] inputSegmentHandle DartHandle of input segment
 */
-float CDTGenerator::vectorMagnitude(DartHandle inputSegmentHandle)
+float CDTGenerator::vectorMagnitude(DartHandle& inputSegmentHandle)
 {
 	CGALPoint segmentVertices[2];
 
@@ -860,7 +860,7 @@ float CDTGenerator::vectorMagnitude(DartHandle inputSegmentHandle)
     \param [in] segment1Handle DartHandle for first input segment
     \param [in] segment2Handle DartHandle for second input segment
 */
-float CDTGenerator::computeAngleBetweenSegments(DartHandle segment1Handle, DartHandle segment2Handle)
+float CDTGenerator::computeAngleBetweenSegments(DartHandle& segment1Handle, DartHandle& segment2Handle)
 {
 
 	float angle = acosf(dotProduct(segment1Handle, segment2Handle) / (vectorMagnitude(segment1Handle) * vectorMagnitude(segment2Handle)));
@@ -901,7 +901,7 @@ bool CDTGenerator::isVertexAcute(DartHandle inputPointHandle)
 
     \param [in] DartHandle for input constraint segment
 */
-size_t CDTGenerator::determineSegmentType(DartHandle missingSegmentHandle)
+size_t CDTGenerator::determineSegmentType(DartHandle& missingSegmentHandle)
 {
 
 	CGALPoint &A = plc.point(missingSegmentHandle);
@@ -939,7 +939,7 @@ float CDTGenerator::computeSegmentLength(CGALPoint &A, CGALPoint &B)
     /param [in] v New vertex to be inserted into a constraint segment of PLC
     /param [ih] missignSegmentHandle DartHandle of constraint segment which will be split after inserting new vertex  
 */
-void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
+void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle& missingSegmentHandle)
 {
 
 	// TODO: update PLC 
@@ -1000,7 +1000,7 @@ void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle missingSegmentHandle)
 
     \param [in] missingSegmentHandle DartHandle of missing constraint segment
 */
-void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
+void CDTGenerator::splitMissingSegment(DartHandle& missingSegmentHandle)
 {
 //	cout << "Inside segment splitting function!!" << endl;
 	CGALPoint vb, refPoint;
@@ -1444,7 +1444,7 @@ void CDTGenerator::removeLocalDegeneracies()
  *  \param [in] facetHandle Dart handle to second cell.
  *  \return true if tet anf facet intersect otherwise returns false.
  */
-bool CDTGenerator::areFacetTetIntersecting(DartHandle tetHandle, DartHandle facetHandle)
+bool CDTGenerator::areFacetTetIntersecting(DartHandle& tetHandle, DartHandle& facetHandle)
 {
 	// represent facet as CGALTriangle and tet as CGALTeterahedron
 	// call do_intersect(tet, tri)
@@ -1467,7 +1467,7 @@ bool CDTGenerator::areFacetTetIntersecting(DartHandle tetHandle, DartHandle face
 
 	tet = CGALTetrahedron(p2[0], p2[1], p2[2], p2[3]);
 
-	if (tet.is_degenerate()) //TODO: What to do with this degenerate tet?
+	if (tri.is_degenerate() || tet.is_degenerate()) //TODO: What to do with this degenerate tet?
 	{
 		//cout << "Degenerate tetrahedron in cdtMesh!!" << endl;
 		return false;
@@ -1478,6 +1478,7 @@ bool CDTGenerator::areFacetTetIntersecting(DartHandle tetHandle, DartHandle face
 	else
 		return false;
 }
+
 
 /*! \fn void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFacetList)
  *  \brief Computes list of constraint facets missing in current Delaunay triangulation.	
@@ -1509,7 +1510,7 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
  *  \param [in] d Dart handle to the facet.
  *  \param [in] lcc Linear cell complex containing d.
  */
-bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle d, LCCWithDartInfo& lcc)
+bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle& d, LCCWithDartInfo& lcc)
 {
 	// a facet is non strongly Delaunay if there do not exist any circumsphere which does not include and other point on and inside it.
 	// since local degeneracies are already removed we only need to check for input facet in Delaunay tetrahedralization of vetices of cavity.
@@ -1543,13 +1544,13 @@ bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle d, LC
  *  \return True if input facets have same geometry.   
  */
 static size_t callID = 0;
-bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC& lcc, LCCWithDartInfo::Dart_handle facetInCavity, LCCWithDartInfo& cavityLCC)
+bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle& fHandle, LCC& lcc, LCCWithDartInfo::Dart_handle& facetInCavity, LCCWithDartInfo& cavityLCC)
 {
 
 	CGALPoint p[3];
 //	cout << "Inside facetsHaveSameGeometry!!" << endl;
 	size_t i = 0;
-	callID++; //DEBUG statement
+//	callID++; //DEBUG statement
 //	cout << "Call number: " << callID << endl;
 
 	for (LCC::Dart_of_orbit_range<1>::iterator pHandleBegin = lcc.darts_of_orbit<1>(fHandle).begin(), pHandleEnd = lcc.darts_of_orbit<1>(fHandle).end(); pHandleBegin != pHandleEnd; pHandleBegin++)	
@@ -1578,7 +1579,7 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle fHandle, LCC& lcc, LC
  *  \param [in] cavityLCC LCC representation of cavity
  *  \return True if input facet is in cavity.
  */
-bool CDTGenerator::isFacetInCavity(LCC::Dart_handle fHandle, LCC& lcc, LCCWithDartInfo::Dart_handle& correspondingFacetInCavity, LCCWithDartInfo& cavityLCC)
+bool CDTGenerator::isFacetInCavity(LCC::Dart_handle& fHandle, LCC& lcc, LCCWithDartInfo::Dart_handle& correspondingFacetInCavity, LCCWithDartInfo& cavityLCC)
 {
 //	cout << "Inside isFacetInCavity!!" << endl;
 	size_t i = 0;
@@ -1601,7 +1602,7 @@ bool CDTGenerator::isFacetInCavity(LCC::Dart_handle fHandle, LCC& lcc, LCCWithDa
  *  \param [in] lcc Linear cell complex containing fHandle.
  *  \return True if ray does intersect the given facet in LCC.
  */
-bool CDTGenerator::rayIntersectsFacet(CGALRay ray, LCCWithDartInfo::Dart_handle fHandle, LCCWithDartInfo& lcc)
+bool CDTGenerator::rayIntersectsFacet(CGALRay& ray, LCCWithDartInfo::Dart_handle& fHandle, LCCWithDartInfo& lcc)
 {
 	// represent facet in triangle_3 form 
 	CGALPoint p[3];
@@ -1714,7 +1715,7 @@ void CDTGenerator::recoverConstraintFacets()
 				if (areFacetTetIntersecting(cIter, missingFacetHandle)) 
 					intersectingTets.push_back(cIter);
 			}
-	
+				
 			int partOfIntersectingTetMark = cdtMesh.get_new_mark();
 	
 			if (partOfIntersectingTetMark == -1)
@@ -1873,7 +1874,7 @@ void CDTGenerator::recoverConstraintFacets()
  *  \param [in] fHandle Dart handle to the facet. 
  *  \return True if input ray intersects the facet of PLC.
  */
-void CDTGenerator::countRayPLCFacetIntersections(CGALRay randomRay, LCC::Dart_handle fHandle, size_t &nIntersections)
+void CDTGenerator::countRayPLCFacetIntersections(CGALRay &randomRay, LCC::Dart_handle &fHandle, size_t &nIntersections)
 {
 	// represent facet in triangle_3 form 
 	CGALPoint p[4];
@@ -1922,7 +1923,7 @@ void CDTGenerator::countRayPLCFacetIntersections(CGALRay randomRay, LCC::Dart_ha
  *  \param [in] cellHandle Dart handle for the input cell.
  *  \return True if the input cell is outside PLC.
  */
-bool CDTGenerator::isCellOutsidePLC(LCC::Dart_handle cellHandle)
+bool CDTGenerator::isCellOutsidePLC(LCC::Dart_handle &cellHandle)
 {
 	// endpoint 1
 	size_t i = 0;
@@ -1959,8 +1960,8 @@ bool CDTGenerator::isCellOutsidePLC(LCC::Dart_handle cellHandle)
 
 	size_t nIntersections = 0;
 	for (LCC::One_dart_per_cell_range<2>::iterator fHandle = plc.one_dart_per_cell<2>().begin(), fHandleEnd = plc.one_dart_per_cell<2>().end(); fHandle != fHandleEnd; fHandle++)
-		//if (cdtMesh.beta<2>(fHandle) == NULL) // boundary facet
 		countRayPLCFacetIntersections(randomRay, fHandle, nIntersections);
+		
 		
 //	cout << "Total number of intersections: " << nIntersections << endl;
 	return (nIntersections % 2 == 0) ? true : false;
@@ -2018,7 +2019,7 @@ void CDTGenerator::generate()
 //	removeLocalDegeneracies();
 	cout << "Skipping explicit local degeneracy removal, CGAL performs symbolic perturbation by default!!" << endl;
 	recoverConstraintFacets();
-	removeExteriorTetrahedrons(); // removes tetrahedrons from cdtMesh which are outside input PLC
+	//removeExteriorTetrahedrons(); // removes tetrahedrons from cdtMesh which are outside input PLC
 
 }
 
