@@ -1752,7 +1752,7 @@ void CDTGenerator::recoverConstraintFacets()
 				}
 			}
 			cout << "Sewing 1 starts..." << endl;
-			tempLCC.sew3_same_facets();
+			tempLCC.sew3_same_facets(); // tempLCC contains all intersecting tets
 			cout << "Sewing 1 ends!!" << endl;
 			// copy the boundary facet to cavityLCC(adds only those facets which are on boundary)
 			for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator fIter = tempLCC.one_dart_per_cell<2>().begin(), fIterEnd = tempLCC.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
@@ -1766,14 +1766,13 @@ void CDTGenerator::recoverConstraintFacets()
 					continue;
 			}
 			//// sew 2-cells at boundaries
-			sew2CellsWithDartInfoFromEdge(cavityLCC); // cavity is created
+			sew2CellsWithDartInfoFromEdge(cavityLCC); // cavityLCC contains boundary facets of tempLCC
 		
 //			cout << "Cavity verification started!!" << endl;
 			// CAVITY VERIFICATION/EXPANSION:
 			//// create queue of non strongly Delaunay faces in cavityLCC
 			vector<LCCWithDartInfo::Dart_handle> nonStronglyDelaunayFacetsInCavity;
 			LCCWithDartInfo::Dart_handle correspondingFacetInCavity;
-
 			//// initialize vector
 			for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator nonStrongFaceIter = cavityLCC.one_dart_per_cell<2>().begin(), nonStrongFaceIterEnd = cavityLCC.one_dart_per_cell<2>().end(); nonStrongFaceIter != nonStrongFaceIterEnd; nonStrongFaceIter++)	
 				if (isNonStronglyDelaunayFacet(nonStrongFaceIter, cavityLCC))  
@@ -1794,30 +1793,17 @@ void CDTGenerator::recoverConstraintFacets()
 				//// Explore all faces of this cell
 				for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator facetInCellHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).begin(), facetInCellEndHandle = cdtMesh.one_dart_per_incident_cell<2, 3>(exteriorCellSharingNonDelaunayFacet).end(); facetInCellHandle != facetInCellEndHandle; facetInCellHandle++) 
 				{	
-					//cout << "Iteration: " << i++ << endl;
-					size_t facetLocation;
-					//cout << "Before isFacetInCavity!!" << endl;
 					if (isFacetInCavity(facetInCellHandle, cdtMesh, correspondingFacetInCavity, cavityLCC)) 
-					{
-						if (correspondingFacetInCavity != NULL)//cavityLCC.null_dart_handle)
-							remove_cell<LCCWithDartInfo, 2>(cavityLCC, correspondingFacetInCavity);
-						else
-						{
-							cout << "Dart returned by isFacetInCavity is NULL!!";
-							exit(0);
-						}
-					}	
+						remove_cell<LCCWithDartInfo, 2>(cavityLCC, correspondingFacetInCavity);
 					else
 					{
-						//cout << "In else!!" << endl;
 						CGALPoint p[3];
 						size_t i = 0;
 						for (LCC::Dart_of_orbit_range<1>::iterator pIter = cdtMesh.darts_of_orbit<1>(facetInCellEndHandle).begin(), pIterEnd = cdtMesh.darts_of_orbit<1>(facetInCellEndHandle).end(); pIter != pIterEnd; pIter++)
 							p[i++] = cdtMesh.point(pIter);
 			
 						cavityLCC.make_triangle(p[0], p[1], p[2]);
-						sew2CellsWithDartInfoFromEdge(cavityLCC);
-						//cout << "After sewing!!" << endl;
+						sew2CellsWithDartInfoFromEdge(cavityLCC); // merge this newly added facet with already existing ones.
 					}
 				}
 				// recompute list of non strongly Delaunay facets in cavityLCC
@@ -1830,10 +1816,10 @@ void CDTGenerator::recoverConstraintFacets()
 //		cout << "Cavity verification complete!!" << endl;
 //		cout << "Cavity retetrahedralization started!!" << endl;
 		// CAVITY RETETRAHEDRALIZATION		
-		vector<pair<CGALPoint, LCC::Dart_handle> > cavityVertices;
+		vector<CGALPoint> cavityVertices;
 	
-		for (LCCWithDartInfo::One_dart_per_cell_range<0, 3>::iterator pIter = cavityLCC.one_dart_per_cell<0, 3>().begin(), pIterEnd = cavityLCC.one_dart_per_cell<0, 3>().end(); pIter != pIterEnd; pIter++)	
-			cavityVertices.push_back(make_pair(cavityLCC.point(pIter), cavityLCC.info<0>(pIter)));
+		for (LCCWithDartInfo::One_dart_per_cell_range<0>::iterator pIter = cavityLCC.one_dart_per_cell<0>().begin(), pIterEnd = cavityLCC.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)	
+			cavityVertices.push_back(cavityLCC.point(pIter));
 	
 		Delaunay cavityDelaunay;
 		cavityDelaunay.insert(cavityVertices.begin(), cavityVertices.end()); // DT of cavity vertices
