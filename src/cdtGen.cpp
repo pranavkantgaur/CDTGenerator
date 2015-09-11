@@ -1815,42 +1815,43 @@ void CDTGenerator::recoverConstraintFacets()
 //		cout << "Cavity expanded, if required!!" << endl;
 //		cout << "Cavity verification complete!!" << endl;
 //		cout << "Cavity retetrahedralization started!!" << endl;
-		// CAVITY RETETRAHEDRALIZATION		
-		vector<CGALPoint> cavityVertices;
-	
-		for (LCCWithDartInfo::One_dart_per_cell_range<0>::iterator pIter = cavityLCC.one_dart_per_cell<0>().begin(), pIterEnd = cavityLCC.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)	
-			cavityVertices.push_back(cavityLCC.point(pIter));
-	
-		Delaunay cavityDelaunay;
-		cavityDelaunay.insert(cavityVertices.begin(), cavityVertices.end()); // DT of cavity vertices
+			// CAVITY RETETRAHEDRALIZATION		
+			vector<CGALPoint> cavityVertices;
 		
-		//// remove intersecting tets from cdtMesh(make way for new tets)
-		for (vector<LCC::Dart_handle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
-			remove_cell<LCC, 3>(cdtMesh, *tetIter); 
-//		cout << "Intersecting tets removed from mesh!!" << endl;
+			for (LCCWithDartInfo::One_dart_per_cell_range<0>::iterator pIter = cavityLCC.one_dart_per_cell<0>().begin(), pIterEnd = cavityLCC.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)	
+				cavityVertices.push_back(cavityLCC.point(pIter));
+	
+			Delaunay cavityDelaunay;
+			cavityDelaunay.insert(cavityVertices.begin(), cavityVertices.end()); // DT of cavity vertices
+			
+			//// remove intersecting tets from cdtMesh(make way for new tets)
+			for (vector<LCC::Dart_handle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
+				remove_cell<LCC, 3>(cdtMesh, *tetIter); 
+	//		cout << "Intersecting tets removed from mesh!!" << endl;
 		
-		// mark each cell of DT as either inside/outside cavity
-		for (Delaunay::Finite_cells_iterator cIter = cavityDelaunay.finite_cells_begin(), cIterEnd = cavityDelaunay.finite_cells_end(); cIter != cIterEnd; cIter++)
-		{
-			if (isTetInsideCavity(cIter, cavityLCC))
-			{
-				// create identical 3-cell in cdtMesh
-				CGALPoint p[4];
-				for (size_t i = 0; i < 4; i++)
-					p[i] = ((*cIter).vertex(i))->point();
-				cdtMesh.make_tetrahedron(p[0], p[1], p[2], p[3]); 
+			// mark each cell of DT as either inside/outside cavity
+			for (Delaunay::Finite_cells_iterator cIter = cavityDelaunay.finite_cells_begin(), cIterEnd = cavityDelaunay.finite_cells_end(); cIter != cIterEnd; cIter++)
+			{	
+				if (isTetInsideCavity(cIter, cavityLCC))
+				{
+					// create identical 3-cell in cdtMesh
+					CGALPoint p[4];
+					for (size_t i = 0; i < 4; i++)
+						p[i] = ((*cIter).vertex(i))->point();
+					cdtMesh.make_tetrahedron(p[0], p[1], p[2], p[3]); 
+				}
+				else
+					continue;
 			}
-			else
-				continue;
+			cout << "Sewing 2 starts..." << endl;
+			cdtMesh.sew3_same_facets();
+			cout << "Sewing 2 ends!!" << endl;
+	//		cout << "Cavity retetrahedralization complete!!" << endl;
+			cout << "Facet recovery iteration: #" << faceRecoveryID << endl;		
+			faceRecoveryID++;
+			computeMissingConstraintFacets(missingConstraintFacets);
 		}
-		cout << "Sewing 2 starts..." << endl;
-		cdtMesh.sew3_same_facets();
-		cout << "Sewing 2 ends!!" << endl;
-//		cout << "Cavity retetrahedralization complete!!" << endl;
-		cout << "Facet recovery iteration: #" << faceRecoveryID << endl;		
-		faceRecoveryID++;
-	}
-	cout << "Constraint facets recovered!!" << endl;
+		cout << "Constraint facets recovered!!" << endl;
 }
 
 
