@@ -112,13 +112,13 @@ class CDTGenerator
 		void markInfiniteVertexDart(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, int);
 		void markInfiniteVertexDart(LCC::Dart_handle, LCC&, int);
 
-		bool isInfinite(LCCWithIntInfo::Dart_handle, const LCCWithIntInfo&, int, size_t);
-		bool isInfinite(LCC::Dart_handle, const LCC&, int, size_t);
+		bool isInfinite(LCCWithIntInfo::Dart_handle&, const LCCWithIntInfo&, int, size_t);
+		bool isInfinite(LCC::Dart_handle&, const LCC&, int, size_t);
 		void recoverConstraintSegments();
-		void splitMissingSegment(DartHandle);
-		void updatePLCAndDT(CGALPoint&, DartHandle);
+		void splitMissingSegment(DartHandle&);
+		void updatePLCAndDT(CGALPoint&, DartHandle&);
 		float computeSegmentLength(CGALPoint&, CGALPoint&);
-		size_t determineSegmentType(DartHandle);
+		size_t determineSegmentType(DartHandle&);
 		bool isVertexAcute(DartHandle);
 		float dotProduct(DartHandle, DartHandle);
 		void computeReferencePoint(CGALPoint*, DartHandle);
@@ -131,8 +131,8 @@ class CDTGenerator
 
 		void readPLCInput();
 
-		bool areGeometricallySameSegments(DartHandle, DartHandle, LCC&);
-		bool areGeometricallySameSegmentsWithDartInfo(LCCWithDartInfo::Dart_handle, LCCWithDartInfo::Dart_handle, LCCWithDartInfo&);
+		bool areGeometricallySameSegments(DartHandle&, DartHandle&, LCC&);
+		bool areGeometricallySameSegmentsWithDartInfo(LCCWithDartInfo::Dart_handle&, LCCWithDartInfo::Dart_handle&, LCCWithDartInfo&);
 		void sew2CellsFromEdge(LCC &);
 		void sew2CellsWithDartInfoFromEdge(LCCWithDartInfo &);
 
@@ -148,17 +148,17 @@ class CDTGenerator
 		void removeLocalDegeneracies();
 
 		// constraint facet recovery
-		bool areFacetTetIntersecting(DartHandle, DartHandle); // first 2 arguments specify the dimension of first and second cells respectively.
+		bool areFacetTetIntersecting(DartHandle&, DartHandle&); // first 2 arguments specify the dimension of first and second cells respectively.
 		void computeMissingConstraintFacets(vector<DartHandle>&);
 		void recoverConstraintFacets();
-		bool isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle, LCCWithDartInfo&); //TODO
-		bool facetsHaveSameGeometry(LCC::Dart_handle, LCC&, LCCWithDartInfo::Dart_handle, LCCWithDartInfo&); // TODO
-		bool isFacetInCavity(LCC::Dart_handle, LCC&, LCCWithDartInfo::Dart_handle&, LCCWithDartInfo&);
+		bool isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle&, LCCWithDartInfo&); //TODO
+		bool facetsHaveSameGeometry(LCC::Dart_handle&, LCC&, LCCWithDartInfo::Dart_handle&, LCCWithDartInfo&); // TODO
+		bool isFacetInCavity(LCC::Dart_handle&, LCC&, LCCWithDartInfo::Dart_handle&, LCCWithDartInfo&);
 	
 		bool isTetInsideCavity(Delaunay::Cell_handle, LCCWithDartInfo&);
-		bool rayIntersectsFacet(CGALRay, LCCWithDartInfo::Dart_handle, LCCWithDartInfo&);
-		void countRayPLCFacetIntersections(CGALRay, LCC::Dart_handle, size_t &);
-		bool isCellOutsidePLC(LCC::Dart_handle);
+		bool rayIntersectsFacet(CGALRay&, LCCWithDartInfo::Dart_handle&, LCCWithDartInfo&);
+		void countRayPLCFacetIntersections(CGALRay&, LCC::Dart_handle&, size_t &);
+		bool isCellOutsidePLC(LCC::Dart_handle&, CGALPoint&);
 		void removeExteriorTetrahedrons();
 
 };
