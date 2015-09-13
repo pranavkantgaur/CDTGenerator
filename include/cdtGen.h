@@ -120,8 +120,8 @@ class CDTGenerator
 		float computeSegmentLength(CGALPoint&, CGALPoint&);
 		size_t determineSegmentType(DartHandle&);
 		bool isVertexAcute(DartHandle);
-		float dotProduct(DartHandle, DartHandle);
-		void computeReferencePoint(CGALPoint*, DartHandle);
+		float dotProduct(DartHandle&, DartHandle&);
+		void computeReferencePoint(CGALPoint*, DartHandle&);
 		size_t computeCircumradius(CGALPoint&, CGALPoint&, CGALPoint&);
 		void formMissingSegmentsQueue();//vector<DartHandle>&);
 		void computeDelaunayTetrahedralization(int);

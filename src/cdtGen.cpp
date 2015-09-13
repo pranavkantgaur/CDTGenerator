@@ -833,24 +833,6 @@ float CDTGenerator::dotProduct(DartHandle& segment1Handle, DartHandle& segment2H
 	return v1Dotv2;
 }
 
-/*! \fn float CDTGenerator::vectorMagnitude(DartHandle inputSegmentHandle)
-    \brief Computes magnitue of input vector
-
-    \param [in] inputSegmentHandle DartHandle of input segment
-*/
-float CDTGenerator::vectorMagnitude(DartHandle& inputSegmentHandle)
-{
-	CGALPoint segmentVertices[2];
-
-	segmentVertices[0] = plc.point(inputSegmentHandle);
-	segmentVertices[1] = plc.point(plc.beta(inputSegmentHandle, 1));	
-
-	CGALPoint vector = CGALPoint(segmentVertices[0].x() - segmentVertices[1].x(), segmentVertices[0].y() - segmentVertices[1].y(), segmentVertices[0].z() - segmentVertices[1].z());
-
-	float vectorMagnitude = sqrtf(powf(vector.x(), 2.0) + powf(vector.y(), 2.0) + powf(vector.z(), 2.0));
-
-	return vectorMagnitude;
-}
 
 
 /*! \fn bool CDTGenerator::isVertexAcute(DartHandle inputPointHandle)
