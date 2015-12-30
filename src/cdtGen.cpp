@@ -1524,19 +1524,19 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle& fHandle, LCC& lcc, L
 	size_t i = 0;
 //	callID++; //DEBUG statement
 //	cout << "Call number: " << callID << endl;
-
+	LCC testLCC;
 	for (LCC::Dart_of_orbit_range<1>::iterator pHandleBegin = lcc.darts_of_orbit<1>(fHandle).begin(), pHandleEnd = lcc.darts_of_orbit<1>(fHandle).end(); pHandleBegin != pHandleEnd; pHandleBegin++)	
 		p[i++] = lcc.point(pHandleBegin);
 
-	LCC::Dart_handle d1 = lcc.make_triangle(p[0], p[1], p[2]);
+	LCC::Dart_handle d1 = testLCC.make_triangle(p[0], p[1], p[2]);
 
 	i = 0;
 	for (LCCWithDartInfo::Dart_of_orbit_range<1>::iterator pIter = cavityLCC.darts_of_orbit<1>(facetInCavity).begin(),  pIterEnd = cavityLCC.darts_of_orbit<1>(facetInCavity).end(); pIter != pIterEnd; pIter++)
 		p[i++] = cavityLCC.point(pIter);
 
 
-	LCC::Dart_handle d2 = lcc.make_triangle(p[0], p[1], p[2]);
-	if (lcc.are_facets_same_geometry(d1, d2))
+	LCC::Dart_handle d2 = testLCC.make_triangle(p[0], p[1], p[2]);
+	if (testLCC.are_facets_same_geometry(d1, d2))
 		return true;
 	else
 		return false;
@@ -1675,8 +1675,16 @@ void CDTGenerator::recoverConstraintFacets()
 
 //		cout << "Infinite cells removed!!" << endl;
 		size_t faceRecoveryID = 0;
+		unsigned int nTet;
 		while (missingConstraintFacets.size() != 0)
 		{
+
+			nTet = 0;
+			for (LCC::One_dart_per_cell_range<3>::iterator cellIter = cdtMesh.one_dart_per_cell<3>().begin(), cellIterEnd = cdtMesh.one_dart_per_cell<3>().end(); cellIter != cellIterEnd; cellIter++)
+				nTet++;
+
+			cout << "Number of tets: " << nTet << endl;
+
 			DartHandle missingFacetHandle = missingConstraintFacets.back(); // test for each missing facet
 			missingConstraintFacets.pop_back();
 		
@@ -1722,10 +1730,12 @@ void CDTGenerator::recoverConstraintFacets()
 							continue;						
 					}
 				}
+
 			}
 			cout << "Sewing 1 starts..." << endl;
 			tempLCC.sew3_same_facets(); // tempLCC contains all intersecting tets
 			cout << "Sewing 1 ends!!" << endl;
+			
 			// copy the boundary facet to cavityLCC(adds only those facets which are on boundary)
 			for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator fIter = tempLCC.one_dart_per_cell<2>().begin(), fIterEnd = tempLCC.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
 			{
@@ -1822,6 +1832,7 @@ void CDTGenerator::recoverConstraintFacets()
 			cout << "Facet recovery iteration: #" << faceRecoveryID << endl;		
 			faceRecoveryID++;
 			computeMissingConstraintFacets(missingConstraintFacets);
+
 		}
 		cout << "Constraint facets recovered!!" << endl;
 }
