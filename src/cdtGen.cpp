@@ -1596,7 +1596,7 @@ bool CDTGenerator::rayIntersectsFacet(CGALRay& ray, LCCWithDartInfo::Dart_handle
  *  \param [in] cavityLCC LCC representation of cavity.
  *  \return True if given tetrahedron is inside cavityLCC.
  */
-bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo& cavityLCC)
+/*bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo& cavityLCC)
 {
 	CGALPoint circumcenter1 = circumcenter(ch->vertex(0)->point(), ch->vertex(1)->point(), ch->vertex(2)->point(), ch->vertex(3)->point());
 
@@ -1617,6 +1617,42 @@ bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo& 
 	}
 	return (nIntersections % 2) ? false : true;
 }
+*/
+
+
+/*! \fn bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo& cavityLCC)
+ *  \brief Determines whether given 3-cell is inside Cavity boundary.
+ *  \param [in] ch Cell handle pointing to the query tetrahedron.
+ *  \param [in] cavityLCC LCC representation of cavity.
+ *  \return True if given tetrahedron is inside cavityLCC.
+ */
+bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo& cavityLCC)
+{
+	CGALPoint circumcenter1 = circumcenter(ch->vertex(0)->point(), ch->vertex(1)->point(), ch->vertex(2)->point(), ch->vertex(3)->point());
+
+	// generate a random ray from circumcenter
+	Random r1 = Random(), r2 = Random(), r3 = Random(); // system time serves as seed.
+	CGALPoint randomEndpoint(r1.get_bits<15>(), r2.get_bits<15>(), r3.get_bits<15>()); 
+	CGALRay randomRay = CGALRay(circumcenter1, randomEndpoint);
+	// find intersection with each face of cavity
+	// if number of intersections are even then tetrahedron is outside
+	// else, tetrahedron is outside.
+	size_t nIntersections = 0;
+	// construct AABB tree of cavity:
+	vector<CGALTriangle> cavityTriangles;
+	CGALPoint p[3];
+	for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator fIter = cavityLCC.one_dart_per_cell<2>().begin(), fIterEnd = cavityLCC.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)	
+	{
+		i = 0;
+		for (LCCWithDartInfo::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cavityLCC.one_dart_per_incident_cell<0, 2>(fIter).begin(), pIterEnd = cavityLCC.one_dart_per_incident_cell<0, 2>(fIter).end(); pIter != pIterEnd; pIter++)
+			p[i++] = cavityLCC.point(pIter);
+		cavityTriangles.push_back(CGALTriangle(p[0], p[1], p[2], p[3]));
+	}
+	aabbTree tree(cavityTriangles.begin(), cavityTriangles.end());
+	// check number of intersections 
+	return (nIntersections % 2) ? false : true;
+}
+
 
 
 /*! \fn void CDTGenerator::recoverConstraintFacets()
@@ -1696,11 +1732,7 @@ void CDTGenerator::recoverConstraintFacets()
 					intersectingTets.push_back(cIter);
 			}
 				
-			int partOfIntersectingTetMark = cdtMesh.get_new_mark();
-	
-			if (partOfIntersectingTetMark == -1)
-				exit(0);
-	
+			
 			// Mark boundary facets of intersecting tets
 			LCCWithDartInfo tempLCC; 
 			LCCWithDartInfo::Dart_handle d;
@@ -1820,7 +1852,8 @@ void CDTGenerator::recoverConstraintFacets()
 					CGALPoint p[4];
 					for (size_t i = 0; i < 4; i++)
 						p[i] = ((*cIter).vertex(i))->point();
-					cdtMesh.make_tetrahedron(p[0], p[1], p[2], p[3]); 
+					cdtMesh.make_tetrahedron(p[0], p[1], p[2], p[3]);		
+				        cout << "Hi1!!" << endl;	
 				}
 				else
 					continue;
@@ -1831,7 +1864,7 @@ void CDTGenerator::recoverConstraintFacets()
 	//		cout << "Cavity retetrahedralization complete!!" << endl;
 			cout << "Facet recovery iteration: #" << faceRecoveryID << endl;		
 			faceRecoveryID++;
-			computeMissingConstraintFacets(missingConstraintFacets);
+			//computeMissingConstraintFacets(missingConstraintFacets);
 
 		}
 		cout << "Constraint facets recovered!!" << endl;
