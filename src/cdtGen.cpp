@@ -1628,6 +1628,7 @@ bool CDTGenerator::rayIntersectsFacet(CGALRay& ray, LCCWithDartInfo::Dart_handle
  */
 bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo& cavityLCC)
 {
+//	cout << "We are here!@!" << endl;
 	CGALPoint circumcenter1 = circumcenter(ch->vertex(0)->point(), ch->vertex(1)->point(), ch->vertex(2)->point(), ch->vertex(3)->point());
 
 	// generate a random ray from circumcenter
@@ -1652,9 +1653,9 @@ bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo& 
 	aabbTree tree(cavityTriangles.begin(), cavityTriangles.end());
 	// check number of intersections 
 	nIntersections = tree.number_of_intersected_primitives(randomRay);
-	cout << "Random endpoint is: " << randomEndpoint << endl;
+//	cout << "Random endpoint is: " << randomEndpoint << endl;
 	if (nIntersections != 0)
-		cout << "No. of interesctions: " << nIntersections;
+		cout << "No. of interesctions: " << nIntersections << endl;
 	
 	return (nIntersections % 2) ? false : true;
 }
@@ -1762,6 +1763,8 @@ void CDTGenerator::recoverConstraintFacets()
 						if (facetsHaveSameGeometry(fIter2, cdtMesh, fIter1, tempLCC)) 
 						{
 							tempLCC.info<0>(fIter1) = fIter2;  // TODO: more efficient possible?
+							if (tempLCC.info<0>(fIter1) == NULL)
+								cout << "NULL info in tempLCC!!" << endl;	
 							break;
 						}
 						else
@@ -1773,18 +1776,26 @@ void CDTGenerator::recoverConstraintFacets()
 			cout << "Sewing 1 starts..." << endl;
 			tempLCC.sew3_same_facets(); // tempLCC contains all intersecting tets
 			cout << "Sewing 1 ends!!" << endl;
-			
+		
 			// copy the boundary facet to cavityLCC(adds only those facets which are on boundary)
 			for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator fIter = tempLCC.one_dart_per_cell<2>().begin(), fIterEnd = tempLCC.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
 			{
-				if (tempLCC.beta<3>(fIter) == NULL)//tempLCC.null_dart_handle) // TODO: should it be NULL??
+				if (tempLCC.beta<3>(fIter) == tempLCC.null_dart_handle) 
 				{
-					d = cavityLCC.make_triangle(tempLCC.point(fIter), tempLCC.point(tempLCC.beta<1>(fIter)), tempLCC.point(tempLCC.beta<1, 1>(fIter)));
+					LCCWithDartInfo::Dart_handle d1 = fIter;
+					LCCWithDartInfo::Dart_handle d2 = tempLCC.beta<1>(fIter);
+					LCCWithDartInfo::Dart_handle d3 = tempLCC.beta<1, 1>(fIter);
+					d = cavityLCC.make_triangle(tempLCC.point(d1), tempLCC.point(d2), tempLCC.point(d3));
 					cavityLCC.info<0>(d) = tempLCC.info<0>(fIter); // stores handle to the facet in original mesh	
+					if (cavityLCC.info<0>(d) == NULL)
+						cout << "NULL info in cavityLCC!!" << endl;
+					else
+						cout << "There are some!!" << endl; 
 				}
 				else
 					continue;
-			}
+			}	
+//			cout << "tempLCC size is: " << n << endl;
 			//// sew 2-cells at boundaries
 			sew2CellsWithDartInfoFromEdge(cavityLCC); // cavityLCC contains boundary facets of tempLCC
 		
@@ -1808,6 +1819,8 @@ void CDTGenerator::recoverConstraintFacets()
 				LCCWithDartInfo::Dart_handle nonStronglyDelaunayFace = nonStronglyDelaunayFacetsInCavity.back();
 				nonStronglyDelaunayFacetsInCavity.pop_back(); // visit a non strongly Delaunay facet
 				dartToFacetIncdtMesh = cavityLCC.info<0>(nonStronglyDelaunayFace);	
+				if (dartToFacetIncdtMesh ==  NULL)
+					cout << "ERROR!!" << endl;
 				LCC::Dart_handle exteriorCellSharingNonDelaunayFacet = cdtMesh.beta<3>(dartToFacetIncdtMesh);  
 				
 				//// Explore all faces of this cell
@@ -1851,7 +1864,7 @@ void CDTGenerator::recoverConstraintFacets()
 		
 			// mark each cell of DT as either inside/outside cavity
 			for (Delaunay::Finite_cells_iterator cIter = cavityDelaunay.finite_cells_begin(), cIterEnd = cavityDelaunay.finite_cells_end(); cIter != cIterEnd; cIter++)
-			{	
+			{
 				if (isTetInsideCavity(cIter, cavityLCC))
 				{
 					// create identical 3-cell in cdtMesh
@@ -1859,7 +1872,6 @@ void CDTGenerator::recoverConstraintFacets()
 					for (size_t i = 0; i < 4; i++)
 						p[i] = ((*cIter).vertex(i))->point();
 					cdtMesh.make_tetrahedron(p[0], p[1], p[2], p[3]);		
-				        cout << "Hi1!!" << endl;	
 				}
 				else
 					continue;
