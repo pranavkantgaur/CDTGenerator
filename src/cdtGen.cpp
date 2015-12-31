@@ -1639,17 +1639,23 @@ bool CDTGenerator::isTetInsideCavity(Delaunay::Cell_handle ch, LCCWithDartInfo& 
 	// else, tetrahedron is outside.
 	size_t nIntersections = 0;
 	// construct AABB tree of cavity:
-	vector<CGALTriangle> cavityTriangles;
+	list<CGALTriangle> cavityTriangles;
 	CGALPoint p[3];
+	int i;
 	for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator fIter = cavityLCC.one_dart_per_cell<2>().begin(), fIterEnd = cavityLCC.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)	
 	{
 		i = 0;
 		for (LCCWithDartInfo::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cavityLCC.one_dart_per_incident_cell<0, 2>(fIter).begin(), pIterEnd = cavityLCC.one_dart_per_incident_cell<0, 2>(fIter).end(); pIter != pIterEnd; pIter++)
 			p[i++] = cavityLCC.point(pIter);
-		cavityTriangles.push_back(CGALTriangle(p[0], p[1], p[2], p[3]));
+		cavityTriangles.push_back(CGALTriangle(p[0], p[1], p[2]));
 	}
 	aabbTree tree(cavityTriangles.begin(), cavityTriangles.end());
 	// check number of intersections 
+	nIntersections = tree.number_of_intersected_primitives(randomRay);
+	cout << "Random endpoint is: " << randomEndpoint << endl;
+	if (nIntersections != 0)
+		cout << "No. of interesctions: " << nIntersections;
+	
 	return (nIntersections % 2) ? false : true;
 }
 
