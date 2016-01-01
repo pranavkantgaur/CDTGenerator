@@ -3,4 +3,5 @@ README.md~
 CMakeLists.txt~
 build/*
 LICENSE~
+data/output.ply
 
