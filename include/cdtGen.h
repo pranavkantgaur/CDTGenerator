@@ -22,6 +22,10 @@
 #include <CGAL/Linear_cell_complex.h>
 #include <CGAL/Linear_cell_complex_constructors.h>
 #include <CGAL/enum.h>
+#include <CGAL/AABB_tree.h>
+#include <CGAL/AABB_traits.h>
+#include <CGAL/AABB_triangle_primitive.h>
+
 
 #include "rply.h"
 
@@ -78,6 +82,10 @@ typedef Line_arc_3<SK> CGALSphericalLineArc;
 typedef Sphere_3<SK> CGALSphericalSphere;
 typedef Segment_3<SK> CGALSphericalSegment; 
 typedef Point_3<SK> CGALSphericalPoint;
+typedef std::list<CGALTriangle>::iterator Iterator;
+typedef AABB_triangle_primitive<K, Iterator> Primitive;
+typedef AABB_traits<K, Primitive> AABB_triangle_traits;
+typedef AABB_tree<AABB_triangle_traits> aabbTree;
 
 /*! \class Triangle
     \brief Represents triangle 
