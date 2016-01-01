@@ -1763,13 +1763,12 @@ void CDTGenerator::recoverConstraintFacets()
 						if (facetsHaveSameGeometry(fIter2, cdtMesh, fIter1, tempLCC)) 
 						{
 							// set info attribute of all associated darts
-							for (LCCWithDartInfo::Dart_of_cell_range<3>::iterator dartIter = tempLCC.darts_of_cell<3>(fIter1).begin(), dartIterEnd = tempLCC.darts_of_cell<3>(fIter1).end(); dartIter != dartIterEnd; dartIter++)
+							for (LCCWithDartInfo::Dart_of_cell_range<2>::iterator dartIter = tempLCC.darts_of_cell<2>(fIter1).begin(), dartIterEnd = tempLCC.darts_of_cell<2>(fIter1).end(); dartIter != dartIterEnd; dartIter++)
 							{
 								tempLCC.info<0>(dartIter) = fIter2; 
 								if (tempLCC.beta<3>(dartIter) == tempLCC.null_dart_handle)
 									cout << "Boundary facet initialized!!" << endl;
-							}
-							
+							}					
 							break;
 						}
 						else
