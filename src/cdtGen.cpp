@@ -1767,7 +1767,7 @@ void CDTGenerator::recoverConstraintFacets()
 							{
 								tempLCC.info<0>(dartIter) = fIter2; 
 								if (tempLCC.beta<3>(dartIter) == tempLCC.null_dart_handle)
-									cout << "Boundary facet initialized!!" << endl;
+									cout << "A boundary facet initialized!!" << endl;
 							}					
 							break;
 						}
@@ -1789,11 +1789,16 @@ void CDTGenerator::recoverConstraintFacets()
 					LCCWithDartInfo::Dart_handle d2 = tempLCC.beta<1>(fIter);
 					LCCWithDartInfo::Dart_handle d3 = tempLCC.beta<1, 1>(fIter);
 					d = cavityLCC.make_triangle(tempLCC.point(d1), tempLCC.point(d2), tempLCC.point(d3));
-					cavityLCC.info<0>(d) = tempLCC.info<0>(fIter); // stores handle to the facet in original mesh	
+					for (LCCWithDartInfo::Dart_of_cell_range<2>::iterator dartIter = tempLCC.darts_of_cell<2>(fIter).begin(), dartIterEnd = tempLCC.darts_of_cell<2>(fIter).end(); dartIter != dartIterEnd; dartIter++)
+						if (tempLCC.info<0>(dartIter) != NULL)	
+						{
+							cavityLCC.info<0>(d) = tempLCC.info<0>(dartIter); // stores handle to the facet in original mesh	
+							break;
+						}
+						else
+							continue;
 					if (cavityLCC.info<0>(d) == NULL)
-						cout << "NULL info in cavityLCC!!" << endl;
-					else
-						cout << "There are some!!" << endl; 
+						cout << "cavityLCC info still NULL" << endl;
 				}
 				else
 					continue;
