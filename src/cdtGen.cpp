@@ -1754,7 +1754,7 @@ void CDTGenerator::recoverConstraintFacets()
 
 				//create identical tet in tempLCC	
 				d = tempLCC.make_tetrahedron(p[0], p[1], p[2], p[3]);
-
+				
 				// idetify the identical facets in the tet from cdtMesh and corresponding tet in tempLCC
 				for (LCCWithDartInfo::One_dart_per_incident_cell_range<2, 3>::iterator fIter1 = tempLCC.one_dart_per_incident_cell<2, 3>(d).begin(), fIterEnd1 = tempLCC.one_dart_per_incident_cell<2, 3>(d).end(); fIter1 != fIterEnd1; fIter1++)
 				{
@@ -1762,16 +1762,20 @@ void CDTGenerator::recoverConstraintFacets()
 					{
 						if (facetsHaveSameGeometry(fIter2, cdtMesh, fIter1, tempLCC)) 
 						{
-							tempLCC.info<0>(fIter1) = fIter2;  // TODO: more efficient possible?
-							if (tempLCC.info<0>(fIter1) == NULL)
-								cout << "NULL info in tempLCC!!" << endl;	
+							// set info attribute of all associated darts
+							for (LCCWithDartInfo::Dart_of_cell_range<3>::iterator dartIter = tempLCC.darts_of_cell<3>(fIter1).begin(), dartIterEnd = tempLCC.darts_of_cell<3>(fIter1).end(); dartIter != dartIterEnd; dartIter++)
+							{
+								tempLCC.info<0>(dartIter) = fIter2; 
+								if (tempLCC.beta<3>(dartIter) == tempLCC.null_dart_handle)
+									cout << "Boundary facet initialized!!" << endl;
+							}
+							
 							break;
 						}
 						else
-							continue;						
+							continue;							
 					}
 				}
-
 			}
 			cout << "Sewing 1 starts..." << endl;
 			tempLCC.sew3_same_facets(); // tempLCC contains all intersecting tets
