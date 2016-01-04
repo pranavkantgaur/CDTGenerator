@@ -1522,18 +1522,42 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle& fHandle, LCC& lcc, L
 	CGALPoint p[3];
 
 	size_t i = 0;
+	float a, b, c;
 
 	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pHandle = lcc.one_dart_per_incident_cell<0, 2>(fHandle).begin(), pHandleEnd = lcc.one_dart_per_incident_cell<0, 2>(fHandle).end(); pHandle != pHandleEnd; pHandle++)
-		p[i++] = lcc.point(pHandle);
-
+	{
+		p[i] = lcc.point(pHandle);
+		a = p[i].x();
+		b = p[i].y();
+		c = p[i].z();
+		if(!isnan(a))
+			if (!isnan(b))	
+				if (!isnan(c))
+					i++;
+		else
+			return false;	
+	}
+	
 	CGALTriangle t1(p[0], p[1], p[2]);
 
 	i = 0;
 
 	for (LCCWithDartInfo::One_dart_per_incident_cell_range<0, 2>::iterator pHandle = cavityLCC.one_dart_per_incident_cell<0, 2>(facetInCavity).begin(), pHandleEnd = cavityLCC.one_dart_per_incident_cell<0, 2>(facetInCavity).end(); pHandle != pHandleEnd; pHandle++)
-		p[i++] = cavityLCC.point(pHandle);
-
+	{
+		p[i] = cavityLCC.point(pHandle);
+		a = p[i].x();
+		b = p[i].y();
+		c = p[i].z();
+		if(!isnan(a))
+			if (!isnan(b))	
+				if (!isnan(c))
+					i++;
+		else
+			return false;	
+	}
+	
 	CGALTriangle t2(p[0], p[1], p[2]);
+
 	if (!t1.is_degenerate() && !t2.is_degenerate())
 	{
 		if (t1 == t2)
