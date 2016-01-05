@@ -1530,10 +1530,8 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle& fHandle, LCC& lcc, L
 		a = p[i].x();
 		b = p[i].y();
 		c = p[i].z();
-		if(!isnan(a))
-			if (!isnan(b))	
-				if (!isnan(c))
-					i++;
+		if (!isnan(a) && !isnan(b) && !isnan(c))
+			i++;
 		else
 			return false;	
 	}
@@ -1548,10 +1546,8 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle& fHandle, LCC& lcc, L
 		a = p[i].x();
 		b = p[i].y();
 		c = p[i].z();
-		if(!isnan(a))
-			if (!isnan(b))	
-				if (!isnan(c))
-					i++;
+		if (!isnan(a) && !isnan(b) && !isnan(c))
+			i++;
 		else
 			return false;	
 	}
