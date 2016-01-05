@@ -1488,8 +1488,21 @@ bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle& d, L
 	// since local degeneracies are already removed we only need to check for input facet in Delaunay tetrahedralization of vetices of cavity.
 	
 	vector<CGALPoint> cavityPoints;
+	CGALPoint p;
+	float a, b, e;
 	for (LCCWithDartInfo::One_dart_per_cell_range<0>::iterator pIter = lcc.one_dart_per_cell<0>().begin(), pIterEnd = lcc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
-		cavityPoints.push_back(lcc.point(pIter));
+	{
+		p = lcc.point(pIter);
+		a = p.x();
+		b = p.y();
+		e = p.z();
+		if (!isnan(a) && !isnan(b) && !isnan(e))
+		{
+			cavityPoints.push_back(lcc.point(pIter));
+		}
+//		else
+//			remove_cell<LCCWithDartInfo, 0>(lcc, pIter);
+	}
 
 	Delaunay cavityDT;
 	cavityDT.insert(cavityPoints.begin(), cavityPoints.end());
@@ -1498,6 +1511,17 @@ bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle& d, L
 	Delaunay::Cell_handle c;
 	int i, j, k;
 	// test for facet
+	CGALPoint l = lcc.point(lcc.beta(d, 1, 1));
+	a = l.x();
+	b = l.y();
+	e = l.z();
+	if (isnan(a) || isnan(b) || isnan(e))
+	{
+		cout << "PROBKEM!!" << endl;
+		cout << "Nan Point is: " <<  l << endl;
+		exit(0);
+	}
+
 	if (cavityDT.is_vertex(lcc.point(d), v1))
 		if (cavityDT.is_vertex(lcc.point(lcc.beta(d, 1)), v2))
 			if (cavityDT.is_vertex(lcc.point(lcc.beta(d, 1, 1)), v3))
@@ -1742,6 +1766,22 @@ void CDTGenerator::recoverConstraintFacets()
 			remove_cell<LCC, 3>(cdtMesh, *cellIter); // infinite cells removed from cdtMesh
 
 //		cout << "Infinite cells removed!!" << endl;
+		// remove Nan's if any
+		CGALPoint p;
+		float a, b, c;
+		for (LCC::One_dart_per_cell_range<0>::iterator pIter = cdtMesh.one_dart_per_cell<0>().begin(), pIterEnd = cdtMesh.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
+		{
+			p = cdtMesh.point(pIter);			
+			a = p.x();
+			b = p.y();
+			c = p.z();
+			if (isnan(a) || isnan(b) || isnan(c))	
+			{
+				remove_cell<LCC, 0>(cdtMesh, pIter);	
+				cout << "Nan found!!" << endl;
+			}
+		}
+
 		size_t faceRecoveryID = 0;
 		unsigned int nTet;
 		while (missingConstraintFacets.size() != 0)
@@ -1871,10 +1911,16 @@ void CDTGenerator::recoverConstraintFacets()
 					}
 				}
 				// recompute list of non strongly Delaunay facets in cavityLCC
+				size_t n = 0;
 				nonStronglyDelaunayFacetsInCavity.clear();
 				for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator nonStrongFaceIter = cavityLCC.one_dart_per_cell<2>().begin(), nonStrongFaceIterEnd = cavityLCC.one_dart_per_cell<2>().end(); nonStrongFaceIter != nonStrongFaceIterEnd; nonStrongFaceIter++)	
+				{
 					if (isNonStronglyDelaunayFacet(nonStrongFaceIter, cavityLCC))  
+					{
 						nonStronglyDelaunayFacetsInCavity.push_back(nonStrongFaceIter); // handle to non strongly Delauny facets in cavityLCC
+						cout << "#" << n++ << endl;
+					}
+				}
 			}
 //		cout << "Cavity expanded, if required!!" << endl;
 //		cout << "Cavity verification complete!!" << endl;
