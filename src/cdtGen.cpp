@@ -1488,10 +1488,12 @@ bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle& d, L
 	// since local degeneracies are already removed we only need to check for input facet in Delaunay tetrahedralization of vetices of cavity.
 	
 	vector<CGALPoint> cavityPoints;
+	CGALPoint p;
+	float a, b, e;
 	for (LCCWithDartInfo::One_dart_per_cell_range<0>::iterator pIter = lcc.one_dart_per_cell<0>().begin(), pIterEnd = lcc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
 	{
 		cavityPoints.push_back(lcc.point(pIter));
-	}
+	}}
 
 	Delaunay cavityDT;
 	cavityDT.insert(cavityPoints.begin(), cavityPoints.end());
@@ -1531,7 +1533,6 @@ bool CDTGenerator::facetsHaveSameGeometry(LCC::Dart_handle& fHandle, LCC& lcc, L
 	CGALTriangle t1(p[0], p[1], p[2]);
 
 	i = 0;
-
 	for (LCCWithDartInfo::One_dart_per_incident_cell_range<0, 2>::iterator pHandle = cavityLCC.one_dart_per_incident_cell<0, 2>(facetInCavity).begin(), pHandleEnd = cavityLCC.one_dart_per_incident_cell<0, 2>(facetInCavity).end(); pHandle != pHandleEnd; pHandle++)
 	{
 		p[i++] = cavityLCC.point(pHandle);
