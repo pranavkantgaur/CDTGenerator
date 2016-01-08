@@ -1493,7 +1493,7 @@ bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle& d, L
 	for (LCCWithDartInfo::One_dart_per_cell_range<0>::iterator pIter = lcc.one_dart_per_cell<0>().begin(), pIterEnd = lcc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
 	{
 		cavityPoints.push_back(lcc.point(pIter));
-	}}
+	}
 
 	Delaunay cavityDT;
 	cavityDT.insert(cavityPoints.begin(), cavityPoints.end());
@@ -1773,46 +1773,77 @@ void CDTGenerator::recoverConstraintFacets()
 				{
 					for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter2 = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).begin(), fIterEnd2 = cdtMesh.one_dart_per_incident_cell<2, 3>(*intersectingTetIter).end(); fIter2 != fIterEnd2; fIter2++)				
 					{
-
 						if (facetsHaveSameGeometry(fIter2, cdtMesh, fIter1, tempLCC)) 
 						{
-							// set info attribute of all associated darts
-							for (LCCWithDartInfo::Dart_of_cell_range<2>::iterator dartIter = tempLCC.darts_of_cell<2>(fIter1).begin(), dartIterEnd = tempLCC.darts_of_cell<2>(fIter1).end(); dartIter != dartIterEnd; dartIter++)
-							{
-								tempLCC.info<0>(dartIter) = fIter2;
-							}										      break;
+							if (tempLCC.attribute<2>(fIter1) == NULL)
+								tempLCC.set_attribute<2>(fIter1, tempLCC.create_attribute<2>());
+							tempLCC.info<2>(fIter1) = fIter2;
+                                                        break;
 						}
 						else
-							continue;								}
+							continue;		
+					}
 				}
 			}
 			cout << "Sewing 1 starts..." << endl;
 			tempLCC.sew3_same_facets(); // tempLCC contains all intersecting tets
 			cout << "Sewing 1 ends!!" << endl;
-		
+			
+			for (LCCWithDartInfo::Dart_range::iterator fIter = tempLCC.darts().begin(), fIterEnd = tempLCC.darts().end(); fIter != fIterEnd; fIter++)
+			{
+				if (tempLCC.info<2>(fIter) == NULL)
+				{	
+					cout << "tempLCC has null info" << endl;
+					exit(0);
+				}
+				else
+					cout << "Somes facets without Non null info" << endl;
+			}
+
 			// copy the boundary facet to cavityLCC(adds only those facets which are on boundary)
 			for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator fIter = tempLCC.one_dart_per_cell<2>().begin(), fIterEnd = tempLCC.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
 			{
-				if (tempLCC.beta<3>(fIter) == tempLCC.null_dart_handle) 
+				if (tempLCC.beta<3>(fIter) == tempLCC.null_dart_handle) /// boundary facet 
 				{
+					cout << "Boundary facet found!!" << endl;
 					LCCWithDartInfo::Dart_handle d1 = fIter;
 					LCCWithDartInfo::Dart_handle d2 = tempLCC.beta<1>(fIter);
 					LCCWithDartInfo::Dart_handle d3 = tempLCC.beta<1, 1>(fIter);
 					d = cavityLCC.make_triangle(tempLCC.point(d1), tempLCC.point(d2), tempLCC.point(d3));
-					for (LCCWithDartInfo::Dart_of_cell_range<2>::iterator dartIter = tempLCC.darts_of_cell<2>(fIter).begin(), dartIterEnd = tempLCC.darts_of_cell<2>(fIter).end(); dartIter != dartIterEnd; dartIter++)
-						if (tempLCC.info<0>(dartIter) != NULL)	
+//					for (LCCWithDartInfo::Dart_of_cell_range<2>::iterator dartIter = tempLCC.darts_of_cell<2>(fIter).begin(), dartIterEnd = tempLCC.darts_of_cell<2>(fIter).end(); dartIter != dartIterEnd; dartIter++)
+						if (tempLCC.info<2>(fIter) != NULL)	
 						{
-							cavityLCC.info<0>(d) = tempLCC.info<0>(dartIter); // stores handle to the facet in original mesh	
+							if (cavityLCC.attribute<2>(d) == NULL)
+								cavityLCC.set_attribute<2>(d, cavityLCC.create_attribute<2>());
+	
+							cavityLCC.info<2>(d) = tempLCC.info<2>(fIter); // stores handle to the facet in original mesh	
 							break;
 						}
 						else
-							continue;
-					if (cavityLCC.info<0>(d) == NULL)
+						{
+							cout << "How is that possible????" << endl;
+//							continue;
+							exit(0);
+						}
+					if (cavityLCC.info<2>(d) == NULL)
+					{
 						cout << "cavityLCC info still NULL" << endl;
+						exit(0);
+					}
 				}
 				else
 					continue;
-			}	
+			}
+			for (LCCWithDartInfo::Dart_range::iterator fIter = tempLCC.darts().begin(), fIterEnd = tempLCC.darts().end(); fIter != fIterEnd; fIter++)
+			{
+				if (tempLCC.info<2>(fIter) == NULL)
+				{	
+					cout << "cavityLCC has null info" << endl;
+					exit(0);
+				}
+				else
+					cout << "Somes facets without Non null info" << endl;
+			} 
 //			cout << "tempLCC size is: " << n << endl;
 			//// sew 2-cells at boundaries
 			sew2CellsWithDartInfoFromEdge(cavityLCC); // cavityLCC contains boundary facets of tempLCC
@@ -1836,9 +1867,12 @@ void CDTGenerator::recoverConstraintFacets()
 			{
 				LCCWithDartInfo::Dart_handle nonStronglyDelaunayFace = nonStronglyDelaunayFacetsInCavity.back();
 				nonStronglyDelaunayFacetsInCavity.pop_back(); // visit a non strongly Delaunay facet
-				dartToFacetIncdtMesh = cavityLCC.info<0>(nonStronglyDelaunayFace);	
+				dartToFacetIncdtMesh = cavityLCC.info<2>(nonStronglyDelaunayFace);	
 				if (dartToFacetIncdtMesh ==  NULL)
+				{
 					cout << "ERROR!!" << endl;
+					exit(0);
+				}
 				LCC::Dart_handle exteriorCellSharingNonDelaunayFacet = cdtMesh.beta<3>(dartToFacetIncdtMesh);  
 				
 				//// Explore all faces of this cell

@@ -40,6 +40,7 @@ typedef Linear_cell_complex_traits<3, K> Traits;
 typedef Linear_cell_complex<3, 3, Traits> LCC;
 typedef LCC::Dart_handle DartHandle;
 
+/*
 struct MyDartInfo
 {
 	template<class Refs>
@@ -50,6 +51,21 @@ struct MyDartInfo
 		typedef cpp11::tuple<VertexAttribute> Attributes;
 	};	
 };
+*/
+
+struct MyDartInfo
+{
+	template<class CMap>
+	struct Dart_wrapper
+	{
+		typedef CGAL::Dart<3, CMap > Dart;
+		typedef Cell_attribute<CMap, DartHandle> Facet_attribute;
+		typedef	cpp11::tuple<void, void, Facet_attribute> Attributes;
+	};	
+};
+
+
+
 
 struct MyIntInfo
 {
@@ -61,6 +77,7 @@ struct MyIntInfo
 		typedef cpp11::tuple<VertexAttribute> Attributes;
 	};	
 };
+
 
 typedef Linear_cell_complex<3, 3, Traits, MyDartInfo> LCCWithDartInfo;
 typedef Linear_cell_complex<3, 3, Traits, MyIntInfo> LCCWithIntInfo;
