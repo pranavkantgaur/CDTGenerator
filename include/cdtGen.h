@@ -60,7 +60,8 @@ struct MyDartInfo
 	{
 		typedef CGAL::Dart<3, CMap > Dart;
 		typedef Cell_attribute<CMap, DartHandle> Facet_attribute;
-		typedef	cpp11::tuple<void, void, Facet_attribute> Attributes;
+		typedef Cell_attribute_with_point<CMap> Vertex_attribute;
+		typedef	cpp11::tuple<Vertex_attribute, void, Facet_attribute> Attributes;
 	};	
 };
 
