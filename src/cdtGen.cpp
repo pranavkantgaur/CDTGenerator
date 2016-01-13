@@ -1789,16 +1789,7 @@ void CDTGenerator::recoverConstraintFacets()
 			tempLCC.sew3_same_facets(); // tempLCC contains all intersecting tets
 			cout << "Sewing 1 ends!!" << endl;
 			
-			for (LCCWithDartInfo::Dart_range::iterator fIter = tempLCC.darts().begin(), fIterEnd = tempLCC.darts().end(); fIter != fIterEnd; fIter++)
-			{
-				if (tempLCC.info<2>(fIter) == NULL)
-				{	
-					cout << "tempLCC has null info" << endl;
-					exit(0);
-				}
-				else
-					cout << "Somes facets without Non null info" << endl;
-			}
+		
 
 			// copy the boundary facet to cavityLCC(adds only those facets which are on boundary)
 			for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator fIter = tempLCC.one_dart_per_cell<2>().begin(), fIterEnd = tempLCC.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
@@ -1834,16 +1825,7 @@ void CDTGenerator::recoverConstraintFacets()
 				else
 					continue;
 			}
-			for (LCCWithDartInfo::Dart_range::iterator fIter = tempLCC.darts().begin(), fIterEnd = tempLCC.darts().end(); fIter != fIterEnd; fIter++)
-			{
-				if (tempLCC.info<2>(fIter) == NULL)
-				{	
-					cout << "cavityLCC has null info" << endl;
-					exit(0);
-				}
-				else
-					cout << "Somes facets without Non null info" << endl;
-			} 
+			 
 //			cout << "tempLCC size is: " << n << endl;
 			//// sew 2-cells at boundaries
 			sew2CellsWithDartInfoFromEdge(cavityLCC); // cavityLCC contains boundary facets of tempLCC
@@ -1940,7 +1922,7 @@ void CDTGenerator::recoverConstraintFacets()
 	//		cout << "Cavity retetrahedralization complete!!" << endl;
 			cout << "Facet recovery iteration: #" << faceRecoveryID << endl;		
 			faceRecoveryID++;
-			//computeMissingConstraintFacets(missingConstraintFacets);
+			computeMissingConstraintFacets(missingConstraintFacets);
 
 		}
 		cout << "Constraint facets recovered!!" << endl;
