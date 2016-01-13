@@ -1463,7 +1463,7 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
 	Delaunay::Vertex_handle v1, v2, v3;
 	Delaunay::Cell_handle c;
 	int i, j, k;
-
+	missingFacetList.clear(); // start fresh
 	for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
 	{
 		if (DT.is_vertex(plc.point(fIter), v1))
@@ -1801,26 +1801,10 @@ void CDTGenerator::recoverConstraintFacets()
 					LCCWithDartInfo::Dart_handle d2 = tempLCC.beta<1>(fIter);
 					LCCWithDartInfo::Dart_handle d3 = tempLCC.beta<1, 1>(fIter);
 					d = cavityLCC.make_triangle(tempLCC.point(d1), tempLCC.point(d2), tempLCC.point(d3));
-//					for (LCCWithDartInfo::Dart_of_cell_range<2>::iterator dartIter = tempLCC.darts_of_cell<2>(fIter).begin(), dartIterEnd = tempLCC.darts_of_cell<2>(fIter).end(); dartIter != dartIterEnd; dartIter++)
-						if (tempLCC.info<2>(fIter) != NULL)	
-						{
-							if (cavityLCC.attribute<2>(d) == NULL)
-								cavityLCC.set_attribute<2>(d, cavityLCC.create_attribute<2>());
-	
-							cavityLCC.info<2>(d) = tempLCC.info<2>(fIter); // stores handle to the facet in original mesh	
-							break;
-						}
-						else
-						{
-							cout << "How is that possible????" << endl;
-//							continue;
-							exit(0);
-						}
-					if (cavityLCC.info<2>(d) == NULL)
-					{
-						cout << "cavityLCC info still NULL" << endl;
-						exit(0);
-					}
+					if (cavityLCC.attribute<2>(d) == NULL)
+						cavityLCC.set_attribute<2>(d, cavityLCC.create_attribute<2>());
+					cavityLCC.info<2>(d) = tempLCC.info<2>(fIter); // stores handle to the facet in original mesh	
+					break;					
 				}
 				else
 					continue;
