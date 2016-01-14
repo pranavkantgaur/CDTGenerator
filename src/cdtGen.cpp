@@ -1452,6 +1452,37 @@ bool CDTGenerator::areFacetTetIntersecting(DartHandle& tetHandle, DartHandle& fa
 }
 
 
+/*! \fn bool CDTGenerator::areFacetsGeometricallySame(LCC::Dart_handle fHandle1, LCC& lcc1, LCC::Dart_handle fHandle2, LCC& lcc2)
+ *  \brief Checks if the facets are geometrically same.
+ *  \param [in] fHandle1 Dart handle to facet1
+ *  \param [in] lcc1 LCC containing facet1
+ *  \param [in] fHandle2 Dart handle to facet2
+ *  \param [in] lcc2 LCC containing facet2
+ *  \return True if facets are geometrically same.
+ */
+bool CDTGenerator::areFacetsGeometricallySame(LCC::Dart_handle& fHandle1, LCC& lcc1, LCC::Dart_handle& fHandle2, LCC& lcc2)
+{
+	size_t nPointsFound = 0;
+	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter1 = lcc1.one_dart_per_incident_cell<0, 2>(fHandle1).begin(), pIterEnd1 = lcc1.one_dart_per_incident_cell<0, 2>(fHandle1).end(); pIter1 != pIterEnd1; pIter1++)
+	{
+		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter2 = lcc2.one_dart_per_incident_cell<0, 2>(fHandle2).begin(), pIterEnd2 = lcc2.one_dart_per_incident_cell<0, 2>(fHandle2).end(); pIter2 != pIterEnd2; pIter2++)
+		{
+			if (lcc1.point(pIter1) == lcc2.point(pIter2))
+			{
+				nPointsFound++;
+				break;
+			}
+			else
+				continue;
+		}
+	}
+	if (nPointsFound == 3) // assuming facets to have triangles only.
+		return true;
+	else
+		return false;
+}
+
+
 /*! \fn void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFacetList)
  *  \brief Computes list of constraint facets missing in current Delaunay triangulation.	
     \param [out] missingFacetList vector of Dart handles to missing constraint facets.	
@@ -1463,16 +1494,23 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
 	Delaunay::Vertex_handle v1, v2, v3;
 	Delaunay::Cell_handle c;
 	int i, j, k;
+	bool correspondingFacetFound = false;
 	missingFacetList.clear(); // start fresh
-	for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
+	for (LCC::One_dart_per_cell_range<2>::iterator plcFIter = plc.one_dart_per_cell<2>().begin(), plcFIterEnd = plc.one_dart_per_cell<2>().end(); plcFIter != plcFIterEnd; plcFIter++)
 	{
-		if (DT.is_vertex(plc.point(fIter), v1))
-			if (DT.is_vertex(plc.point(plc.beta(fIter, 1)), v2))
-				if (DT.is_vertex(plc.point(plc.beta(fIter, 1, 1)), v3))
-					if (DT.is_facet(v1, v2, v3, c, i, j, k))
-						continue;
-		else
-			missingFacetList.push_back(fIter); // facet is indeed missing from current output mesh.
+		correspondingFacetFound = false;
+		for (LCC::One_dart_per_cell_range<2>::iterator cdtMeshFIter = cdtMesh.one_dart_per_cell<2>().begin(), cdtMeshFIterEnd = cdtMesh.one_dart_per_cell<2>().end(); cdtMeshFIter != cdtMeshFIterEnd; cdtMeshFIter++)
+		{
+			if ((areFacetsGeometricallySame(plcFIter, plc, cdtMeshFIter, cdtMesh)) 
+			{
+				correspondingFacetFound = true;
+				break;
+			}
+			else
+				continue;
+		}
+		if (!correspondingFacetFound) // no matching facet found.
+			missingFacetList.push_back(plcFIter); 
 	}
 }
 
@@ -1707,7 +1745,6 @@ void CDTGenerator::recoverConstraintFacets()
 		LCCWithDartInfo cavityLCC;
 		LCCWithDartInfo::Dart_handle cavityFaceHandle;
 
-		computeMissingConstraintFacets(missingConstraintFacets); // list missing constraint facets
 		DartHandle d = import_from_triangulation_3(cdtMesh, DT); // initialization of cdtMesh  
 		
 		// Remove infinite cells
@@ -1728,6 +1765,7 @@ void CDTGenerator::recoverConstraintFacets()
 			remove_cell<LCC, 3>(cdtMesh, *cellIter); // infinite cells removed from cdtMesh
 
 //		cout << "Infinite cells removed!!" << endl;
+		computeMissingConstraintFacets(missingConstraintFacets); // list missing constraint facets
 
 		size_t faceRecoveryID = 0;
 		unsigned int nTet;
