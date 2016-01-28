@@ -1462,21 +1462,81 @@ bool CDTGenerator::areFacetTetIntersecting(DartHandle& tetHandle, DartHandle& fa
  */
 bool CDTGenerator::areFacetsGeometricallySame(LCC::Dart_handle& fHandle1, LCC& lcc1, LCC::Dart_handle& fHandle2, LCC& lcc2)
 {
-	size_t nPointsFound = 0;
-	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter1 = lcc1.one_dart_per_incident_cell<0, 2>(fHandle1).begin(), pIterEnd1 = lcc1.one_dart_per_incident_cell<0, 2>(fHandle1).end(); pIter1 != pIterEnd1; pIter1++)
-	{
-		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter2 = lcc2.one_dart_per_incident_cell<0, 2>(fHandle2).begin(), pIterEnd2 = lcc2.one_dart_per_incident_cell<0, 2>(fHandle2).end(); pIter2 != pIterEnd2; pIter2++)
+	// fix a point in facet1
+	// search for this point in facet 2
+	// if found,
+	// go in both directions one by one and check if vertices match
+
+	bool matchingPointFound =  false;
+	bool matchNotFound = false;
+
+	LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = lcc2.one_dart_per_incident_cell<0, 2>(fHandle2).begin();
+	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIterEnd = lcc2.one_dart_per_incident_cell<0, 2>(fHandle2).end(); pIter != pIterEnd; pIter++)
+		if (lcc2.point(pIter) == lcc1.point(fHandle1))
 		{
-			if (lcc1.point(pIter1) == lcc2.point(pIter2))
+			matchingPointFound = true;
+			break;
+		}
+		else
+			continue;
+	if (matchingPointFound) 
+	{
+		// look for other points
+		size_t nMatchedPoints = 0;
+		LCC::Dart_of_orbit_range<0>::iterator pIter1 = lcc1.darts_of_orbit<0>(fHandle1).begin();
+		LCC::Dart_of_orbit_range<1>::iterator pIter2 = lcc2.darts_of_orbit<1>(pIter).begin();
+		LCC::Dart_of_orbit_range<0>::iterator pIter1End = lcc1.darts_of_orbit<0>(fHandle1).end();
+		 LCC::Dart_of_orbit_range<1>::iterator pIter2End = lcc2.darts_of_orbit<1>(pIter).end();
+		for (; ; pIter1++, pIter2++)
+		{
+			if (lcc1.point(pIter1) != lcc2.point(lcc2.other_extremity(pIter2)))
 			{
-				nPointsFound++;
+				matchNotFound = true;
 				break;
 			}
-			else
-				continue;
+			if (pIter1 != pIter1End)
+			{
+				pIter1 = lcc1.darts_of_orbit<0>(fHandle1).begin(); // faking circular structure
+			}
+			if (pIter2 != pIter2End)
+			{
+				pIter2 = lcc.darts_of_orbit<1>(pIter).begin();
+			}
+			nMatchedPoints++;
+			if (nMatchedPoints == 3)
+				break;
+		}
+		if (matchNotFound) // check in other direction
+		{
+			nMatchedPoints = 0;
+			pIter1 = lcc1.darts_of_orbit<1>(fHandle1).begin(); 
+			pIter2 = lcc2.darts_of_orbit<1>(pIter).begin();
+			for (LCC::Dart_of_orbit_range<1>::iterator pIter1End = lcc1.darts_of_orbit<1>(fHandle1).end(), pIter2End = lcc2.darts_of_orbit<1>(pIter).end(); ; pIter1++, pIter2++)
+			{
+				if (lcc1.point(pIter1) != lcc2.point(pIter2))
+				{
+					matchNotFound = true;
+					break;
+				}
+			
+				if (pIter1 != pIter1End)
+				{
+					pIter1 = lcc1.darts_of_orbit<1>(fHandle1).begin(); // faking circular structure
+				}
+				if (pIter2 != pIter2End)
+				{
+					pIter2 = lcc2.darts_of_orbit<1>(pIter).begin();
+				}
+				nMatchedPoints++;
+				if (nMatchedPoints == 3)
+					break;
+			}
 		}
 	}
-	if (nPointsFound == 3) // assuming facets to have triangles only.
+	else
+		return false;
+		
+	if (!matchNotFound)
 		return true;
 	else
 		return false;
@@ -1487,6 +1547,7 @@ bool CDTGenerator::areFacetsGeometricallySame(LCC::Dart_handle& fHandle1, LCC& l
  *  \brief Computes list of constraint facets missing in current Delaunay triangulation.	
     \param [out] missingFacetList vector of Dart handles to missing constraint facets.	
  */
+/*
 void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFacetList)
 {
 	// test which facets are not present in Delaunay triangulation 
@@ -1501,7 +1562,7 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
 		correspondingFacetFound = false;
 		for (LCC::One_dart_per_cell_range<2>::iterator cdtMeshFIter = cdtMesh.one_dart_per_cell<2>().begin(), cdtMeshFIterEnd = cdtMesh.one_dart_per_cell<2>().end(); cdtMeshFIter != cdtMeshFIterEnd; cdtMeshFIter++)
 		{
-			if ((areFacetsGeometricallySame(plcFIter, plc, cdtMeshFIter, cdtMesh)) 
+			if (areFacetsGeometricallySame(plcFIter, plc, cdtMeshFIter, cdtMesh)) 
 			{
 				correspondingFacetFound = true;
 				break;
@@ -1512,6 +1573,13 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
 		if (!correspondingFacetFound) // no matching facet found.
 			missingFacetList.push_back(plcFIter); 
 	}
+}
+*/
+
+void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFacetList)
+{
+	// modify are_facets_same_geometry
+	// run modified sew3_same_facets which will return the common facets
 }
 
 

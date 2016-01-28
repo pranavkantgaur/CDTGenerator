@@ -158,6 +158,7 @@ class CDTGenerator
 		void readPLCInput();
 
 		bool areGeometricallySameSegments(DartHandle&, DartHandle&, LCC&);
+		bool areFacetsGeometricallySame(LCC::Dart_handle&, LCC&, LCC::Dart_handle&, LCC&);
 		bool areGeometricallySameSegmentsWithDartInfo(LCCWithDartInfo::Dart_handle&, LCCWithDartInfo::Dart_handle&, LCCWithDartInfo&);
 		void sew2CellsFromEdge(LCC &);
 		void sew2CellsWithDartInfoFromEdge(LCCWithDartInfo &);
