@@ -1486,7 +1486,7 @@ bool CDTGenerator::areFacetsGeometricallySame(LCC::Dart_handle& fHandle1, LCC& l
 		LCC::Dart_of_orbit_range<0>::iterator pIter1 = lcc1.darts_of_orbit<0>(fHandle1).begin();
 		LCC::Dart_of_orbit_range<1>::iterator pIter2 = lcc2.darts_of_orbit<1>(pIter).begin();
 		LCC::Dart_of_orbit_range<0>::iterator pIter1End = lcc1.darts_of_orbit<0>(fHandle1).end();
-		 LCC::Dart_of_orbit_range<1>::iterator pIter2End = lcc2.darts_of_orbit<1>(pIter).end();
+		LCC::Dart_of_orbit_range<1>::iterator pIter2End = lcc2.darts_of_orbit<1>(pIter).end();
 		for (; ; pIter1++, pIter2++)
 		{
 			if (lcc1.point(pIter1) != lcc2.point(lcc2.other_extremity(pIter2)))
@@ -1500,17 +1500,19 @@ bool CDTGenerator::areFacetsGeometricallySame(LCC::Dart_handle& fHandle1, LCC& l
 			}
 			if (pIter2 != pIter2End)
 			{
-				pIter2 = lcc.darts_of_orbit<1>(pIter).begin();
+				pIter2 = lcc2.darts_of_orbit<1>(pIter).begin();
 			}
 			nMatchedPoints++;
 			if (nMatchedPoints == 3)
 				break;
 		}
+		
 		if (matchNotFound) // check in other direction
 		{
 			nMatchedPoints = 0;
-			pIter1 = lcc1.darts_of_orbit<1>(fHandle1).begin(); 
-			pIter2 = lcc2.darts_of_orbit<1>(pIter).begin();
+			LCC::Dart_of_orbit_range<1>::iterator pIter1 = lcc1.darts_of_orbit<1>(fHandle1).begin(); 
+			LCC::Dart_of_orbit_range<1>::iterator pIter2 = lcc2.darts_of_orbit<1>(pIter).begin();
+		
 			for (LCC::Dart_of_orbit_range<1>::iterator pIter1End = lcc1.darts_of_orbit<1>(fHandle1).end(), pIter2End = lcc2.darts_of_orbit<1>(pIter).end(); ; pIter1++, pIter2++)
 			{
 				if (lcc1.point(pIter1) != lcc2.point(pIter2))
