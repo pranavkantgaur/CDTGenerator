@@ -1462,83 +1462,77 @@ bool CDTGenerator::areFacetTetIntersecting(DartHandle& tetHandle, DartHandle& fa
  */
 bool CDTGenerator::areFacetsGeometricallySame(LCC::Dart_handle& fHandle1, LCC& lcc1, LCC::Dart_handle& fHandle2, LCC& lcc2)
 {
-	// fix a point in facet1
-	// search for this point in facet 2
-	// if found,
-	// go in both directions one by one and check if vertices match
+	// copy content of lcc1 facet and lcc2 facet into doubly linked lists
+	// check if first point of facet1 is in facet 2, if found, STOP.
+	// traverse in both directions
+	// return True if found in any of them.
+	size_t i = 0;
+	LCC::Dart_handle facet1Vertices[3], facet2Vertices[3];
+	LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter1 = lcc1.one_dart_per_incident_cell<0, 2>(fHandle1).begin();
+	LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter2 = lcc2.one_dart_per_incident_cell<0, 2>(fHandle2).begin();
 
-	bool matchingPointFound =  false;
-	bool matchNotFound = false;
-
-	LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = lcc2.one_dart_per_incident_cell<0, 2>(fHandle2).begin();
-	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIterEnd = lcc2.one_dart_per_incident_cell<0, 2>(fHandle2).end(); pIter != pIterEnd; pIter++)
-		if (lcc2.point(pIter) == lcc1.point(fHandle1))
-		{
-			matchingPointFound = true;
-			break;
+	for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter1End = lcc1.one_dart_per_incident_cell<0, 2>(fHandle1).end(), pIter2End = lcc2.one_dart_per_incident_cell<0, 2>(fHandle2).end(); pIter1 != pIter1End && pIter2 != pIter2End; pIter1++, pIter2++)
+	{
+		facet1Vertices[i] = pIter1;
+		facet2Vertices[i++] = pIter2;
+	}
+	int matchingFacet1ID = 0, matchingFacet2ID = 0;
+	int nMatches = 0;
+	i = 0;
+	int k, l;
+	for (int j = 0; j < 3; j++)
+		if (lcc1.point(facet1Vertices[i]) == lcc2.point(facet2Vertices[j]))
+		{ 
+			matchingFacet1ID = i;
+			matchingFacet2ID = j;
+			nMatches++;
+			k = i;
+			l = j;
+			k++;
+			l++;
+			// Search in both directions now.
+			while ( k != matchingFacet1ID && nMatches != 3) // same direction
+			{
+				if (k == 3)
+					k = 0;
+				if (l == 3)
+					l = 0;
+				if (lcc1.point(facet1Vertices[k++]) == lcc2.point(facet2Vertices[l++]))
+				{
+					nMatches++;
+					continue;
+				}
+				else
+					break;
+			}
+			if (nMatches < 3) // reverse direction
+			{
+				k = matchingFacet1ID;
+				l = matchingFacet2ID;
+				nMatches = 0;
+				k++;
+				l--;
+				while (k != matchingFacet1ID && nMatches != 3)
+				{
+					if (k == 3)
+						k = 0;
+					if (l < 0)
+						l = 2;
+					if (lcc1.point(facet1Vertices[k++]) == lcc2.point(facet2Vertices[l--]))
+					{
+						nMatches++;
+						continue;
+					}
+					else
+						break;
+				}
+			}
+			else
+				break;
 		}
 		else
 			continue;
-	if (matchingPointFound) 
-	{
-		// look for other points
-		size_t nMatchedPoints = 0;
-		LCC::Dart_of_orbit_range<0>::iterator pIter1 = lcc1.darts_of_orbit<0>(fHandle1).begin();
-		LCC::Dart_of_orbit_range<1>::iterator pIter2 = lcc2.darts_of_orbit<1>(pIter).begin();
-		LCC::Dart_of_orbit_range<0>::iterator pIter1End = lcc1.darts_of_orbit<0>(fHandle1).end();
-		LCC::Dart_of_orbit_range<1>::iterator pIter2End = lcc2.darts_of_orbit<1>(pIter).end();
-		for (; ; pIter1++, pIter2++)
-		{
-			if (lcc1.point(pIter1) != lcc2.point(lcc2.other_extremity(pIter2)))
-			{
-				matchNotFound = true;
-				break;
-			}
-			if (pIter1 != pIter1End)
-			{
-				pIter1 = lcc1.darts_of_orbit<0>(fHandle1).begin(); // faking circular structure
-			}
-			if (pIter2 != pIter2End)
-			{
-				pIter2 = lcc2.darts_of_orbit<1>(pIter).begin();
-			}
-			nMatchedPoints++;
-			if (nMatchedPoints == 3)
-				break;
-		}
-		
-		if (matchNotFound) // check in other direction
-		{
-			nMatchedPoints = 0;
-			LCC::Dart_of_orbit_range<1>::iterator pIter1 = lcc1.darts_of_orbit<1>(fHandle1).begin(); 
-			LCC::Dart_of_orbit_range<1>::iterator pIter2 = lcc2.darts_of_orbit<1>(pIter).begin();
-		
-			for (LCC::Dart_of_orbit_range<1>::iterator pIter1End = lcc1.darts_of_orbit<1>(fHandle1).end(), pIter2End = lcc2.darts_of_orbit<1>(pIter).end(); ; pIter1++, pIter2++)
-			{
-				if (lcc1.point(pIter1) != lcc2.point(pIter2))
-				{
-					matchNotFound = true;
-					break;
-				}
-			
-				if (pIter1 != pIter1End)
-				{
-					pIter1 = lcc1.darts_of_orbit<1>(fHandle1).begin(); // faking circular structure
-				}
-				if (pIter2 != pIter2End)
-				{
-					pIter2 = lcc2.darts_of_orbit<1>(pIter).begin();
-				}
-				nMatchedPoints++;
-				if (nMatchedPoints == 3)
-					break;
-			}
-		}
-	}
-	else
-		return false;
-		
-	if (!matchNotFound)
+	if (nMatches == 3)
 		return true;
 	else
 		return false;
@@ -1549,7 +1543,6 @@ bool CDTGenerator::areFacetsGeometricallySame(LCC::Dart_handle& fHandle1, LCC& l
  *  \brief Computes list of constraint facets missing in current Delaunay triangulation.	
     \param [out] missingFacetList vector of Dart handles to missing constraint facets.	
  */
-/*
 void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFacetList)
 {
 	// test which facets are not present in Delaunay triangulation 
@@ -1576,13 +1569,8 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
 			missingFacetList.push_back(plcFIter); 
 	}
 }
-*/
 
-void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFacetList)
-{
-	// modify are_facets_same_geometry
-	// run modified sew3_same_facets which will return the common facets
-}
+
 
 
 /*! \fn bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle d, LCCWithDartInfo lcc)
