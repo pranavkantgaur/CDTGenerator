@@ -1538,6 +1538,96 @@ bool CDTGenerator::areFacetsGeometricallySame(LCC::Dart_handle& fHandle1, LCC& l
 		return false;
 }
 
+/*
+void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFacetList)
+{
+
+
+	// make a LCC which is union of PLC and cdtMesh
+	LCC testLCC = cdtMesh;
+	// copy facets from plc to testLCC
+	for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
+	{
+		i = 0;
+		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>(fIter).begin(), pIterEnd = plc.one-one_dart_per_incident_cell<0, 2>(fIter).end(); pIter != pIterEnd; pIter++)
+			p[i++] = plc.point(fIter)
+		
+		testLCC.make_triangle(p[0], p[1], p[2]);
+	}
+
+        int mark = testLCC.get_new_mark();
+        testLCC.negate_mark(mark);
+                
+	// implement the logic of sew3_same_facets with call to above facet geometry function instead of CGAL function.
+	unsigned int res = 0;
+      	std::map<Point, std::vector<Dart_handle> > one_dart_per_facet;
+	int mymark = testLCC.get_new_mark();
+      	CGAL_assertion( mymark!=-1 );
+
+      	// First we fill the std::map by one dart per facet, and by using
+      	// the minimal point as index.
+	for (typename Dart_range::iterator it(testLCC.darts().begin()),
+             itend(testLCC.darts().end()); it!=itend; ++it )
+      	{
+        	if ( !testLCC.is_marked(it, mymark) && testLCC.is_marked(it, AMark) )
+        	{
+	        	Point min_point=point(it);
+          		Dart_handle min_dart = it;
+          		testLCC->mark(it, mymark);
+          		typename Base::template
+            		Dart_of_orbit_range<1>::iterator it2(testLCC,it);
+          		++it2;
+          		for ( ; it2.cont(); ++it2 )
+          		{
+            			Point cur_point=point(it2);
+            			testLCC.mark(it2, mymark);
+            			if ( cur_point < min_point )
+            			{
+			              min_point = cur_point;
+              min_dart = it2;
+            }
+          }
+          one_dart_per_facet[min_point].push_back(min_dart);
+        }
+        else
+          testLCC.mark(it, mymark);
+      }
+
+      // Second we run through the map: candidates for sew3 have necessary the
+      // same minimal point.
+      typename std::map<Point, std::vector<Dart_handle> >::iterator
+        itmap=one_dart_per_facet.begin(),
+        itmapend=one_dart_per_facet.end();
+
+      for ( ; itmap!=itmapend; ++itmap )
+      {
+        for ( typename std::vector<Dart_handle>::iterator
+                it1=(itmap->second).begin(),
+                it1end=(itmap->second).end(); it1!=it1end; ++it1 )
+        {
+          typename std::vector<Dart_handle>::iterator it2=it1;
+          for ( ++it2; it2!= it1end; ++it2 )
+          {
+            if ( *it1!=*it2 && is_free(*it1, 3) &&
+                 is_free(*it2, 3) &&
+                 areFacetsGeometricallySame(*it1, plc, beta(*it2, 0), cdtMesh) )
+            {
+            	continue;
+	    }
+	    else
+	    {
+	    	missingConstraintFacets.push_back(*it1); // handle to missing facet in PLC(COMPUTATIONALLY EXPENSIVE) 	
+	    }	
+          }
+        }
+      }
+
+      CGAL_assertion( testLCC.is_whole_map_marked(mymark) );
+      testLCC.free_mark(mymark);
+      testLCC.free_mark(mark);
+}
+*/
+
 
 /*! \fn void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFacetList)
  *  \brief Computes list of constraint facets missing in current Delaunay triangulation.	
@@ -1547,26 +1637,44 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
 {
 	// test which facets are not present in Delaunay triangulation 
 	// add them to the missing facet list vector
-	Delaunay::Vertex_handle v1, v2, v3;
-	Delaunay::Cell_handle c;
-	int i, j, k;
 	bool correspondingFacetFound = false;
 	missingFacetList.clear(); // start fresh
+	// copy facets from cdtMesh as we are interested only in them.
+	LCC cdtFacetLCC;
+	CGALPoint p[3];
+	size_t i;
+	for (LCC::One_dart_per_cell_range<2>::iterator fIter = cdtMesh.one_dart_per_cell<2>().begin(), fIterEnd = cdtMesh.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
+	{
+		i = 0;
+		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>(fIter).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 2>(fIter).end(); pIter != pIterEnd; pIter++)
+			p[i++] = cdtMesh.point(pIter);
+
+		cdtFacetLCC.make_triangle(p[0], p[1], p[2]);			
+	}
+//	cdtFacetLCC.sew3_same_facets();	
+	// Lets search for facets of PLC missing in cdtMesh
+	LCC::One_dart_per_cell_range<2>::iterator cdtMeshFIter = cdtFacetLCC.one_dart_per_cell<2>().begin(); 
+	LCC::One_dart_per_cell_range<2>::iterator cdtMeshFIterEnd = cdtFacetLCC.one_dart_per_cell<2>().end();
+	
 	for (LCC::One_dart_per_cell_range<2>::iterator plcFIter = plc.one_dart_per_cell<2>().begin(), plcFIterEnd = plc.one_dart_per_cell<2>().end(); plcFIter != plcFIterEnd; plcFIter++)
 	{
-		correspondingFacetFound = false;
-		for (LCC::One_dart_per_cell_range<2>::iterator cdtMeshFIter = cdtMesh.one_dart_per_cell<2>().begin(), cdtMeshFIterEnd = cdtMesh.one_dart_per_cell<2>().end(); cdtMeshFIter != cdtMeshFIterEnd; cdtMeshFIter++)
+	 	correspondingFacetFound = false;
+		for (cdtMeshFIter = cdtFacetLCC.one_dart_per_cell<2>().begin(), cdtMeshFIterEnd = cdtFacetLCC.one_dart_per_cell<2>().end(); cdtMeshFIter != cdtMeshFIterEnd; cdtMeshFIter++)
 		{
-			if (areFacetsGeometricallySame(plcFIter, plc, cdtMeshFIter, cdtMesh)) 
+		/*	if (areFacetsGeometricallySame(plcFIter, plc, cdtMeshFIter, cdtFacetLCC)) 
 			{
 				correspondingFacetFound = true;
+				// lets remove this facet from search candidates for later iterations.
 				break;
 			}
 			else
-				continue;
+		*/		continue;
 		}
+		
 		if (!correspondingFacetFound) // no matching facet found.
 			missingFacetList.push_back(plcFIter); 
+//		else // facet was found....lets remove it from future searches.
+//			remove_cell<LCC, 2>(cdtFacetLCC, cdtMeshFIter); 
 	}
 }
 
