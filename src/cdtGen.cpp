@@ -2087,10 +2087,24 @@ void CDTGenerator::recoverConstraintFacets()
 			
 			//// remove intersecting tets from cdtMesh(make way for new tets)
 			for (vector<LCC::Dart_handle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
+			{
+				for (LCC::One_dart_per_cell_range<2>::iterator fIter1 = plc.one_dart_per_cell<2>().begin(), fIterEnd1 = plc.one_dart_per_cell<2>().end(); fIter1 != fIterEnd1; fIter1++)
+					for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter2 = cdtMesh.one_dart_per_incident_cell<2, 3>(*tetIter).begin(), fIterEnd2 = cdtMesh.one_dart_per_incident_cell<2, 3>(*tetIter).end(); fIter2 != fIterEnd2; fIter2++)
+					{
+						if (areFacetsGeometricallySame(fIter1, plc, fIter2, cdtMesh))
+						{
+							missingConstraintFacets.push_back(fIter1);
+						}
+						else
+							continue;
+					}
+
 				remove_cell<LCC, 3>(cdtMesh, *tetIter); 
-	//		cout << "Intersecting tets removed from mesh!!" << endl;
+			}
+//		cout << "Intersecting tets removed from mesh!!" << endl;
 		
 			// mark each cell of DT as either inside/outside cavity
+			vector <vector<DartHandle>::iterator> missingConstraintFacetsToBeDeleted; 
 			for (Delaunay::Finite_cells_iterator cIter = cavityDelaunay.finite_cells_begin(), cIterEnd = cavityDelaunay.finite_cells_end(); cIter != cIterEnd; cIter++)
 			{
 				if (isTetInsideCavity(cIter, cavityLCC))
@@ -2099,7 +2113,25 @@ void CDTGenerator::recoverConstraintFacets()
 					CGALPoint p[4];
 					for (size_t i = 0; i < 4; i++)
 						p[i] = ((*cIter).vertex(i))->point();
-					cdtMesh.make_tetrahedron(p[0], p[1], p[2], p[3]);		
+					d = cdtMesh.make_tetrahedron(p[0], p[1], p[2], p[3]);		
+					// lets check is it results in any missing facet to appear in cdtMesh
+					for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter2 = cdtMesh.one_dart_per_incident_cell<2, 3>(d).begin(), fIterEnd2 = cdtMesh.one_dart_per_incident_cell<2, 3>(d).end(); fIter2 != fIterEnd2; fIter2++)
+						for (LCC::One_dart_per_cell_range<2>::iterator fIter1 = plc.one_dart_per_cell<2>().begin(), fIterEnd1 = plc.one_dart_per_cell<2>().end(); fIter1 != fIterEnd1; fIter1++)
+							if (areFacetsGeometricallySame(fIter1, plc, fIter2, cdtMesh))
+							{
+								// remove this facet from missing facet list now.
+								for (vector<DartHandle>::iterator facetHandleIter = missingConstraintFacets.begin(), facetHandleIterEnd = missingConstraintFacets.end(); facetHandleIter != facetHandleIterEnd; facetHandleIter++)
+								{
+									if (areFacetsGeometricallySame(fIter1, plc, *facetHandleIter, plc))
+										missingConstraintFacetsToBeDeleted.push_back(facetHandleIter);
+									else
+										continue;
+								}		
+							}
+							else
+				       				continue;				
+					for (vector<DartHandle>::iterator facetHandleIter = missingConstraintFacetsToBeDeleted.begin(), facetHandleIterEnd = missingConstraintFacetsToBeDeleted.end(); facetHandleIter != facetHandleIterEnd; facetHandleIter++)
+						missingConstraintFacets.erase(*facetHandleIter);
 				}
 				else
 					continue;
@@ -2110,8 +2142,6 @@ void CDTGenerator::recoverConstraintFacets()
 	//		cout << "Cavity retetrahedralization complete!!" << endl;
 			cout << "Facet recovery iteration: #" << faceRecoveryID << endl;		
 			faceRecoveryID++;
-			computeMissingConstraintFacets(missingConstraintFacets);
-
 		}
 		cout << "Constraint facets recovered!!" << endl;
 }
