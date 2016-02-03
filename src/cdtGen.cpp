@@ -1653,28 +1653,28 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
 	}
 //	cdtFacetLCC.sew3_same_facets();	
 	// Lets search for facets of PLC missing in cdtMesh
-	LCC::One_dart_per_cell_range<2>::iterator cdtMeshFIter = cdtFacetLCC.one_dart_per_cell<2>().begin(); 
-	LCC::One_dart_per_cell_range<2>::iterator cdtMeshFIterEnd = cdtFacetLCC.one_dart_per_cell<2>().end();
-	
+	LCC::Dart_handle cdtMeshFoundFacetHandle;
 	for (LCC::One_dart_per_cell_range<2>::iterator plcFIter = plc.one_dart_per_cell<2>().begin(), plcFIterEnd = plc.one_dart_per_cell<2>().end(); plcFIter != plcFIterEnd; plcFIter++)
 	{
 	 	correspondingFacetFound = false;
-		for (cdtMeshFIter = cdtFacetLCC.one_dart_per_cell<2>().begin(), cdtMeshFIterEnd = cdtFacetLCC.one_dart_per_cell<2>().end(); cdtMeshFIter != cdtMeshFIterEnd; cdtMeshFIter++)
+		for (LCC::One_dart_per_cell_range<2>::iterator cdtMeshFIter = cdtFacetLCC.one_dart_per_cell<2>().begin(), cdtMeshFIterEnd = cdtFacetLCC.one_dart_per_cell<2>().end(); cdtMeshFIter != cdtMeshFIterEnd; cdtMeshFIter++)
 		{
-		/*	if (areFacetsGeometricallySame(plcFIter, plc, cdtMeshFIter, cdtFacetLCC)) 
+			if (areFacetsGeometricallySame(plcFIter, plc, cdtMeshFIter, cdtFacetLCC)) 
 			{
 				correspondingFacetFound = true;
 				// lets remove this facet from search candidates for later iterations.
+				cdtMeshFoundFacetHandle = plcFIter; 
+ 
 				break;
 			}
 			else
-		*/		continue;
+				continue;
 		}
 		
 		if (!correspondingFacetFound) // no matching facet found.
 			missingFacetList.push_back(plcFIter); 
-//		else // facet was found....lets remove it from future searches.
-//			remove_cell<LCC, 2>(cdtFacetLCC, cdtMeshFIter); 
+		else // facet was found....lets remove it from future searches.
+			remove_cell<LCC, 2>(cdtFacetLCC, cdtMeshFoundFacetHandle); 
 	}
 }
 
