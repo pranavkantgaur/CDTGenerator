@@ -1951,7 +1951,18 @@ void CDTGenerator::recoverConstraintFacets()
 
 //		cout << "Infinite cells removed!!" << endl;
 		computeMissingConstraintFacets(missingConstraintFacets); // list missing constraint facets
-
+		// represent plc in AABB tree form...will be useful for performing search operations
+		CGALPoint p[3];
+		aabbTree plcTree;		
+		vector<CGALTriangle> plcTriangles;
+		for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>.end(); fIter != fIterEnd; fIter++)
+		{
+			i = 0;
+			for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<2>(fIter).begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>(fIter).end(); pIter != pIterEnd; pIter++)
+ 				p[i++] = plc.point(pIter);
+			plcTriangles.push_back(CGALTriangle(p[0], p[1], p[2]));
+		}
+		plcTree.insert(plcTriangles.begin(), plcTriangles.end()); // AABB representation of plc
 		size_t faceRecoveryID = 0;
 		unsigned int nTet;
 		while (missingConstraintFacets.size() != 0)
@@ -2137,20 +2148,10 @@ void CDTGenerator::recoverConstraintFacets()
 					facetHandle = cdtMesh.make_tetrahedron(p[0], p[1], p[2], p[3]);		
 					// lets check is it results in any missing facet to appear in cdtMesh
 					for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter2 = cdtMesh.one_dart_per_incident_cell<2, 3>(facetHandle).begin(), fIterEnd2 = cdtMesh.one_dart_per_incident_cell<2, 3>(facetHandle).end(); fIter2 != fIterEnd2; fIter2++)
-						for (LCC::One_dart_per_cell_range<2>::iterator fIter1 = plc.one_dart_per_cell<2>().begin(), fIterEnd1 = plc.one_dart_per_cell<2>().end(); fIter1 != fIterEnd1; fIter1++)
-							if (areFacetsGeometricallySame(fIter1, plc, fIter2, cdtMesh))
-							{
-								// remove this facet from missing facet list now.
-								for (vector<LCC::Dart_handle>::iterator facetHandleIter = missingConstraintFacets.begin(), facetHandleIterEnd = missingConstraintFacets.end(); facetHandleIter != facetHandleIterEnd; facetHandleIter++)
-								{
-									if (areFacetsGeometricallySame(fIter1, plc, *facetHandleIter, plc))
-										missingConstraintFacetsToBeDeleted.push_back(facetHandleIter);
-									else
-										continue;
-								}		
-							}
-							else
-				       				continue;				
+					{
+						// check if given facet from this tet belongs to PLC as well
+						//plcTree.(); TODO
+					}
 					for (vector<vector<LCC::Dart_handle>::iterator>::iterator facetHandleIter = missingConstraintFacetsToBeDeleted.begin(), facetHandleIterEnd = missingConstraintFacetsToBeDeleted.end(); facetHandleIter != facetHandleIterEnd; facetHandleIter++)
 						missingConstraintFacets.erase(*facetHandleIter);
 				}
