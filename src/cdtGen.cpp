@@ -2112,7 +2112,9 @@ void CDTGenerator::recoverConstraintFacets()
 					{
 						if (areFacetsGeometricallySame(fIter1, plc, fIter2, cdtMesh))
 						{
-							missingConstraintFacets.push_back(fIter1);
+							// scan if this facet is not present already in cdtMesh
+							if (cdtMesh.beta<3>(fIter2) == cdtMesh.null_dart_handle) // ie. if this tet is at the boundary....otherwise there will be a neighbor tet containing this facet.
+								missingConstraintFacets.push_back(fIter1);
 						}
 						else
 							continue;
