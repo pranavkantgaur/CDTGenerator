@@ -1633,6 +1633,7 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
  *  \brief Computes list of constraint facets missing in current Delaunay triangulation.	
     \param [out] missingFacetList vector of Dart handles to missing constraint facets.	
  */
+/*
 void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFacetList)
 {
 	// test which facets are not present in Delaunay triangulation 
@@ -1677,9 +1678,27 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
 			remove_cell<LCC, 2>(cdtFacetLCC, cdtMeshFoundFacetHandle); 
 	}
 }
+*/
 
+void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFacetList)
+{
+	// test which facets are not present in Delaunay triangulation 
+	// add them to the missing facet list vector
+	Delaunay::Vertex_handle v1, v2, v3;
+	Delaunay::Cell_handle c;
+	int i, j, k;
 
-
+	for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
+	{
+		if (DT.is_vertex(plc.point(fIter), v1))
+			if (DT.is_vertex(plc.point(plc.beta(fIter, 1)), v2))
+				if (DT.is_vertex(plc.point(plc.beta(fIter, 1, 1)), v3))
+					if (DT.is_facet(v1, v2, v3, c, i, j, k))
+						continue;
+		else
+			missingFacetList.push_back(fIter); // facet is indeed missing from current output mesh.
+	}
+}
 
 /*! \fn bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle d, LCCWithDartInfo lcc)
  *  \brief Tests whether input facet is not strongly Delaunay.
@@ -2102,9 +2121,9 @@ void CDTGenerator::recoverConstraintFacets()
 				remove_cell<LCC, 3>(cdtMesh, *tetIter); 
 			}
 //		cout << "Intersecting tets removed from mesh!!" << endl;
-		
+			LCC::Dart_handle facetHandle;	
 			// mark each cell of DT as either inside/outside cavity
-			vector <vector<DartHandle>::iterator> missingConstraintFacetsToBeDeleted; 
+			vector <vector<LCC::Dart_handle>::iterator> missingConstraintFacetsToBeDeleted; 
 			for (Delaunay::Finite_cells_iterator cIter = cavityDelaunay.finite_cells_begin(), cIterEnd = cavityDelaunay.finite_cells_end(); cIter != cIterEnd; cIter++)
 			{
 				if (isTetInsideCavity(cIter, cavityLCC))
@@ -2113,14 +2132,14 @@ void CDTGenerator::recoverConstraintFacets()
 					CGALPoint p[4];
 					for (size_t i = 0; i < 4; i++)
 						p[i] = ((*cIter).vertex(i))->point();
-					d = cdtMesh.make_tetrahedron(p[0], p[1], p[2], p[3]);		
+					facetHandle = cdtMesh.make_tetrahedron(p[0], p[1], p[2], p[3]);		
 					// lets check is it results in any missing facet to appear in cdtMesh
-					for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter2 = cdtMesh.one_dart_per_incident_cell<2, 3>(d).begin(), fIterEnd2 = cdtMesh.one_dart_per_incident_cell<2, 3>(d).end(); fIter2 != fIterEnd2; fIter2++)
+					for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter2 = cdtMesh.one_dart_per_incident_cell<2, 3>(facetHandle).begin(), fIterEnd2 = cdtMesh.one_dart_per_incident_cell<2, 3>(facetHandle).end(); fIter2 != fIterEnd2; fIter2++)
 						for (LCC::One_dart_per_cell_range<2>::iterator fIter1 = plc.one_dart_per_cell<2>().begin(), fIterEnd1 = plc.one_dart_per_cell<2>().end(); fIter1 != fIterEnd1; fIter1++)
 							if (areFacetsGeometricallySame(fIter1, plc, fIter2, cdtMesh))
 							{
 								// remove this facet from missing facet list now.
-								for (vector<DartHandle>::iterator facetHandleIter = missingConstraintFacets.begin(), facetHandleIterEnd = missingConstraintFacets.end(); facetHandleIter != facetHandleIterEnd; facetHandleIter++)
+								for (vector<LCC::Dart_handle>::iterator facetHandleIter = missingConstraintFacets.begin(), facetHandleIterEnd = missingConstraintFacets.end(); facetHandleIter != facetHandleIterEnd; facetHandleIter++)
 								{
 									if (areFacetsGeometricallySame(fIter1, plc, *facetHandleIter, plc))
 										missingConstraintFacetsToBeDeleted.push_back(facetHandleIter);
@@ -2130,7 +2149,7 @@ void CDTGenerator::recoverConstraintFacets()
 							}
 							else
 				       				continue;				
-					for (vector<DartHandle>::iterator facetHandleIter = missingConstraintFacetsToBeDeleted.begin(), facetHandleIterEnd = missingConstraintFacetsToBeDeleted.end(); facetHandleIter != facetHandleIterEnd; facetHandleIter++)
+					for (vector<vector<LCC::Dart_handle>::iterator>::iterator facetHandleIter = missingConstraintFacetsToBeDeleted.begin(), facetHandleIterEnd = missingConstraintFacetsToBeDeleted.end(); facetHandleIter != facetHandleIterEnd; facetHandleIter++)
 						missingConstraintFacets.erase(*facetHandleIter);
 				}
 				else
