@@ -2118,19 +2118,31 @@ void CDTGenerator::recoverConstraintFacets()
 			//// remove intersecting tets from cdtMesh(make way for new tets)
 			for (vector<LCC::Dart_handle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
 			{
-				for (LCC::One_dart_per_cell_range<2>::iterator fIter1 = plc.one_dart_per_cell<2>().begin(), fIterEnd1 = plc.one_dart_per_cell<2>().end(); fIter1 != fIterEnd1; fIter1++)
+		/*		for (LCC::One_dart_per_cell_range<2>::iterator fIter1 = plc.one_dart_per_cell<2>().begin(), fIterEnd1 = plc.one_dart_per_cell<2>().end(); fIter1 != fIterEnd1; fIter1++)
 					for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter2 = cdtMesh.one_dart_per_incident_cell<2, 3>(*tetIter).begin(), fIterEnd2 = cdtMesh.one_dart_per_incident_cell<2, 3>(*tetIter).end(); fIter2 != fIterEnd2; fIter2++)
 					{
-						if (areFacetsGeometricallySame(fIter1, plc, fIter2, cdtMesh))
+		*/
+				for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
+				{
+					CGALPoint plcPoint = plc.point(fIter); // one point of facet
+					for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator cdtPIter = cdtMesh.one_dart_per_incident_cell<0, 3>(*tetIter).begin(), cdtPiterEnd = cdtMesh.one_dart_per_incident_cell<0, 3>(*tetIter).end(); cdtPIter != cdtPiterEnd; cdtPIter++)
+					{
+						if (plcPoint == cdtMesh.point(cdtPIter))
 						{
-							// scan if this facet is not present already in cdtMesh
-							if (cdtMesh.beta<3>(fIter2) == cdtMesh.null_dart_handle) // ie. if this tet is at the boundary....otherwise there will be a neighbor tet containing this facet.
-								missingConstraintFacets.push_back(fIter1);
+							for (LCC::One_dart_per_incident_cell_range<2, 0>::iterator cdtTetFIter = cdtMesh.one_dart_per_incident_cell<2, 0>(cdtPIter).begin(), cdtTetFIterEnd = cdtMesh.one_dart_per_incident_cell<2, 0>(cdtPIter).end(); cdtTetFIter != cdtTetFIterEnd; cdtTetFIter++)
+							{	
+								if (areFacetsGeometricallySame(fIter, plc, cdtTetFIter, cdtMesh))
+								{
+									// scan if this facet is not present already in cdtMesh
+									if (cdtMesh.beta<3>(cdtTetFIter) == cdtMesh.null_dart_handle) // ie. if this tet is at the boundary....otherwise there will be a neighbor tet containing this facet.
+										missingConstraintFacets.push_back(fIter);
+								}
+							}
 						}
 						else
 							continue;
 					}
-
+				}
 				remove_cell<LCC, 3>(cdtMesh, *tetIter); 
 			}
 //		cout << "Intersecting tets removed from mesh!!" << endl;
