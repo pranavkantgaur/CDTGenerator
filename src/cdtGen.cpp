@@ -1700,6 +1700,26 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
 	}
 }
 
+/*
+// HASH approach
+void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFacetList)
+{
+	// construct hash table for cdtMesh cdtMeshHashTable
+	// Hash each facet of plc into cdtMeshHashTable
+	unordered_map<class Key, class T, class Hash, class Pred, class Alloc> cdtMeshHashTable;
+	// initialize hash table 
+	// TODO
+
+ 	for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dartt_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
+       {
+		if (cdtMeshHashTable[fIter] == NULL) // facet is missing        	
+			missingConstraintFacets.push_back(fIter);  	
+		else
+			continue;
+       }	       
+}
+*/
+
 /*! \fn bool CDTGenerator::isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle d, LCCWithDartInfo lcc)
  *  \brief Tests whether input facet is not strongly Delaunay.
  *  \param [in] d Dart handle to the facet.
@@ -2135,7 +2155,10 @@ void CDTGenerator::recoverConstraintFacets()
 								{
 									// scan if this facet is not present already in cdtMesh
 									if (cdtMesh.beta<3>(cdtTetFIter) == cdtMesh.null_dart_handle) // ie. if this tet is at the boundary....otherwise there will be a neighbor tet containing this facet.
+									{
 										missingConstraintFacets.push_back(fIter);
+										break;
+									}
 								}
 							}
 						}
@@ -2143,6 +2166,7 @@ void CDTGenerator::recoverConstraintFacets()
 							continue;
 					}
 				}
+			
 				remove_cell<LCC, 3>(cdtMesh, *tetIter); 
 			}
 //		cout << "Intersecting tets removed from mesh!!" << endl;
@@ -2169,8 +2193,11 @@ void CDTGenerator::recoverConstraintFacets()
 								for (LCC::One_dart_per_incident_cell_range<2, 0>::iterator incidentFacetsIter = cdtMesh.one_dart_per_incident_cell<2, 0>(newTetPIter).begin(), incidentFacetIterEnd = cdtMesh.one_dart_per_incident_cell<2, 0>(newTetPIter).end();  incidentFacetsIter != incidentFacetIterEnd; incidentFacetsIter++)
 								{
 									if (areFacetsGeometricallySame(*plcMissingFacetIter, plc, incidentFacetsIter, cdtMesh))
+									{	
 										missingConstraintFacetsToBeDeleted.push_back(plcMissingFacetIter);
-								}	
+										break;
+									}	
+								}
 							}
 						}
 					}	
