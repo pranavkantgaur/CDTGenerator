@@ -1680,6 +1680,7 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
 }
 */
 
+/*
 void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFacetList)
 {
 	// test which facets are not present in Delaunay triangulation 
@@ -1699,6 +1700,43 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
 			missingFacetList.push_back(fIter); // facet is indeed missing from current output mesh.
 	}
 }
+*/
+
+// Kd-tree based approach.
+void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> && missingFacetList)
+{
+	// kd-tree represents cdtMesh, using circumcenter
+	// for each face in plc,
+	// represent circumcenter, get nearest neighbor
+	// check if nearest neighbor, is same as this facet.
+	kdTree cdtMeshTree;
+        for (LCC::One_dart_per_cell_range<2>::iterator fIter = cdtMesh.one_dart_per_cell<2>().begin(), fIterEnd = cdtMesh.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
+	{
+		CGALPoint p[3];
+		int i = 0;
+		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>().begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 2>().end(); pIter != pIterEnd; pIter++)
+			p[i++] = cdtMesh.point(pIter);
+		CGALPoint circumcenter = circumcenter(p[0], p[1], p[2]);
+		cdtMeshTree.insert(circumcenter); // how to insert handle of facet as well?
+	}
+	
+	for (LCC::One_dart_per_cell_range<2>::iterator plcFIter = plc.one_dart_per_cell<2>().begin(), plcFIterEnd = plc.one_dart_per_cell<2>().end(); plcFIter != plcFIterEnd; plcFIter++)	
+	{
+		CGALPoint p[3];
+		int i = 0;
+		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>().begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>().end(); pIter != pIterEnd; pIter++)
+			p[i++] = plc.point(pIter);
+
+		CGALPoint plcCircumcenter = circumcenter(p[0], p[1], p[2]);
+		cdtMeshTree.nearest(plcCircumcenter, 1); // 1 nearest neighbor
+		if (areFacetsGeometricallySame(nearestNeighbour, cdtMesh, plcFIter, plc)) // this facet exists in cdtMesh
+			continue;
+		else
+			missingFacetList.push_back(plcFIter);
+	}
+}
+
+
 
 /*
 // HASH approach
@@ -2076,7 +2114,8 @@ void CDTGenerator::recoverConstraintFacets()
 			//// initialize vector
 			for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator nonStrongFaceIter = cavityLCC.one_dart_per_cell<2>().begin(), nonStrongFaceIterEnd = cavityLCC.one_dart_per_cell<2>().end(); nonStrongFaceIter != nonStrongFaceIterEnd; nonStrongFaceIter++)	
 				if (isNonStronglyDelaunayFacet(nonStrongFaceIter, cavityLCC))  
-					nonStronglyDelaunayFacetsInCavity.push_back(nonStrongFaceIter); // handle to non strongly Delauny facets in cavityLCC
+					//nonStronglyDelaunayFacetsInCavity.push_back(nonStrongFaceIter); // handle to non strongly Delauny facets in cavityLCC
+					continue;
 				else 
 					continue;	
 			
@@ -2134,7 +2173,7 @@ void CDTGenerator::recoverConstraintFacets()
 	
 			Delaunay cavityDelaunay;
 			cavityDelaunay.insert(cavityVertices.begin(), cavityVertices.end()); // DT of cavity vertices
-			
+			cout << "Removing intersecting tets from cdtMesh..." << endl;	
 			//// remove intersecting tets from cdtMesh(make way for new tets)
 			for (vector<LCC::Dart_handle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
 			{
@@ -2169,7 +2208,8 @@ void CDTGenerator::recoverConstraintFacets()
 			
 				remove_cell<LCC, 3>(cdtMesh, *tetIter); 
 			}
-//		cout << "Intersecting tets removed from mesh!!" << endl;
+
+			cout << "Intersecting tets removed from mesh!!" << endl;
 			LCC::Dart_handle tetHandle;	
 			// mark each cell of DT as either inside/outside cavity
 			vector <vector<LCC::Dart_handle>::iterator> missingConstraintFacetsToBeDeleted; 
