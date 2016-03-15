@@ -1703,36 +1703,37 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
 */
 
 // Kd-tree based approach.
-void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> && missingFacetList)
+void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> & missingFacetList)
 {
 	// kd-tree represents cdtMesh, using circumcenter
 	// for each face in plc,
 	// represent circumcenter, get nearest neighbor
 	// check if nearest neighbor, is same as this facet.
-	kdTree cdtMeshTree;
+	missingFacetList.clear();
+	Tree cdtMeshTree;
 	vector<CGALPoint> facetCircumcenters;
 	vector<LCC::Dart_handle> facetDartHandles;
         for (LCC::One_dart_per_cell_range<2>::iterator fIter = cdtMesh.one_dart_per_cell<2>().begin(), fIterEnd = cdtMesh.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
 	{
 		CGALPoint p[3];
 		int i = 0;
-		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>().begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 2>().end(); pIter != pIterEnd; pIter++)
+		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>(fIter).begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 2>(fIter).end(); pIter != pIterEnd; pIter++)
 			p[i++] = cdtMesh.point(pIter);
-		CGALPoint circumcenter = circumcenter(p[0], p[1], p[2]);
-		facetCircumcenters.push_back(circumcenter); // how to insert handle of facet as well?
+		CGALPoint cdtMeshFCircumcenter = circumcenter(p[0], p[1], p[2]);
+		facetCircumcenters.push_back(cdtMeshFCircumcenter); // how to insert handle of facet as well?
 		facetDartHandles.push_back(fIter);
 	}
 
 	//construct kd-tree representation of cdtMesh
-	cdtMeshTree(boost::make_zip_iterator(boost::make_tuple(facetCircumcenters.begin(), facetCircumcenters.end())),
-		    boost::make_zip_iterator(boost::make_tuple(facetDartHandles.begin(), facetDartHandles.end())));
+	cdtMeshTree(boost::make_zip_iterator(boost::make_tuple(facetCircumcenters.begin(), facetDartHandles.begin())),
+		    boost::make_zip_iterator(boost::make_tuple(facetCircumcenters.end(), facetDartHandles.end())));
 	
 	// lets do the actual searching
 	for (LCC::One_dart_per_cell_range<2>::iterator plcFIter = plc.one_dart_per_cell<2>().begin(), plcFIterEnd = plc.one_dart_per_cell<2>().end(); plcFIter != plcFIterEnd; plcFIter++)	
 	{
 		CGALPoint p[3];
 		int i = 0;
-		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>().begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>().end(); pIter != pIterEnd; pIter++)
+		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<0, 2>(plcFIter).begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>(plcFIter).end(); pIter != pIterEnd; pIter++)
 			p[i++] = plc.point(pIter);
 
 		CGALPoint plcCircumcenter = circumcenter(p[0], p[1], p[2]);
