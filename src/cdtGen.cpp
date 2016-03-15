@@ -1710,6 +1710,8 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> && missingF
 	// represent circumcenter, get nearest neighbor
 	// check if nearest neighbor, is same as this facet.
 	kdTree cdtMeshTree;
+	vector<CGALPoint> facetCircumcenters;
+	vector<LCC::Dart_handle> facetDartHandles;
         for (LCC::One_dart_per_cell_range<2>::iterator fIter = cdtMesh.one_dart_per_cell<2>().begin(), fIterEnd = cdtMesh.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
 	{
 		CGALPoint p[3];
@@ -1717,9 +1719,15 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> && missingF
 		for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = cdtMesh.one_dart_per_incident_cell<0, 2>().begin(), pIterEnd = cdtMesh.one_dart_per_incident_cell<0, 2>().end(); pIter != pIterEnd; pIter++)
 			p[i++] = cdtMesh.point(pIter);
 		CGALPoint circumcenter = circumcenter(p[0], p[1], p[2]);
-		cdtMeshTree.insert(circumcenter); // how to insert handle of facet as well?
+		facetCircumcenters.push_back(circumcenter); // how to insert handle of facet as well?
+		facetDartHandles.push_back(fIter);
 	}
+
+	//construct kd-tree representation of cdtMesh
+	cdtMeshTree(boost::make_zip_iterator(boost::make_tuple(facetCircumcenters.begin(), facetCircumcenters.end())),
+		    boost::make_zip_iterator(boost::make_tuple(facetDartHandles.begin(), facetDartHandles.end())));
 	
+	// lets do the actual searching
 	for (LCC::One_dart_per_cell_range<2>::iterator plcFIter = plc.one_dart_per_cell<2>().begin(), plcFIterEnd = plc.one_dart_per_cell<2>().end(); plcFIter != plcFIterEnd; plcFIter++)	
 	{
 		CGALPoint p[3];
@@ -1728,11 +1736,16 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> && missingF
 			p[i++] = plc.point(pIter);
 
 		CGALPoint plcCircumcenter = circumcenter(p[0], p[1], p[2]);
-		cdtMeshTree.nearest(plcCircumcenter, 1); // 1 nearest neighbor
-		if (areFacetsGeometricallySame(nearestNeighbour, cdtMesh, plcFIter, plc)) // this facet exists in cdtMesh
-			continue;
+		K_neighbor_search search(cdtMeshTree, plcCircumcenter, 2);
+		// searching done lets check if we have found facets
+		for (K_neighbor_search::iterator sIter = search.begin(), sIterEnd = search.end(); sIter != sIterEnd; sIter++)
+		{
+			LCC::Dart_handle cdtFHandle = boost::get<1>(sIter->first); // facetHandle
+			if (areFacetsGeometricallySame(cdtFHandle, cdtMesh, plcFIter, plc)) // this facet exists in cdtMesh
+				continue;
 		else
 			missingFacetList.push_back(plcFIter);
+		}
 	}
 }
 

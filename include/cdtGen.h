@@ -25,6 +25,13 @@
 #include <CGAL/AABB_tree.h>
 #include <CGAL/AABB_traits.h>
 #include <CGAL/AABB_triangle_primitive.h>
+#include <CGAL/Search_traits_3.h>
+#include <CGAL/Search_traits_adapter.h>
+#include <CGAL/point_generators_3.h>
+#include <CGAL/Orthogonal_k_neighbor_search.h>
+#include <CGAL/property_map.h>
+#include <boost/iterator/zip_iterator.hpp>
+#include <utility>
 
 
 #include "rply.h"
@@ -39,6 +46,15 @@ typedef Exact_predicates_inexact_constructions_kernel K;
 typedef Linear_cell_complex_traits<3, K> Traits;
 typedef Linear_cell_complex<3, 3, Traits> LCC;
 typedef LCC::Dart_handle DartHandle;
+typedef boost::tuple<Point_3,int>                           Point_and_int;
+typedef CGAL::Random_points_in_cube_3<Point_3>              Random_points_iterator;
+typedef CGAL::Search_traits_3<Kernel>                       Traits_base;
+typedef CGAL::Search_traits_adapter<Point_and_int,
+  CGAL::Nth_of_tuple_property_map<0, Point_and_int>,
+  Traits_base>                                              Traits;
+typedef CGAL::Orthogonal_k_neighbor_search<Traits>          K_neighbor_search;
+typedef K_neighbor_search::Tree                             Tree;
+typedef K_neighbor_search::Distance                         Distance;
 
 /*
 struct MyDartInfo
