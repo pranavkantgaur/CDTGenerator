@@ -1710,7 +1710,7 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> & missingFa
 	// represent circumcenter, get nearest neighbor
 	// check if nearest neighbor, is same as this facet.
 	missingFacetList.clear();
-//	Tree cdtMeshTree;
+	int k = 2; /// represents the number of nearest neighbors we are interseted in searching
 	vector<CGALPoint> facetCircumcenters;
 	vector<DartHandle> facetDartHandles;
         for (LCC::One_dart_per_cell_range<2>::iterator fIter = cdtMesh.one_dart_per_cell<2>().begin(), fIterEnd = cdtMesh.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
@@ -1737,17 +1737,22 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> & missingFa
 			p[i++] = plc.point(pIter);
 
 		CGALPoint plcCircumcenter = circumcenter(p[0], p[1], p[2]);
-		K_neighbor_search search(cdtMeshTree, plcCircumcenter, 2);
+		K_neighbor_search search(cdtMeshTree, plcCircumcenter, k);
+		int notMatched = 0;
 		// searching done lets check if we have found facets
 		for (K_neighbor_search::iterator sIter = search.begin(), sIterEnd = search.end(); sIter != sIterEnd; sIter++)
 		{
 			LCC::Dart_handle cdtFHandle = boost::get<1>(sIter->first); // facetHandle
 			if (areFacetsGeometricallySame(cdtFHandle, cdtMesh, plcFIter, plc)) // this facet exists in cdtMesh
-				continue;
-		else
-			missingFacetList.push_back(plcFIter);
+				break;
+			else
+				notMatched++;
 		}
+		if (notMatched == k)
+			missingFacetList.push_back(plcFIter);
+		
 	}
+	cout << "Number of missing facets: " << missingFacetList.size() << endl;
 }
 
 
