@@ -1710,9 +1710,9 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> & missingFa
 	// represent circumcenter, get nearest neighbor
 	// check if nearest neighbor, is same as this facet.
 	missingFacetList.clear();
-	Tree cdtMeshTree;
+//	Tree cdtMeshTree;
 	vector<CGALPoint> facetCircumcenters;
-	vector<LCC::Dart_handle> facetDartHandles;
+	vector<DartHandle> facetDartHandles;
         for (LCC::One_dart_per_cell_range<2>::iterator fIter = cdtMesh.one_dart_per_cell<2>().begin(), fIterEnd = cdtMesh.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
 	{
 		CGALPoint p[3];
@@ -1725,7 +1725,7 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> & missingFa
 	}
 
 	//construct kd-tree representation of cdtMesh
-	cdtMeshTree(boost::make_zip_iterator(boost::make_tuple(facetCircumcenters.begin(), facetDartHandles.begin())),
+	Tree cdtMeshTree(boost::make_zip_iterator(boost::make_tuple(facetCircumcenters.begin(), facetDartHandles.begin())),
 		    boost::make_zip_iterator(boost::make_tuple(facetCircumcenters.end(), facetDartHandles.end())));
 	
 	// lets do the actual searching
@@ -2191,11 +2191,7 @@ void CDTGenerator::recoverConstraintFacets()
 			//// remove intersecting tets from cdtMesh(make way for new tets)
 			for (vector<LCC::Dart_handle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
 			{
-		/*		for (LCC::One_dart_per_cell_range<2>::iterator fIter1 = plc.one_dart_per_cell<2>().begin(), fIterEnd1 = plc.one_dart_per_cell<2>().end(); fIter1 != fIterEnd1; fIter1++)
-					for (LCC::One_dart_per_incident_cell_range<2, 3>::iterator fIter2 = cdtMesh.one_dart_per_incident_cell<2, 3>(*tetIter).begin(), fIterEnd2 = cdtMesh.one_dart_per_incident_cell<2, 3>(*tetIter).end(); fIter2 != fIterEnd2; fIter2++)
-					{
-		*/
-				for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
+			/*	for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
 				{
 					CGALPoint plcPoint = plc.point(fIter); // one point of facet
 					for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator cdtPIter = cdtMesh.one_dart_per_incident_cell<0, 3>(*tetIter).begin(), cdtPiterEnd = cdtMesh.one_dart_per_incident_cell<0, 3>(*tetIter).end(); cdtPIter != cdtPiterEnd; cdtPIter++)
@@ -2219,7 +2215,7 @@ void CDTGenerator::recoverConstraintFacets()
 							continue;
 					}
 				}
-			
+			*/
 				remove_cell<LCC, 3>(cdtMesh, *tetIter); 
 			}
 
@@ -2236,7 +2232,7 @@ void CDTGenerator::recoverConstraintFacets()
 					for (size_t i = 0; i < 4; i++)
 						p[i] = ((*cIter).vertex(i))->point();
 					tetHandle = cdtMesh.make_tetrahedron(p[0], p[1], p[2], p[3]);		
-					// lets check is it results in any missing facet to appear in cdtMesh
+				/*	// lets check is it results in any missing facet to appear in cdtMesh
 					for (vector<LCC::Dart_handle>::iterator plcMissingFacetIter = missingConstraintFacets.begin(), plcMissingFacetIterEnd = missingConstraintFacets.end(); plcMissingFacetIter != plcMissingFacetIterEnd; plcMissingFacetIter++)
 					{
 						CGALPoint plcPoint = plc.point(*plcMissingFacetIter);
@@ -2257,7 +2253,7 @@ void CDTGenerator::recoverConstraintFacets()
 					}	
 					for (vector<vector<LCC::Dart_handle>::iterator>::iterator facetHandleIter = missingConstraintFacetsToBeDeleted.begin(), facetHandleIterEnd = missingConstraintFacetsToBeDeleted.end(); facetHandleIter != facetHandleIterEnd; facetHandleIter++)
 						missingConstraintFacets.erase(*facetHandleIter);
-				}
+			*/	}
 				else
 					continue;
 			}
@@ -2265,7 +2261,7 @@ void CDTGenerator::recoverConstraintFacets()
 			cdtMesh.sew3_same_facets();
 			cout << "Sewing 2 ends!!" << endl;
 	//		cout << "Cavity retetrahedralization complete!!" << endl;
-			cout << "Facet recovery iteration: #" << faceRecoveryID << endl;		
+			cout << "Facet recovery iteration: #" << faceRecoveryID << endl;				   computeMissingConstraintFacets(missingConstraintFacets);
 			faceRecoveryID++;
 		}
 		cout << "Constraint facets recovered!!" << endl;
