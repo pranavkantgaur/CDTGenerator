@@ -48,7 +48,6 @@ typedef Linear_cell_complex<3, 3, Traits> LCC;
 typedef LCC::Dart_handle DartHandle;
 typedef K::Point_3 Point3;
 typedef boost::tuple<Point3, DartHandle>                           Point_and_dart;
-typedef Random_points_in_cube_3<Point3>              Random_points_iterator;
 typedef Search_traits_3<K>                       Traits_base;
 typedef Search_traits_adapter<Point_and_dart,
   Nth_of_tuple_property_map<0, Point_and_dart>,
