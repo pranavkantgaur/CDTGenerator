@@ -13,6 +13,7 @@
 #include <CGAL/Circle_3.h>
 #include <CGAL/Triangle_3.h>
 #include <CGAL/Tetrahedron_3.h>
+#include <CGAL/Vector_3.h>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Triangulation_vertex_base_with_info_3.h>
 #include <CGAL/Delaunay_triangulation_3.h>
