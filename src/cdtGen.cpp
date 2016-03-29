@@ -825,11 +825,14 @@ float CDTGenerator::dotProduct(DartHandle& segment1Handle, DartHandle& segment2H
 	segment2Vertex[0] = plc.point(segment2Handle);
 	segment2Vertex[1] = plc.point(plc.beta(segment2Handle, 1));
 
-	CGALPoint vector1 = CGALPoint(fabs(segment1Vertex[0].x() - segment1Vertex[1].x()), fabs(segment1Vertex[0].y() - segment1Vertex[1].y()), fabs(segment1Vertex[0].z() - segment1Vertex[1].z()));
-	CGALPoint vector2 = CGALPoint(fabs(segment2Vertex[0].x() - segment2Vertex[1].x()), fabs(segment2Vertex[0].y() - segment2Vertex[1].y()), fabs(segment2Vertex[0].z() - segment2Vertex[1].z()));
+	Vector_3<K> vector1(segment1Vertex[0], segment1Vertex[1]);
+	Vector_3<K> vector2(segment2Vertex[0], segment2Vertex[1]);
 
-	float v1Dotv2 = vector1.x() * vector2.x() + vector1.y() * vector2.y() + vector1.z() * vector2.z();
-
+	//float v1Dotv2 = vector1.x() * vector2.x() + vector1.y() * vector2.y() + vector1.z() * vector2.z();
+	float v1Dotv2 = vector1 * vector2;
+	cout << "Vector1: " << vector1 << endl;
+	cout << "Vector2: " << vector2 << endl;
+	cout << "Dot product: " << v1Dotv2 << endl;
 	return v1Dotv2;
 }
 
@@ -852,10 +855,17 @@ bool CDTGenerator::isVertexAcute(DartHandle inputPointHandle)
 
 	// Compute angle between all possible pairs(TODO: NAIVE SOLUTION)
 	for (vector<DartHandle>::iterator segIter1 = incidentOnInputPoint.begin(); segIter1 != incidentOnInputPoint.end(); segIter1++) 
-		for (vector<DartHandle>::iterator segIter2 = incidentOnInputPoint.begin(); *segIter1 != *segIter2 && segIter2 != incidentOnInputPoint.end(); segIter2++)
-			if (dotProduct(*segIter1, *segIter2) > 0 )
-				return true;
-
+		for (vector<DartHandle>::iterator segIter2 = incidentOnInputPoint.begin(); segIter2 != incidentOnInputPoint.end(); segIter2++)
+		{
+			if (*segIter1 != *segIter2)
+			{
+				if (dotProduct(*segIter1, *segIter2) > 0 )
+					return true;
+			}
+			else
+				continue;
+		}
+	
 	return false; 
 }
 
@@ -875,7 +885,7 @@ size_t CDTGenerator::determineSegmentType(DartHandle& missingSegmentHandle)
 
 	bool vertexAIsAcute = isVertexAcute(missingSegmentHandle);
 	bool vertexBIsAcute = isVertexAcute(plc.beta(missingSegmentHandle, 1));
-
+	
 	if (!vertexAIsAcute && !vertexBIsAcute)	
 		return 1;
 	
@@ -988,14 +998,20 @@ void CDTGenerator::splitMissingSegment(DartHandle& missingSegmentHandle)
 	CGALPoint A = plc.point(missingSegmentHandle);
 	CGALPoint B = plc.point(plc.beta(missingSegmentHandle, 1));
 	
-//	cout << "Point A: " << A << endl;
-//	cout << "Point B: " << B << endl;
+	cout << "Point A: " << A << endl;
+	cout << "Point B: " << B << endl;
 
 	float AP, PB, AB;
 
 	CGALPoint v; // steiner point
+	cout << "Segment type is: " << segmentType << endl;
 
-	if (segmentType == 1)
+	v = CGALPoint(A.x() + 0.5 * (A.x() - B.x()), A.y() + 0.5 * (A.y() - B.y()), A.z() + 0.5 * (A.z() - B.z()));
+	if (!collinear(A, B, v)) 
+	{
+		cout << "Not collinear...exiting" << endl;
+	}
+	/*	if (segmentType == 1 || segmentType == 4)
 	{
 		AP = computeSegmentLength(A, refPoint);
 		AB = computeSegmentLength(A, B);
@@ -1018,14 +1034,15 @@ void CDTGenerator::splitMissingSegment(DartHandle& missingSegmentHandle)
 			sphereCenter = A;
 			sphereRadius = 0.5 * AB; 
 		}	
-
+*/
 		// Compute coordinates of steiner point:
-		CGALSphericalPoint sphericalSphereCenter = CGALSphericalPoint(sphereCenter.x(), sphereCenter.y(), sphereCenter.z());
+/*		CGALSphericalPoint sphericalSphereCenter = CGALSphericalPoint(sphereCenter.x(), sphereCenter.y(), sphereCenter.z());
 		CGALSphericalSphere s = CGALSphericalSphere(sphericalSphereCenter, pow(sphereRadius, 2));
 
 		CGALSphericalPoint p1 = CGALSphericalPoint(A.x(), A.y(), A.z());
 		CGALSphericalPoint p2 = CGALSphericalPoint(B.x(), B.y(), B.z());
-
+		cout << "Spherical point 1: " << p1 << endl;
+		cout << "Spherical point 2: " << p2 << endl;
 		CGALSphericalSegment seg(p1, p2);
 		CGALSphericalLineArc lineArc(seg);
 		vector<Object> intersections; 
@@ -1033,7 +1050,8 @@ void CDTGenerator::splitMissingSegment(DartHandle& missingSegmentHandle)
 		intersection(lineArc, s, back_inserter(intersections));
 //		cout << "Case 1 ends!!" << endl;
 		if (intersections.size() > 0)
-		{	v = object_cast<CGALPoint>(intersections.back());
+		{
+			v = object_cast<CGALPoint>(intersections.back());
 			intersections.pop_back();
 		}
 		
@@ -1044,8 +1062,8 @@ void CDTGenerator::splitMissingSegment(DartHandle& missingSegmentHandle)
 		}
 	}
 
-
-	else if (segmentType == 2 || segmentType == 3 )
+*/
+/*	else if (segmentType == 2 || segmentType == 3 )
 	{
 		// A is acute
 		DartHandle acuteParentHandle; 
@@ -1145,21 +1163,8 @@ void CDTGenerator::splitMissingSegment(DartHandle& missingSegmentHandle)
 		}
 	}
 	
-	else if (segmentType == 4) // meaning both A & B are acute
-	{
-		//cout << "Segment is of type 4!!" << endl;
-		CGALPoint newPoint;
-		
-		float x = (A.x() + B.x()) / 2.0;
-		float y = (A.y() + B.y()) / 2.0;
-		float z = (A.z() + B.z()) / 2.0;
-		newPoint = CGALPoint(x, y, z); 
-		
-		v = newPoint;
-	}
-
 	// update plc and DT
-/*	cout << "DEBUG(Before plc update) !!" << endl;
+	cout << "DEBUG(Before plc update) !!" << endl;
 	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
 		cout << plc.point(pIter) << endl;
  	cout << "ENDS!!" << endl;
@@ -1184,9 +1189,10 @@ void CDTGenerator::recoverConstraintSegments()
 */
 	DartHandle missingSegment;
 	cout << "Constraint segment recovery starts..." << endl;
+	formMissingSegmentsQueue();
 	do
 	{
-		formMissingSegmentsQueue();
+		cout << "Number of missing segments: " << missingSegmentQueue.size() << endl;
 		size_t i = 0;
 		while (missingSegmentQueue.size() != 0)
 		{
@@ -1196,21 +1202,9 @@ void CDTGenerator::recoverConstraintSegments()
 			splitMissingSegment(missingSegment);
 			i++;
 		}
+		formMissingSegmentsQueue();
 	}while (missingSegmentQueue.size() != 0);
 
-/*	////TEST
-	cout << "Printing plc points after segment recovery: " << endl;
-	for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
-	{
-		for (LCC::Dart_of_orbit_range<1>::iterator pIter = plc.darts_of_orbit<1>(fIter).begin(), pIterEnd = plc.darts_of_orbit<1>(fIter).end(); pIter != pIterEnd; pIter++)
-			cout << plc.point(pIter) << " "; 
-		cout << endl;
-	}
-
-	cout << "DEBUG(After segment recovery)!!" << endl;
-	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
-		cout << plc.point(pIter) << endl;
-*/	
 	return;
 }
 
@@ -1702,6 +1696,7 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFac
 }
 */
 
+
 // Kd-tree based approach.
 void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> & missingFacetList)
 {
@@ -1710,7 +1705,7 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> & missingFa
 	// represent circumcenter, get nearest neighbor
 	// check if nearest neighbor, is same as this facet.
 	missingFacetList.clear();
-	int k = 2; /// represents the number of nearest neighbors we are interseted in searching
+	int k = 10; /// represents the number of nearest neighbors we are interseted in searching
 	vector<CGALPoint> facetCircumcenters;
 	vector<DartHandle> facetDartHandles;
         for (LCC::One_dart_per_cell_range<2>::iterator fIter = cdtMesh.one_dart_per_cell<2>().begin(), fIterEnd = cdtMesh.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
@@ -1749,31 +1744,40 @@ void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> & missingFa
 				notMatched++;
 		}
 		if (notMatched == k)
-			missingFacetList.push_back(plcFIter);
-		
+			missingFacetList.push_back(plcFIter);		
 	}
 	cout << "Number of missing facets: " << missingFacetList.size() << endl;
 }
 
 
-
 /*
-// HASH approach
-void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> &missingFacetList)
+void CDTGenerator::computeMissingConstraintFacets(vector<DartHandle> & missingFacetList)
 {
-	// construct hash table for cdtMesh cdtMeshHashTable
-	// Hash each facet of plc into cdtMeshHashTable
-	unordered_map<class Key, class T, class Hash, class Pred, class Alloc> cdtMeshHashTable;
-	// initialize hash table 
-	// TODO
+	// based on computing mapping between vertices of plc and cdtMesh
+	// Store vertex handles for each vertex in kdtree
+	// Assign vertex handles from plc to cdtMesh.
+	// Steps:
+	// 1. Make tree of vertices of kd-tree.
+	// 2. In each vertex, store corresponding vertex handle(in cdtMesh).
+	// 3. Seach for a vertex of missing facet of plc in cdtMesh tree
+	// 4. Once it  found.
+	vector<LCC::Dart_handle> cdtMeshVertexHandles;
+	vector<CGALPoint> cdtMeshVertices;
+	for (LCC::One_dart_per_cell_range<DartHandle>::iterator pIter = cdtMesh.one_dart_per_cell<0>().begin(), fIterEnd = cdtMesh.one_dart_per_cell<0>().end(); fIter != fIterEnd; fIter++)
+	{
+		cdtMeshVertices.push_back(cdtMesh.point(pIter));
+		cdtMeshVertexHandles.push_back(pIter);		
+	}
 
- 	for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dartt_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
-       {
-		if (cdtMeshHashTable[fIter] == NULL) // facet is missing        	
-			missingConstraintFacets.push_back(fIter);  	
-		else
-			continue;
-       }	       
+	//construct kd-tree representation of cdtMesh
+	Tree cdtMeshTree(boost::make_zip_iterator(boost::make_tuple(cdtMeshVertices.begin(), cdtMeshVertexHandles.begin())),
+		    boost::make_zip_iterator(boost::make_tuple(cdtMeshVertices.end(), cdtMeshVertexHandles.end())));
+	
+	// for each facet in plc check if its there in cdtMesh
+	for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
+	{
+		// search for facet in cdtMesh matching with that in plc.
+	}
 }
 */
 
@@ -2029,18 +2033,7 @@ void CDTGenerator::recoverConstraintFacets()
 //		cout << "Infinite cells removed!!" << endl;
 		computeMissingConstraintFacets(missingConstraintFacets); // list missing constraint facets
 		// represent plc in AABB tree form...will be useful for performing search operations
-		CGALPoint p[3];
-/*		aabbTree plcTree;		
-		vector<CGALTriangle> plcTriangles;
-		for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>.end(); fIter != fIterEnd; fIter++)
-		{
-			i = 0;
-			for (LCC::One_dart_per_incident_cell_range<0, 2>::iterator pIter = plc.one_dart_per_incident_cell<2>(fIter).begin(), pIterEnd = plc.one_dart_per_incident_cell<0, 2>(fIter).end(); pIter != pIterEnd; pIter++)
- 				p[i++] = plc.point(pIter);
-			plcTriangles.push_back(CGALTriangle(p[0], p[1], p[2]));
-		}
-		plcTree.insert(plcTriangles.begin(), plcTriangles.end()); // AABB representation of plc
-*/		size_t faceRecoveryID = 0;
+		size_t faceRecoveryID = 0;
 		unsigned int nTet;
 		while (missingConstraintFacets.size() != 0)
 		{
@@ -2133,8 +2126,7 @@ void CDTGenerator::recoverConstraintFacets()
 			//// initialize vector
 			for (LCCWithDartInfo::One_dart_per_cell_range<2>::iterator nonStrongFaceIter = cavityLCC.one_dart_per_cell<2>().begin(), nonStrongFaceIterEnd = cavityLCC.one_dart_per_cell<2>().end(); nonStrongFaceIter != nonStrongFaceIterEnd; nonStrongFaceIter++)	
 				if (isNonStronglyDelaunayFacet(nonStrongFaceIter, cavityLCC))  
-					//nonStronglyDelaunayFacetsInCavity.push_back(nonStrongFaceIter); // handle to non strongly Delauny facets in cavityLCC
-					continue;
+					nonStronglyDelaunayFacetsInCavity.push_back(nonStrongFaceIter); // handle to non strongly Delauny facets in cavityLCC
 				else 
 					continue;	
 			
@@ -2196,31 +2188,6 @@ void CDTGenerator::recoverConstraintFacets()
 			//// remove intersecting tets from cdtMesh(make way for new tets)
 			for (vector<LCC::Dart_handle>::iterator tetIter = intersectingTets.begin(), tetIterEnd = intersectingTets.end(); tetIter != tetIterEnd; tetIter++)
 			{
-			/*	for (LCC::One_dart_per_cell_range<2>::iterator fIter = plc.one_dart_per_cell<2>().begin(), fIterEnd = plc.one_dart_per_cell<2>().end(); fIter != fIterEnd; fIter++)
-				{
-					CGALPoint plcPoint = plc.point(fIter); // one point of facet
-					for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator cdtPIter = cdtMesh.one_dart_per_incident_cell<0, 3>(*tetIter).begin(), cdtPiterEnd = cdtMesh.one_dart_per_incident_cell<0, 3>(*tetIter).end(); cdtPIter != cdtPiterEnd; cdtPIter++)
-					{
-						if (plcPoint == cdtMesh.point(cdtPIter))
-						{
-							for (LCC::One_dart_per_incident_cell_range<2, 0>::iterator cdtTetFIter = cdtMesh.one_dart_per_incident_cell<2, 0>(cdtPIter).begin(), cdtTetFIterEnd = cdtMesh.one_dart_per_incident_cell<2, 0>(cdtPIter).end(); cdtTetFIter != cdtTetFIterEnd; cdtTetFIter++)
-							{	
-								if (areFacetsGeometricallySame(fIter, plc, cdtTetFIter, cdtMesh))
-								{
-									// scan if this facet is not present already in cdtMesh
-									if (cdtMesh.beta<3>(cdtTetFIter) == cdtMesh.null_dart_handle) // ie. if this tet is at the boundary....otherwise there will be a neighbor tet containing this facet.
-									{
-										missingConstraintFacets.push_back(fIter);
-										break;
-									}
-								}
-							}
-						}
-						else
-							continue;
-					}
-				}
-			*/
 				remove_cell<LCC, 3>(cdtMesh, *tetIter); 
 			}
 
@@ -2237,28 +2204,7 @@ void CDTGenerator::recoverConstraintFacets()
 					for (size_t i = 0; i < 4; i++)
 						p[i] = ((*cIter).vertex(i))->point();
 					tetHandle = cdtMesh.make_tetrahedron(p[0], p[1], p[2], p[3]);		
-				/*	// lets check is it results in any missing facet to appear in cdtMesh
-					for (vector<LCC::Dart_handle>::iterator plcMissingFacetIter = missingConstraintFacets.begin(), plcMissingFacetIterEnd = missingConstraintFacets.end(); plcMissingFacetIter != plcMissingFacetIterEnd; plcMissingFacetIter++)
-					{
-						CGALPoint plcPoint = plc.point(*plcMissingFacetIter);
-						for (LCC::One_dart_per_incident_cell_range<0, 3>::iterator newTetPIter = cdtMesh.one_dart_per_incident_cell<0, 3>(tetHandle).begin(), newTetPIterEnd = cdtMesh.one_dart_per_incident_cell<0, 3>(tetHandle).end(); newTetPIter != newTetPIterEnd; newTetPIter++)
-						{
-							if (plcPoint == cdtMesh.point(newTetPIter))
-							{
-								for (LCC::One_dart_per_incident_cell_range<2, 0>::iterator incidentFacetsIter = cdtMesh.one_dart_per_incident_cell<2, 0>(newTetPIter).begin(), incidentFacetIterEnd = cdtMesh.one_dart_per_incident_cell<2, 0>(newTetPIter).end();  incidentFacetsIter != incidentFacetIterEnd; incidentFacetsIter++)
-								{
-									if (areFacetsGeometricallySame(*plcMissingFacetIter, plc, incidentFacetsIter, cdtMesh))
-									{	
-										missingConstraintFacetsToBeDeleted.push_back(plcMissingFacetIter);
-										break;
-									}	
-								}
-							}
-						}
-					}	
-					for (vector<vector<LCC::Dart_handle>::iterator>::iterator facetHandleIter = missingConstraintFacetsToBeDeleted.begin(), facetHandleIterEnd = missingConstraintFacetsToBeDeleted.end(); facetHandleIter != facetHandleIterEnd; facetHandleIter++)
-						missingConstraintFacets.erase(*facetHandleIter);
-			*/	}
+				}
 				else
 					continue;
 			}
@@ -2266,7 +2212,8 @@ void CDTGenerator::recoverConstraintFacets()
 			cdtMesh.sew3_same_facets();
 			cout << "Sewing 2 ends!!" << endl;
 	//		cout << "Cavity retetrahedralization complete!!" << endl;
-			cout << "Facet recovery iteration: #" << faceRecoveryID << endl;				   computeMissingConstraintFacets(missingConstraintFacets);
+			cout << "Facet recovery iteration: #" << faceRecoveryID << endl;
+			computeMissingConstraintFacets(missingConstraintFacets);
 			faceRecoveryID++;
 		}
 		cout << "Constraint facets recovered!!" << endl;
@@ -2422,9 +2369,9 @@ void CDTGenerator::generate()
 	computeDelaunayTetrahedralization(-1);
 	recoverConstraintSegments();
 //	removeLocalDegeneracies();
-	cout << "Skipping explicit local degeneracy removal, CGAL performs symbolic perturbation by default!!" << endl;
+/*	cout << "Skipping explicit local degeneracy removal, CGAL performs symbolic perturbation by default!!" << endl;
 	recoverConstraintFacets();
 	removeExteriorTetrahedrons(); // removes tetrahedrons from cdtMesh which are outside input PLC
-
+*/
 }
 
