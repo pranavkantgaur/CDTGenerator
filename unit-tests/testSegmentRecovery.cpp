@@ -57,7 +57,6 @@ bool TestSegmentRecovery::runTest()
 					nEdgesPresentAfterSegRecovery++;				
 				else
 					nEdgesNotPresentEvenAfterSegRecovery++;
-		
 	}
 
 	cout << "Number of edges already present: " << nEdgesAlreadyPresent << "\n";

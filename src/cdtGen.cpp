@@ -828,7 +828,6 @@ float CDTGenerator::dotProduct(DartHandle& segment1Handle, DartHandle& segment2H
 	Vector_3<K> vector1(segment1Vertex[0], segment1Vertex[1]);
 	Vector_3<K> vector2(segment2Vertex[0], segment2Vertex[1]);
 
-	//float v1Dotv2 = vector1.x() * vector2.x() + vector1.y() * vector2.y() + vector1.z() * vector2.z();
 	float v1Dotv2 = vector1 * vector2;
 	cout << "Vector1: " << vector1 << endl;
 	cout << "Vector2: " << vector2 << endl;
@@ -859,7 +858,7 @@ bool CDTGenerator::isVertexAcute(DartHandle inputPointHandle)
 		{
 			if (*segIter1 != *segIter2)
 			{
-				if (dotProduct(*segIter1, *segIter2) > 0 )
+				if (dotProduct(*segIter1, *segIter2) > 0.0 )
 					return true;
 			}
 			else
@@ -980,6 +979,7 @@ void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle& missingSegmentHandle
 
     \param [in] missingSegmentHandle DartHandle of missing constraint segment
 */
+/*
 void CDTGenerator::splitMissingSegment(DartHandle& missingSegmentHandle)
 {
 //	cout << "Inside segment splitting function!!" << endl;
@@ -1011,7 +1011,7 @@ void CDTGenerator::splitMissingSegment(DartHandle& missingSegmentHandle)
 	{
 		cout << "Not collinear...exiting" << endl;
 	}
-	/*	if (segmentType == 1 || segmentType == 4)
+		if (segmentType == 1 || segmentType == 4)
 	{
 		AP = computeSegmentLength(A, refPoint);
 		AB = computeSegmentLength(A, B);
@@ -1168,9 +1168,82 @@ void CDTGenerator::splitMissingSegment(DartHandle& missingSegmentHandle)
 	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
 		cout << plc.point(pIter) << endl;
  	cout << "ENDS!!" << endl;
-*/	updatePLCAndDT(v, missingSegmentHandle);
+	updatePLCAndDT(v, missingSegmentHandle);
 //	cout << "Going outside segment splitting function!!" << endl;
 	return;
+}
+*/
+
+float distance(Dart_handle p1, Dart_handle p2)
+{
+	CGALPoint point1 = plc.point(p1);
+	CGALPoint point2 = plc.point(p2);
+	float pointDistance = sqrt(pow(point1.x() - point2.x() , 2) + pow(point1.y() - point2.y(), 2));
+	return pointDistance;
+}
+
+void getParentSegment(Dart_handle vertexToFindParent, Dart_handle parentSegment)
+{
+	
+}
+
+void projectPointOnSegment(Dart_handle pointToBeProjected, Dart_handle segmentOnWhichToProject, CGALPoint& projectionPoint)
+{
+	CGALPoint p = plc.point(pointToBeProjected);
+	CGALPoint ei = plc.point(segmentOnWhichToProject);
+	CGALPoint ej = plc.point(plc.beta(segmentOnWhichToProject, 1));
+	Vector_3 v1(ej.x() - ei.x(), ej.y() - ei.y(), ej.z() - ei.z());
+	Vector_3 v2(p.x() - ei.x(), p.y() - ei.y(), p.z() - ei.z());
+	float length = sqrt(v1 * v2);
+	v1 = v1 * (1.0 / length);
+	float lp = v1 * v2;
+	projectionPoint = CGALPoint(ei.x() + lp * v1.x(), ei.y() + lp * v1.y(), ei.z() + lp * v1.z());
+}
+
+void splitMissingSegment(DartHandle& missingSegmentHandle)
+
+{
+	// compute reference point
+	computeReferencePoint(refPoint, missingSegmentHandle);
+	CGALPoint steinerPoint;
+	float L, L1, t;
+	if (refPoint != NULL)
+	{
+		Dart_handle ei = missingSegmentHandle;
+		Dart_handle ej = plc.beta(missingSegmentHandle, 1);
+		Dart_handle farEi = ei;
+		Dart_handle farEj = ej;
+		getParentSegment(refPoint, parentSeg);
+		Dart_handle farPi = parentSeg;
+		Dart_handle farPj = plc.beta(parentSeg, 1);
+
+		if (farEi == farPi || farEi == farPj)
+		{
+			L = distance(farEi, farEj);
+			L1 = distance(farEi, refPoint);
+			t = L1 / L;
+			steinerPoint = farEi + t * (farEi - farEj);		
+		}	
+		else if(farEj == farPi || farEj == farPj)	
+		{
+			L = distance(farEi, farEj);
+			L1 = distance(refPoint, farEj);
+			t = L1 / L;
+			steinerPoint = farEj + t * (farEi - farEj);
+		}
+		else 	
+		{
+			//project reference point onto eiej
+			projectPointOnSegment(refPoint, missingSegmentHandle, steinerPoint);
+		}
+	}
+	else
+		// bisect eiej
+		steinerPoint = farEi + 0.5 * (farEi - farEj);
+	
+	// insert steiner point in cdtMesh and PLC
+	// TODO
+	updatePLCAndDT(steinerPoint);
 }
 
 
@@ -1181,12 +1254,6 @@ void CDTGenerator::splitMissingSegment(DartHandle& missingSegmentHandle)
 */
 void CDTGenerator::recoverConstraintSegments()
 {
-
-	/*
-	cout << "DEBUG(Before segment recovery)!!" << endl;
-	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
-		cout << plc.point(pIter) << endl;
-*/
 	DartHandle missingSegment;
 	cout << "Constraint segment recovery starts..." << endl;
 	formMissingSegmentsQueue();
