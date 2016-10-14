@@ -918,6 +918,7 @@ float CDTGenerator::computeSegmentLength(CGALPoint &A, CGALPoint &B)
     /param [in] v New vertex to be inserted into a constraint segment of PLC
     /param [ih] missignSegmentHandle DartHandle of constraint segment which will be split after inserting new vertex  
 */
+/*
 void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle& missingSegmentHandle)
 {
 
@@ -926,11 +927,6 @@ void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle& missingSegmentHandle
 	//// for each removed triangle (A, B, C): add triangles as: (A, B, C) + v => (A, B, v) + (A, v, C)
 	//// stitch triangles sharing common edge
 	
-/*	cout << "DEBUG(Before plc update) !!" << endl;
-	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
-		cout << plc.point(pIter) << endl;
- 	cout << "ENDS!!" << endl;
-*/	
 	vector<LCC::Dart_handle> incidentFacets;
 	for (LCC::One_dart_per_incident_cell_range<2, 1>::iterator fIter = plc.one_dart_per_incident_cell<2, 1>(missingSegmentHandle).begin(), fIterEnd = plc.one_dart_per_incident_cell<2, 1>(missingSegmentHandle).end(); fIter != fIterEnd; fIter++)
 		incidentFacets.push_back(fIter);
@@ -954,21 +950,18 @@ void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle& missingSegmentHandle
 			remove_cell<LCC, 2>(plc, *facetIter); 
 			sew2CellsFromEdge(plc);
 
-	/*		cout << "Geometrically identical segment found!!" << endl;
-			cout << "v: " << endl;
-			cout << "A: " << A << endl;
-			cout << "B: " << B << endl;
-			cout << "C: " << C << endl;*/
 	}	
 	
-	/*cout << "DEBUG(After plc update) !!" << endl;
-	for (LCC::One_dart_per_cell_range<0>::iterator pIter = plc.one_dart_per_cell<0>().begin(), pIterEnd = plc.one_dart_per_cell<0>().end(); pIter != pIterEnd; pIter++)
-		cout << plc.point(pIter) << endl;
- 	cout << "ENDS!!" << endl;
-	*/
-	
+
 	// update DT
 	computeDelaunayTetrahedralization(missingSegmentQueue.size()); 
+}
+*/
+
+void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle& missingSegmentHandle)
+{
+	// TODO: Boyer-watson point insertion strategy
+	
 }
 
 
@@ -1184,7 +1177,7 @@ float distance(Dart_handle p1, Dart_handle p2)
 
 void getParentSegment(Dart_handle vertexToFindParent, Dart_handle parentSegment)
 {
-	
+		
 }
 
 void projectPointOnSegment(Dart_handle pointToBeProjected, Dart_handle segmentOnWhichToProject, CGALPoint& projectionPoint)
