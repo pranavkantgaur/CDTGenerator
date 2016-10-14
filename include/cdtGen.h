@@ -108,17 +108,9 @@ struct MyIntInfo
 };
 
 
-/*! \class Triangle
-    \brief Represents triangle 
-    Triangle class stores indices of vertices. 
-*/
-class Triangle
-{
-	public:
-		size_t pointIds[3]; /*< Indices of points */
-};
-
-
+/*! \class DegenerateVertexSet
+ *  \brief Represents a set of 5 cospherical vertices representing a degenrate condition.
+ */
 class DegenerateVertexSet
 {
 	public:
@@ -126,6 +118,9 @@ class DegenerateVertexSet
 };
 
 
+/*! \class CDTGenerator
+ *  \brief Main class representing the Constrained Delaunay mesh generator
+ */
 class CDTGenerator
 {
 	public:
@@ -136,12 +131,15 @@ class CDTGenerator
 		Delaunay DT; /*!< Intermidiate structure used for storing Delaunay tetrahedralization */
 		LCC cdtMesh; /*!< Output mesh */
 		vector<LCC::Dart_handle> missingSegmentQueue;
-
+		
+		// initial Delaunay triangulation
+		void readPLCInput();
 		void markInfiniteVertexDart(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, int);
 		void markInfiniteVertexDart(LCC::Dart_handle, LCC&, int);
-
 		bool isInfinite(LCCWithIntInfo::Dart_handle&, const LCCWithIntInfo&, int, size_t);
 		bool isInfinite(LCC::Dart_handle&, const LCC&, int, size_t);
+
+		// segment recovery
 		void recoverConstraintSegments();
 		void splitMissingSegment(DartHandle&);
 		void updatePLCAndDT(CGALPoint&, DartHandle&);
@@ -154,11 +152,6 @@ class CDTGenerator
 		void formMissingSegmentsQueue();//vector<DartHandle>&);
 		void computeDelaunayTetrahedralization(int);
 		void copyLCCToLCCWithIntInfo(LCC &, LCCWithIntInfo &);
-		void writePLYOutput(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, string); 
-		void writePLYOutput(LCC::Dart_handle, LCC&, string); 
-
-		void readPLCInput();
-
 		bool areGeometricallySameSegments(DartHandle&, DartHandle&, LCC&);
 		bool areFacetsGeometricallySame(LCC::Dart_handle&, LCC&, LCC::Dart_handle&, LCC&);
 		bool areGeometricallySameSegmentsWithDartInfo(LCCWithDartInfo::Dart_handle&, LCCWithDartInfo::Dart_handle&, LCCWithDartInfo&);
@@ -177,17 +170,21 @@ class CDTGenerator
 		void removeLocalDegeneracies();
 
 		// constraint facet recovery
-		bool areFacetTetIntersecting(DartHandle&, DartHandle&); // first 2 arguments specify the dimension of first and second cells respectively.
+		bool areFacetTetIntersecting(DartHandle&, DartHandle&); 
 		void computeMissingConstraintFacets(vector<DartHandle>&);
 		void recoverConstraintFacets();
 		bool isNonStronglyDelaunayFacet(LCCWithDartInfo::Dart_handle&, LCCWithDartInfo&); //TODO
 		bool facetsHaveSameGeometry(LCC::Dart_handle&, LCC&, LCCWithDartInfo::Dart_handle&, LCCWithDartInfo&); // TODO
 		bool isFacetInCavity(LCC::Dart_handle&, LCC&, LCCWithDartInfo::Dart_handle&, LCCWithDartInfo&);
-	
+		
+		// remove outside tets	
 		bool isTetInsideCavity(Delaunay::Cell_handle, LCCWithDartInfo&);
 		bool rayIntersectsFacet(CGALRay&, LCCWithDartInfo::Dart_handle&, LCCWithDartInfo&);
 		void countRayPLCFacetIntersections(CGALRay&, LCC::Dart_handle&, size_t &);
 		bool isCellOutsidePLC(LCC::Dart_handle&, CGALPoint&);
 		void removeExteriorTetrahedrons();
 
+		// IO
+		void writePLYOutput(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, string); 
+		void writePLYOutput(LCC::Dart_handle, LCC&, string); 
 };
