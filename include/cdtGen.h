@@ -3,7 +3,6 @@
 #include <math.h>
 #include <map>
 #include <unordered_set>
-
 #include <CGAL/Kernel/global_functions.h>
 #include <CGAL/Random.h>
 #include <CGAL/Object.h>
@@ -33,8 +32,6 @@
 #include <CGAL/property_map.h>
 #include <boost/iterator/zip_iterator.hpp>
 #include <utility>
-
-
 #include "rply.h"
 
 
@@ -56,47 +53,6 @@ typedef Search_traits_adapter<Point_and_dart,
 typedef Orthogonal_k_neighbor_search<Search_traits>          K_neighbor_search;
 typedef K_neighbor_search::Tree                             Tree;
 typedef K_neighbor_search::Distance                         Distance;
-
-/*
-struct MyDartInfo
-{
-	template<class Refs>
-	struct Dart_wrapper
-	{
-		typedef CGAL::Dart<3, Refs > Dart;
-		typedef Cell_attribute_with_point<Refs, DartHandle > VertexAttribute;
-		typedef cpp11::tuple<VertexAttribute> Attributes;
-	};	
-};
-*/
-
-struct MyDartInfo
-{
-	template<class CMap>
-	struct Dart_wrapper
-	{
-		typedef CGAL::Dart<3, CMap > Dart;
-		typedef Cell_attribute<CMap, DartHandle> Facet_attribute;
-		typedef Cell_attribute_with_point<CMap> Vertex_attribute;
-		typedef	cpp11::tuple<Vertex_attribute, void, Facet_attribute> Attributes;
-	};	
-};
-
-
-
-
-struct MyIntInfo
-{
-	template<class Refs>
-	struct Dart_wrapper
-	{
-		typedef CGAL::Dart<3, Refs > Dart;
-		typedef Cell_attribute_with_point<Refs, size_t > VertexAttribute;
-		typedef cpp11::tuple<VertexAttribute> Attributes;
-	};	
-};
-
-
 typedef Linear_cell_complex<3, 3, Traits, MyDartInfo> LCCWithDartInfo;
 typedef Linear_cell_complex<3, 3, Traits, MyIntInfo> LCCWithIntInfo;
 typedef LCCWithDartInfo::Dart_handle DartHandleWithDartInfo;
@@ -122,9 +78,38 @@ typedef AABB_triangle_primitive<K, Iterator> Primitive;
 typedef AABB_traits<K, Primitive> AABB_triangle_traits;
 typedef AABB_tree<AABB_triangle_traits> aabbTree;
 
+/*! \struct MyDartInfo
+ *  \brief Associates info for each dart.
+ */
+struct MyDartInfo
+{
+	template<class CMap>
+	struct Dart_wrapper
+	{
+		typedef CGAL::Dart<3, CMap > Dart;
+		typedef Cell_attribute<CMap, DartHandle> Facet_attribute;
+		typedef Cell_attribute_with_point<CMap> Vertex_attribute;
+		typedef	cpp11::tuple<Vertex_attribute, void, Facet_attribute> Attributes;
+	};	
+};
+
+/*! \struct MyIntInfo
+ *  \brief Associates int with each dart.
+ */
+struct MyIntInfo
+{
+	template<class Refs>
+	struct Dart_wrapper
+	{
+		typedef CGAL::Dart<3, Refs > Dart;
+		typedef Cell_attribute_with_point<Refs, size_t > VertexAttribute;
+		typedef cpp11::tuple<VertexAttribute> Attributes;
+	};	
+};
+
+
 /*! \class Triangle
     \brief Represents triangle 
-  
     Triangle class stores indices of vertices. 
 */
 class Triangle
