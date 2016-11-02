@@ -4,7 +4,7 @@ static size_t pointId = 0;
 static float tempPoint[3];
 static size_t dimensionId = 0;
 vector<CGALPoint> plcVertexVector;
-vector<Triangle> plcFaceVector;
+vector<TriangleWithIndices> plcFaceVector;
 
 
 /*! \fn static int vertex_cb(p_ply_argument argument)
@@ -35,7 +35,7 @@ static int vertex_cb(p_ply_argument argument)
 static int face_cb(p_ply_argument argument) 
 {
 	long length, value_index;
-        static Triangle tempFace;
+        static CGALTriangle tempFace;
 	
 	ply_get_argument_property(argument, NULL, &length, &value_index);
 
@@ -2433,5 +2433,6 @@ void CDTGenerator::generate()
 	recoverConstraintFacets();
 	removeExteriorTetrahedrons(); // removes tetrahedrons from cdtMesh which are outside input PLC
 */
+	return;
 }
 

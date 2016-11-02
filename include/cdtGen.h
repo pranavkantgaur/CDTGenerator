@@ -43,7 +43,38 @@ using namespace CGAL;
 typedef Exact_predicates_inexact_constructions_kernel K;
 typedef Linear_cell_complex_traits<3, K> Traits;
 typedef Linear_cell_complex<3, 3, Traits> LCC;
+
 typedef LCC::Dart_handle DartHandle;
+
+/*! \struct MyDartInfo
+ *  \brief Associates info for each dart.
+ */
+struct MyDartInfo
+{
+	template<class CMap>
+	struct Dart_wrapper
+	{
+		typedef CGAL::Dart<3, CMap > Dart;
+		typedef Cell_attribute<CMap, DartHandle> Facet_attribute;
+		typedef Cell_attribute_with_point<CMap> Vertex_attribute;
+		typedef	cpp11::tuple<Vertex_attribute, void, Facet_attribute> Attributes;
+	};	
+};
+
+/*! \struct MyIntInfo
+ *  \brief Associates int with each dart.
+ */
+struct MyIntInfo
+{
+	template<class Refs>
+	struct Dart_wrapper
+	{
+		typedef CGAL::Dart<3, Refs > Dart;
+		typedef Cell_attribute_with_point<Refs, size_t > VertexAttribute;
+		typedef cpp11::tuple<VertexAttribute> Attributes;
+	};	
+};
+
 typedef K::Point_3 Point3;
 typedef boost::tuple<Point3, DartHandle>                           Point_and_dart;
 typedef Search_traits_3<K>                       Traits_base;
@@ -78,35 +109,6 @@ typedef AABB_triangle_primitive<K, Iterator> Primitive;
 typedef AABB_traits<K, Primitive> AABB_triangle_traits;
 typedef AABB_tree<AABB_triangle_traits> aabbTree;
 
-/*! \struct MyDartInfo
- *  \brief Associates info for each dart.
- */
-struct MyDartInfo
-{
-	template<class CMap>
-	struct Dart_wrapper
-	{
-		typedef CGAL::Dart<3, CMap > Dart;
-		typedef Cell_attribute<CMap, DartHandle> Facet_attribute;
-		typedef Cell_attribute_with_point<CMap> Vertex_attribute;
-		typedef	cpp11::tuple<Vertex_attribute, void, Facet_attribute> Attributes;
-	};	
-};
-
-/*! \struct MyIntInfo
- *  \brief Associates int with each dart.
- */
-struct MyIntInfo
-{
-	template<class Refs>
-	struct Dart_wrapper
-	{
-		typedef CGAL::Dart<3, Refs > Dart;
-		typedef Cell_attribute_with_point<Refs, size_t > VertexAttribute;
-		typedef cpp11::tuple<VertexAttribute> Attributes;
-	};	
-};
-
 
 /*! \class DegenerateVertexSet
  *  \brief Represents a set of 5 cospherical vertices representing a degenrate condition.
@@ -115,6 +117,16 @@ class DegenerateVertexSet
 {
 	public:
 		LCC::Dart_handle vertHandles[5];
+};
+
+
+/*! \class TriangleWithIndices
+ *  \brief Represents triangle using indices. Cannot use CGAL Triangle_3 here because we only need indices.
+ */
+class TriangleWithIndices
+{
+	public:
+		size_t pointIDs[3];
 };
 
 
