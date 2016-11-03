@@ -35,7 +35,7 @@ static int vertex_cb(p_ply_argument argument)
 static int face_cb(p_ply_argument argument) 
 {
 	long length, value_index;
-        static CGALTriangle tempFace;
+        static TriangleWithIndices tempFace;
 	
 	ply_get_argument_property(argument, NULL, &length, &value_index);
 
@@ -43,10 +43,10 @@ static int face_cb(p_ply_argument argument)
 	{
         	case 0:
 	        case 1: 
-        		tempFace.pointIds[pointId++] = ply_get_argument_value(argument);
+        		tempFace.pointIDs[pointId++] = ply_get_argument_value(argument);
 		        break;
         	case 2:	
-			tempFace.pointIds[pointId] = ply_get_argument_value(argument);
+			tempFace.pointIDs[pointId] = ply_get_argument_value(argument);
 			pointId = 0;				
 			plcFaceVector.push_back(tempFace);
 			break;
@@ -239,7 +239,7 @@ void CDTGenerator::readPLCInput()
 	for (size_t n = 0, m = plcFaceVector.size(); n < m; n++)
 	{
 		for (size_t k = 0; k < 3; k++)
-			vertexIds[k] = plcFaceVector[n].pointIds[k];
+			vertexIds[k] = plcFaceVector[n].pointIDs[k];
 	
 		for (size_t i = 0; i < 3; i++)
 			trianglePoints[i] = CGALPoint(plcVertexVector[vertexIds[i]].x(), plcVertexVector[vertexIds[i]].y(), plcVertexVector[vertexIds[i]].z());
@@ -1167,7 +1167,7 @@ void CDTGenerator::splitMissingSegment(DartHandle& missingSegmentHandle)
 }
 */
 
-float distance(Dart_handle p1, Dart_handle p2)
+float distance(LCC::Dart_handle p1, LCC::Dart_handle p2)
 {
 	CGALPoint point1 = plc.point(p1);
 	CGALPoint point2 = plc.point(p2);
