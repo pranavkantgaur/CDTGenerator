@@ -125,7 +125,7 @@ class DegenerateVertexSet
  */
 class TriangleWithIndices
 {
-	public:
+	protected:
 		size_t pointIDs[3];
 };
 
