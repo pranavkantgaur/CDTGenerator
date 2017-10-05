@@ -918,7 +918,7 @@ float CDTGenerator::computeSegmentLength(CGALPoint &A, CGALPoint &B)
     /param [in] v New vertex to be inserted into a constraint segment of PLC
     /param [ih] missignSegmentHandle DartHandle of constraint segment which will be split after inserting new vertex  
 */
-/*
+
 void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle& missingSegmentHandle)
 {
 
@@ -956,14 +956,14 @@ void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle& missingSegmentHandle
 	// update DT
 	computeDelaunayTetrahedralization(missingSegmentQueue.size()); 
 }
-*/
 
+/*
 void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle& missingSegmentHandle)
 {
 	// TODO: Boyer-watson point insertion strategy
 	
 }
-
+*/
 
 /*! \fn void CDTGenerator::splitMissingSegment(DartHandle missingSegmentHandle)
     \brief Splits the missing constraint segment.
@@ -972,7 +972,7 @@ void CDTGenerator::updatePLCAndDT(CGALPoint &v, DartHandle& missingSegmentHandle
 
     \param [in] missingSegmentHandle DartHandle of missing constraint segment
 */
-/*
+
 void CDTGenerator::splitMissingSegment(DartHandle& missingSegmentHandle)
 {
 //	cout << "Inside segment splitting function!!" << endl;
@@ -1027,9 +1027,9 @@ void CDTGenerator::splitMissingSegment(DartHandle& missingSegmentHandle)
 			sphereCenter = A;
 			sphereRadius = 0.5 * AB; 
 		}	
-*/
+
 		// Compute coordinates of steiner point:
-/*		CGALSphericalPoint sphericalSphereCenter = CGALSphericalPoint(sphereCenter.x(), sphereCenter.y(), sphereCenter.z());
+		CGALSphericalPoint sphericalSphereCenter = CGALSphericalPoint(sphereCenter.x(), sphereCenter.y(), sphereCenter.z());
 		CGALSphericalSphere s = CGALSphericalSphere(sphericalSphereCenter, pow(sphereRadius, 2));
 
 		CGALSphericalPoint p1 = CGALSphericalPoint(A.x(), A.y(), A.z());
@@ -1055,8 +1055,8 @@ void CDTGenerator::splitMissingSegment(DartHandle& missingSegmentHandle)
 		}
 	}
 
-*/
-/*	else if (segmentType == 2 || segmentType == 3 )
+
+	else if (segmentType == 2 || segmentType == 3 )
 	{
 		// A is acute
 		DartHandle acuteParentHandle; 
@@ -1165,9 +1165,9 @@ void CDTGenerator::splitMissingSegment(DartHandle& missingSegmentHandle)
 //	cout << "Going outside segment splitting function!!" << endl;
 	return;
 }
-*/
 
-float distance(LCC::Dart_handle p1, LCC::Dart_handle p2)
+
+float CDTGenerator::distance(LCC::Dart_handle p1, LCC::Dart_handle p2)
 {
 	CGALPoint point1 = plc.point(p1);
 	CGALPoint point2 = plc.point(p2);
@@ -1175,37 +1175,39 @@ float distance(LCC::Dart_handle p1, LCC::Dart_handle p2)
 	return pointDistance;
 }
 
-void getParentSegment(Dart_handle vertexToFindParent, Dart_handle parentSegment)
+void CDTGenerator::getParentSegment(LCC::Dart_handle vertexToFindParent, LCC::Dart_handle parentSegment)
 {
 		
 }
 
-void projectPointOnSegment(Dart_handle pointToBeProjected, Dart_handle segmentOnWhichToProject, CGALPoint& projectionPoint)
+void CDTGenerator::projectPointOnSegment(LCC::Dart_handle pointToBeProjected, LCC::Dart_handle segmentOnWhichToProject, CGALPoint& projectionPoint)
 {
 	CGALPoint p = plc.point(pointToBeProjected);
 	CGALPoint ei = plc.point(segmentOnWhichToProject);
 	CGALPoint ej = plc.point(plc.beta(segmentOnWhichToProject, 1));
-	Vector_3 v1(ej.x() - ei.x(), ej.y() - ei.y(), ej.z() - ei.z());
-	Vector_3 v2(p.x() - ei.x(), p.y() - ei.y(), p.z() - ei.z());
+	CGALVector v1(ej.x() - ei.x(), ej.y() - ei.y(), ej.z() - ei.z());
+	CGALVector v2(p.x() - ei.x(), p.y() - ei.y(), p.z() - ei.z());
 	float length = sqrt(v1 * v2);
 	v1 = v1 * (1.0 / length);
 	float lp = v1 * v2;
 	projectionPoint = CGALPoint(ei.x() + lp * v1.x(), ei.y() + lp * v1.y(), ei.z() + lp * v1.z());
 }
 
-void splitMissingSegment(DartHandle& missingSegmentHandle)
-
+/*
+void CDTGenerator::splitMissingSegment(LCC::Dart_handle& missingSegmentHandle)
 {
 	// compute reference point
+	CGALPoint refPoint, steinerPoint;
 	computeReferencePoint(refPoint, missingSegmentHandle);
-	CGALPoint steinerPoint;
+
 	float L, L1, t;
+	Dart_handle ei = missingSegmentHandle;
+	Dart_handle ej = plc.beta(missingSegmentHandle, 1);
+	Dart_handle farEi = ei;
+	Dart_handle farEj = ej;
+
 	if (refPoint != NULL)
 	{
-		Dart_handle ei = missingSegmentHandle;
-		Dart_handle ej = plc.beta(missingSegmentHandle, 1);
-		Dart_handle farEi = ei;
-		Dart_handle farEj = ej;
 		getParentSegment(refPoint, parentSeg);
 		Dart_handle farPi = parentSeg;
 		Dart_handle farPj = plc.beta(parentSeg, 1);
@@ -1235,10 +1237,10 @@ void splitMissingSegment(DartHandle& missingSegmentHandle)
 		steinerPoint = farEi + 0.5 * (farEi - farEj);
 	
 	// insert steiner point in cdtMesh and PLC
-	// TODO
-	updatePLCAndDT(steinerPoint);
+	//TODO
+	updatePLCAndDT(steinerPoint, missingSegmentHandle);
 }
-
+*/
 
 /*! \fn void CDTGenerator::recoverConstraintSegments()
     \brief Top-level routine for recovering constraint segments.
@@ -2428,11 +2430,11 @@ void CDTGenerator::generate()
 	readPLCInput();
 	computeDelaunayTetrahedralization(-1);
 	recoverConstraintSegments();
-//	removeLocalDegeneracies();
+	removeLocalDegeneracies();
 /*	cout << "Skipping explicit local degeneracy removal, CGAL performs symbolic perturbation by default!!" << endl;
-	recoverConstraintFacets();
+*/	recoverConstraintFacets();
 	removeExteriorTetrahedrons(); // removes tetrahedrons from cdtMesh which are outside input PLC
-*/
+
 	return;
 }
 
