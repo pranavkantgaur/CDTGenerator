@@ -145,7 +145,7 @@ class CDTGenerator
 		LCC cdtMesh; /*!< Output mesh */
 		vector<LCC::Dart_handle> missingSegmentQueue;
 		
-		// Utility functions
+		// utility functions
 		float distance(LCC::Dart_handle, LCC::Dart_handle);
 		void getParentSegment(LCC::Dart_handle, LCC::Dart_handle);
 		void projectPointOnSegment(LCC::Dart_handle, LCC::Dart_handle, CGALPoint&);

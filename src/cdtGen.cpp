@@ -2427,14 +2427,14 @@ void CDTGenerator::removeExteriorTetrahedrons()
  */
 void CDTGenerator::generate()
 {
-	readPLCInput();
+	readPLCInput(); // assumes CAD input
+	computeSurfaceMesh(); 
 	computeDelaunayTetrahedralization(-1);
 	recoverConstraintSegments();
-	removeLocalDegeneracies();
-/*	cout << "Skipping explicit local degeneracy removal, CGAL performs symbolic perturbation by default!!" << endl;
-*/	recoverConstraintFacets();
+/*	removeLocalDegeneracies();
+	recoverConstraintFacets();
 	removeExteriorTetrahedrons(); // removes tetrahedrons from cdtMesh which are outside input PLC
-
+*/
 	return;
 }
 

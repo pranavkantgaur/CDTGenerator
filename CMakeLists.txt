@@ -4,7 +4,7 @@ project (CDTGenerator)
 
 IF (UNIX)
 	set (CMAKE_CXX_FLAGS "-std=c++0x -g")
-	set (CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /usr/local/lib)
+	set (CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /usr/local/lib/x86_64-linux-gnu)
 	include_directories (BEFORE include)
 
 ELSEIF (MSVC)
