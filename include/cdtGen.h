@@ -19,8 +19,9 @@
 #include <CGAL/intersections.h>
 #include <CGAL/Exact_spherical_kernel_3.h>
 #include <CGAL/Spherical_kernel_intersections.h>
-#include <CGAL/Linear_cell_complex.h>
+#include <CGAL/Linear_cell_complex_for_combinatorial_map.h>
 #include <CGAL/Linear_cell_complex_constructors.h>
+#include <CGAL/Triangulation_3_to_lcc.h>
 #include <CGAL/enum.h>
 #include <CGAL/AABB_tree.h>
 #include <CGAL/AABB_traits.h>
@@ -42,7 +43,7 @@ using namespace CGAL;
 
 typedef Exact_predicates_inexact_constructions_kernel K;
 typedef Linear_cell_complex_traits<3, K> Traits;
-typedef Linear_cell_complex<3, 3, Traits> LCC;
+typedef Linear_cell_complex_for_combinatorial_map<3, 3, Traits> LCC;
 
 typedef LCC::Dart_handle DartHandle;
 
@@ -84,8 +85,8 @@ typedef Search_traits_adapter<Point_and_dart,
 typedef Orthogonal_k_neighbor_search<Search_traits>          K_neighbor_search;
 typedef K_neighbor_search::Tree                             Tree;
 typedef K_neighbor_search::Distance                         Distance;
-typedef Linear_cell_complex<3, 3, Traits, MyDartInfo> LCCWithDartInfo;
-typedef Linear_cell_complex<3, 3, Traits, MyIntInfo> LCCWithIntInfo;
+typedef Linear_cell_complex_for_combinatorial_map<3, 3, Traits, MyDartInfo> LCCWithDartInfo;
+typedef Linear_cell_complex_for_combinatorial_map<3, 3, Traits, MyIntInfo> LCCWithIntInfo;
 typedef LCCWithDartInfo::Dart_handle DartHandleWithDartInfo;
 typedef Triangulation_vertex_base_with_info_3<DartHandle, K> Vb; 
 typedef Triangulation_data_structure_3<Vb> Tds;
@@ -125,7 +126,7 @@ class DegenerateVertexSet
  */
 class TriangleWithIndices
 {
-	protected:
+	public:
 		size_t pointIDs[3];
 };
 
@@ -150,6 +151,11 @@ class CDTGenerator
 		void markInfiniteVertexDart(LCC::Dart_handle, LCC&, int);
 		bool isInfinite(LCCWithIntInfo::Dart_handle&, const LCCWithIntInfo&, int, size_t);
 		bool isInfinite(LCC::Dart_handle&, const LCC&, int, size_t);
+
+    // utility functions
+    float distance(LCC::Dart_handle, LCC::Dart_handle);
+    void getParentSegment(LCC::Dart_handle, LCC::Dart_handle);
+    void projectPointOnSegment(LCC::Dart_handle, LCC::Dart_handle, CGALPoint&);  
 
 		// segment recovery
 		void recoverConstraintSegments();
