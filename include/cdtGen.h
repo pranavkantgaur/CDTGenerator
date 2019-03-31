@@ -21,6 +21,7 @@
 #include <CGAL/Spherical_kernel_intersections.h>
 #include <CGAL/Linear_cell_complex.h>
 #include <CGAL/Linear_cell_complex_constructors.h>
+#include <CGAL/Triangulation_3_to_lcc.h>
 #include <CGAL/enum.h>
 #include <CGAL/AABB_tree.h>
 #include <CGAL/AABB_traits.h>
@@ -99,6 +100,7 @@ typedef Tetrahedron_3<K> CGALTetrahedron;
 typedef Triangle_3<K> CGALTriangle;
 typedef Ray_3<K> CGALRay;
 typedef Segment_3<K> CGALSegment;
+typedef Vector_3<K> CGALVector;
 typedef Exact_spherical_kernel_3 SK;
 typedef Line_arc_3<SK> CGALSphericalLineArc;
 typedef Sphere_3<SK> CGALSphericalSphere;
@@ -125,7 +127,7 @@ class DegenerateVertexSet
  */
 class TriangleWithIndices
 {
-	protected:
+	public:
 		size_t pointIDs[3];
 };
 
@@ -144,6 +146,11 @@ class CDTGenerator
 		LCC cdtMesh; /*!< Output mesh */
 		vector<LCC::Dart_handle> missingSegmentQueue;
 		
+		// utility functions
+		float distance(LCC::Dart_handle, LCC::Dart_handle);
+		void getParentSegment(LCC::Dart_handle, LCC::Dart_handle);
+		void projectPointOnSegment(LCC::Dart_handle, LCC::Dart_handle, CGALPoint&);
+
 		// initial Delaunay triangulation
 		void readPLCInput();
 		void markInfiniteVertexDart(LCCWithIntInfo::Dart_handle, LCCWithIntInfo&, int);
@@ -153,7 +160,7 @@ class CDTGenerator
 
 		// segment recovery
 		void recoverConstraintSegments();
-		void splitMissingSegment(DartHandle&);
+		void splitMissingSegment(LCC::Dart_handle&);
 		void updatePLCAndDT(CGALPoint&, DartHandle&);
 		float computeSegmentLength(CGALPoint&, CGALPoint&);
 		size_t determineSegmentType(DartHandle&);
