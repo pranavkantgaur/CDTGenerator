@@ -21,6 +21,7 @@
 #include <CGAL/Spherical_kernel_intersections.h>
 #include <CGAL/Linear_cell_complex.h>
 #include <CGAL/Linear_cell_complex_constructors.h>
+#include <CGAL/Triangulation_3_to_lcc.h>
 #include <CGAL/enum.h>
 #include <CGAL/AABB_tree.h>
 #include <CGAL/AABB_traits.h>

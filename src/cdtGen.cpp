@@ -689,11 +689,11 @@ void CDTGenerator::computeDelaunayTetrahedralization(int missingSegmentQueueSize
 	LCCWithIntInfo DTLCC;
 	string fileName("../../data/delaunay.ply");
 
-	LCCWithIntInfo::Dart_handle dartToInfiniteVertex = import_from_triangulation_3(DTLCC, DT);
+	LCCWithIntInfo::Dart_handle dartToInfiniteVertex = CGAL::import_from_triangulation_3(DTLCC, DT);
 	
-//	cout << "Writing Delaunay triangulation to output file..." << endl;	
-	if (missingSegmentQueueSize == 0)
-		writePLYOutput(dartToInfiniteVertex, DTLCC, fileName);
+	cout << "Writing Delaunay triangulation to output file..." << endl;	
+	//if (missingSegmentQueueSize == -1)
+	writePLYOutput(dartToInfiniteVertex, DTLCC, fileName);
 }
 
 
@@ -2073,7 +2073,7 @@ void CDTGenerator::recoverConstraintFacets()
 		LCCWithDartInfo cavityLCC;
 		LCCWithDartInfo::Dart_handle cavityFaceHandle;
 
-		DartHandle d = import_from_triangulation_3(cdtMesh, DT); // initialization of cdtMesh  
+		DartHandle d = CGAL::import_from_triangulation_3(cdtMesh, DT); // initialization of cdtMesh  
 		
 		// Remove infinite cells
 		int infiniteVertexMark = cdtMesh.get_new_mark();
@@ -2427,11 +2427,10 @@ void CDTGenerator::removeExteriorTetrahedrons()
  */
 void CDTGenerator::generate()
 {
-	readPLCInput(); // assumes CAD input
-	computeSurfaceMesh(); 
+	readPLCInput(); 
 	computeDelaunayTetrahedralization(-1);
-	recoverConstraintSegments();
-/*	removeLocalDegeneracies();
+/*	recoverConstraintSegments();
+	removeLocalDegeneracies();
 	recoverConstraintFacets();
 	removeExteriorTetrahedrons(); // removes tetrahedrons from cdtMesh which are outside input PLC
 */
